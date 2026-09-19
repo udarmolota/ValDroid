@@ -36,9 +36,12 @@ public final class NativeMono {
      * thunks are generated for that Unity version, and 1.5's Unity 2019 Mono is a different runtime.
      */
     public static boolean isSupported(GameInstance instance) {
+        // Valheim (Unity 6000.0.75f1) ships the same Mono fork build as RimWorld 1.6, so the same runtime
+        // serves it; its internal-call thunks are the ones generated into the box64 wrapper.
         return instance != null
                 && runtimePath() != null
-                && new File(instance.getGamePath(), "rd_x11").exists();
+                && (new File(instance.getGamePath(), GameDescriptor.VALHEIM.executable()).isFile()
+                    || new File(instance.getGamePath(), "rd_x11").exists());
     }
 
     /**
