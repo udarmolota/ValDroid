@@ -113,20 +113,20 @@ static int XInputStream_readMoreData(XInputStream* inputStream, jboolean canRece
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_rimdroid_xconnector_XInputStream_nativeAllocate(JNIEnv *env, jobject obj, jint fd,
+Java_com_valdroid_xconnector_XInputStream_nativeAllocate(JNIEnv *env, jobject obj, jint fd,
                                                          jint initialCapacity) {
     XInputStream* inputStream = XInputStream_allocate(fd, initialCapacity);
     return (jlong)inputStream;
 }
 
 JNIEXPORT jbyte JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readByte(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_readByte(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     return *(jbyte*)(inputStream->activeBuffer.data + inputStream->activeBuffer.position++);
 }
 
 JNIEXPORT jshort JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readShort(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_readShort(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     jshort value = *(jshort*)(inputStream->activeBuffer.data + inputStream->activeBuffer.position);
     inputStream->activeBuffer.position += 2;
@@ -134,7 +134,7 @@ Java_com_rimdroid_xconnector_XInputStream_readShort(jlong nativePtr) {
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readInt(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_readInt(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     jint value = *(jint*)(inputStream->activeBuffer.data + inputStream->activeBuffer.position);
     inputStream->activeBuffer.position += 4;
@@ -142,7 +142,7 @@ Java_com_rimdroid_xconnector_XInputStream_readInt(jlong nativePtr) {
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readLong(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_readLong(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     jlong value = *(jlong*)(inputStream->activeBuffer.data + inputStream->activeBuffer.position);
     inputStream->activeBuffer.position += 8;
@@ -150,12 +150,12 @@ Java_com_rimdroid_xconnector_XInputStream_readLong(jlong nativePtr) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XInputStream_skip(jlong nativePtr, jint length) {
+Java_com_valdroid_xconnector_XInputStream_skip(jlong nativePtr, jint length) {
     ((XInputStream*)nativePtr)->activeBuffer.position += length;
 }
 
 JNIEXPORT jobject JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readByteBuffer(JNIEnv *env, jobject obj,
+Java_com_valdroid_xconnector_XInputStream_readByteBuffer(JNIEnv *env, jobject obj,
                                                          jlong nativePtr, jint length) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, inputStream->activeBuffer.data + inputStream->activeBuffer.position, length);
@@ -164,34 +164,34 @@ Java_com_rimdroid_xconnector_XInputStream_readByteBuffer(JNIEnv *env, jobject ob
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XInputStream_available(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_available(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     return inputStream->activeBuffer.limit - inputStream->activeBuffer.position;
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XInputStream_readMoreData(JNIEnv *env, jobject obj,
+Java_com_valdroid_xconnector_XInputStream_readMoreData(JNIEnv *env, jobject obj,
                                                        jlong nativePtr, jboolean canReceiveAncillaryMessages) {
     return XInputStream_readMoreData((XInputStream*)nativePtr, canReceiveAncillaryMessages);
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XInputStream_getActivePosition(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_getActivePosition(jlong nativePtr) {
     return ((XInputStream*)nativePtr)->activeBuffer.position;
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XInputStream_setActivePosition(jlong nativePtr, jint activePosition) {
+Java_com_valdroid_xconnector_XInputStream_setActivePosition(jlong nativePtr, jint activePosition) {
     ((XInputStream*)nativePtr)->activeBuffer.position = activePosition;
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XInputStream_getAncillaryFd(jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_getAncillaryFd(jlong nativePtr) {
     XInputStream* inputStream = (XInputStream*)nativePtr;
     return inputStream->ancillaryFds.size > 0 ? IntArray_removeAt(&inputStream->ancillaryFds, 0) : -1;
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XInputStream_destroy(JNIEnv *env, jclass obj, jlong nativePtr) {
+Java_com_valdroid_xconnector_XInputStream_destroy(JNIEnv *env, jclass obj, jlong nativePtr) {
     XInputStream_destroy((XInputStream*)nativePtr);
 }

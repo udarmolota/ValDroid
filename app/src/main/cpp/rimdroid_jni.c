@@ -24,7 +24,7 @@ extern char** environ;
 // The binary lives next to librimdroid.so in nativeLibraryDir (resolved via
 // dladdr; requires android:extractNativeLibs="true" so it's on disk + exec'able).
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_GameLauncher_execStandaloneGame(
+Java_com_valdroid_GameLauncher_execStandaloneGame(
         JNIEnv* env, jobject clazz,
         jstring j_game_dir, jstring j_lib_dir, jstring j_extra_arg)
 {
@@ -35,7 +35,7 @@ Java_com_rimdroid_GameLauncher_execStandaloneGame(
     // Resolve nativeLibraryDir from our own .so path.
     char self_copy[4096] = {0};
     Dl_info info;
-    if (dladdr((void*)&Java_com_rimdroid_GameLauncher_execStandaloneGame, &info) && info.dli_fname) {
+    if (dladdr((void*)&Java_com_valdroid_GameLauncher_execStandaloneGame, &info) && info.dli_fname) {
         strncpy(self_copy, info.dli_fname, sizeof(self_copy) - 1);
     }
     char* native_lib_dir = dirname(self_copy);   // mutates self_copy, returns dir
@@ -79,7 +79,7 @@ Java_com_rimdroid_GameLauncher_execStandaloneGame(
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameLauncher_startGame(
+Java_com_valdroid_GameLauncher_startGame(
         JNIEnv* env, jobject clazz,
         jstring j_game_dir_path,
         jstring j_library_dir_path,
@@ -112,17 +112,17 @@ Java_com_rimdroid_GameLauncher_startGame(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_GameLauncher_initValDroidWindow(JNIEnv* env, jobject clazz) {
+Java_com_valdroid_GameLauncher_initValDroidWindow(JNIEnv* env, jobject clazz) {
     return rimdroid_init();
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameLauncher_destroyValDroidWindow(JNIEnv* env, jobject clazz) {
+Java_com_valdroid_GameLauncher_destroyValDroidWindow(JNIEnv* env, jobject clazz) {
     rimdroid_deinit();
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_GameLauncher_setSurface(
+Java_com_valdroid_GameLauncher_setSurface(
         JNIEnv* env, jobject clazz,
         jobject surface, jint width, jint height)
 {
@@ -132,12 +132,12 @@ Java_com_rimdroid_GameLauncher_setSurface(
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameLauncher_destroySurface(JNIEnv* env, jobject clazz) {
+Java_com_valdroid_GameLauncher_destroySurface(JNIEnv* env, jobject clazz) {
     rimdroid_surface_deinit();
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_GameLauncher_nativeOsmesaSmokeTest(JNIEnv* env, jclass clazz, jstring jpath) {
+Java_com_valdroid_GameLauncher_nativeOsmesaSmokeTest(JNIEnv* env, jclass clazz, jstring jpath) {
     const char* path = jpath ? (*env)->GetStringUTFChars(env, jpath, NULL) : NULL;
     int rc = rimdroid_osmesa_smoketest(path);
     if (path) (*env)->ReleaseStringUTFChars(env, jpath, path);
@@ -147,7 +147,7 @@ Java_com_rimdroid_GameLauncher_nativeOsmesaSmokeTest(JNIEnv* env, jclass clazz, 
 // --- Phase A input injection (touch → SDL mouse); rd_input_* declared in rimdroid.h ---
 // action: 0 = move, 1 = down, 2 = up. x,y are game-window pixels (already scaled).
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeTouch(JNIEnv* env, jclass clazz,
+Java_com_valdroid_GameActivity_nativeTouch(JNIEnv* env, jclass clazz,
                                            jint action, jint x, jint y) {
     if (action == 1) {            // DOWN: move there, then press left button
         rd_input_mouse_motion(x, y);
@@ -161,7 +161,7 @@ Java_com_rimdroid_GameActivity_nativeTouch(JNIEnv* env, jclass clazz,
 
 // Generic button (1=L,2=M,3=R), down=1/0, at (x,y). Moves cursor there first.
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeButton(JNIEnv* env, jclass clazz,
+Java_com_valdroid_GameActivity_nativeButton(JNIEnv* env, jclass clazz,
                                             jint button, jint down, jint x, jint y) {
     rd_input_mouse_motion(x, y);
     rd_input_mouse_button(button, down, x, y);
@@ -169,7 +169,7 @@ Java_com_rimdroid_GameActivity_nativeButton(JNIEnv* env, jclass clazz,
 
 // Mouse wheel (zoom). Positions the cursor at (x,y) first so RimWorld zooms there.
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeScroll(JNIEnv* env, jclass clazz,
+Java_com_valdroid_GameActivity_nativeScroll(JNIEnv* env, jclass clazz,
                                             jint x, jint y, jint dy) {
     rd_input_mouse_motion(x, y);
     rd_input_mouse_scroll(dy);
@@ -177,14 +177,14 @@ Java_com_rimdroid_GameActivity_nativeScroll(JNIEnv* env, jclass clazz,
 
 // Keyboard key (SDL scancode + keycode), down=1/0. For camera pan (WASD) etc.
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeKey(JNIEnv* env, jclass clazz,
+Java_com_valdroid_GameActivity_nativeKey(JNIEnv* env, jclass clazz,
                                          jint scancode, jint keycode, jint down) {
     rd_input_key(scancode, keycode, down);
 }
 
 // Text input (typing) — UTF-8 string from the Android IME keyboard.
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jtext) {
+Java_com_valdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jtext) {
     if (!jtext) return;
     const char* s = (*env)->GetStringUTFChars(env, jtext, NULL);
     if (s) { rd_input_text(s); (*env)->ReleaseStringUTFChars(env, jtext, s); }
@@ -193,7 +193,7 @@ Java_com_rimdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jte
 // FPS overlay: total presented frames so far. The Java overlay reads this once a
 // second and shows the delta = true presented FPS.
 JNIEXPORT jlong JNICALL
-Java_com_rimdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
+Java_com_valdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
     return (jlong)g_rimdroid_frame_count;
 }
 
@@ -202,6 +202,6 @@ Java_com_rimdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
 // freed for the tick loop.
 extern volatile uint64_t g_rimdroid_frame_min_ns;
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameActivity_nativeSetFpsCap(JNIEnv* env, jclass clazz, jint fps) {
+Java_com_valdroid_GameActivity_nativeSetFpsCap(JNIEnv* env, jclass clazz, jint fps) {
     g_rimdroid_frame_min_ns = (fps > 0) ? (1000000000ull / (uint64_t)fps) : 0;
 }

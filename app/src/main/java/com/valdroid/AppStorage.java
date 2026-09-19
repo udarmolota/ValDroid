@@ -1,0 +1,110 @@
+package com.valdroid;
+
+import android.content.Context;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.io.File;
+
+public class AppStorage {
+    private final String HOME_DIR_PATH;
+    private final String CACHE_DIR_PATH;
+    private final String LIBRARY_DIR_PATH;
+    private static AppStorage singleton;
+
+    private AppStorage(Context applicationContext) {
+        HOME_DIR_PATH    = applicationContext.getFilesDir().getAbsolutePath();
+        CACHE_DIR_PATH   = applicationContext.getCacheDir().getAbsolutePath();
+        LIBRARY_DIR_PATH = applicationContext.getApplicationInfo().nativeLibraryDir;
+    }
+
+    public static void init(Context applicationContext) {
+        singleton = new AppStorage(applicationContext);
+    }
+
+    @Nullable
+    public static AppStorage getSingleton() {
+        return singleton;
+    }
+
+    @NonNull
+    public static AppStorage requireSingleton() {
+        if (singleton == null) throw new RuntimeException("AppStorage is not initialized");
+        return singleton;
+    }
+
+    /** /data/data/com.valdroid/files */
+    public String getHomePath() { return HOME_DIR_PATH; }
+
+    /** /data/data/com.valdroid/cache */
+    public String getCachePath() { return CACHE_DIR_PATH; }
+
+    /** Native .so libs dir (ARM64, installed by APK) */
+    public String getLibraryPath() { return LIBRARY_DIR_PATH; }
+
+    // ---- Convenience helpers ----
+
+    public String getDepsPath() {
+        return HOME_DIR_PATH + "/" + C.deps.ROOT;
+    }
+
+    public String getLibsLinuxX86Path() {
+        return HOME_DIR_PATH + "/" + C.deps.LIBS_LINUX_X86_64;
+    }
+
+    public String getGl4esLibsPath() {
+        return HOME_DIR_PATH + "/" + C.deps.LIBS_GL4ES;
+    }
+
+    public String getZinkLibsPath() {
+        return HOME_DIR_PATH + "/" + C.deps.LIBS_ZINK;
+    }
+
+    public File getInstancesDir() {
+        return new File(HOME_DIR_PATH, "instances");
+    }
+
+    public File getInstanceDir(String name) {
+        return new File(getInstancesDir(), name);
+    }
+
+    /** Short, always-fits default instance name (stays well under the sun_path byte budget). */
+    public static final String DEFAULT_INSTANCE_NAME = "RimWorld";
+
+    /** "RimWorld", or "RimWorld-2"/"-3"/... — the first name with no existing instance directory.
+     *  Shared by every screen that creates an instance (ZIP install and Steam download) so they
+     *  pre-fill the same default. */
+    public static String freeDefaultInstanceName() {
+        AppStorage st = requireSingleton();
+        if (!st.getInstanceDir(DEFAULT_INSTANCE_NAME).exists()) return DEFAULT_INSTANCE_NAME;
+        for (int i = 2; i < 1000; i++) {
+            String n = DEFAULT_INSTANCE_NAME + "-" + i;
+            if (!st.getInstanceDir(n).exists()) return n;
+        }
+        return DEFAULT_INSTANCE_NAME;   // 1000 instances named RimWorld* — practically unreachable
+    }
+
+    /**
+     * Shared library for DLC and Workshop mods, in the PUBLIC Android "Download" folder
+     * (/storage/emulated/0/Download/ValDroid) so the user can see/move/share/delete them with any
+     * file manager — portable content, NOT tied to a single instance.
+     *
+     * NOTE: writing here on Android 11+ requires All-files access (MANAGE_EXTERNAL_STORAGE), granted
+     * once by the user in system settings. ValDroid is sideloaded (no Play Store review), so this is
+     * acceptable. DepotDownloader writes raw file paths (staging + many files), which MediaStore
+     * can't model — hence the broad permission rather than the MediaStore Downloads API.
+     */
+    public File getDownloadsDir() {
+        return new File(android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS), "ValDroid");
+    }
+
+    public File getDownloadDir(String name) {
+        return new File(getDownloadsDir(), name);
+    }
+
+    public File getRimWorldBin(String instanceName) {
+        return new File(getInstanceDir(instanceName), C.files.RIMWORLD_BIN);
+    }
+}

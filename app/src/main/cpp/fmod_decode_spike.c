@@ -74,7 +74,7 @@ static char *read_slice(const char *path, long long offset, long long size) {
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_audio_FmodDecodeSpike_nativeDecodeClip(
+Java_com_valdroid_audio_FmodDecodeSpike_nativeDecodeClip(
         JNIEnv *env, jclass clazz,
         jstring jFmodLib, jint fmodVersion, jstring jResource,
         jlong offset, jlong size, jstring jOutWav, jint srcRate, jint targetRate, jint outChannels) {

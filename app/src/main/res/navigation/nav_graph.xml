@@ -6,52 +6,52 @@
 
     <fragment
         android:id="@+id/launcher_fragment"
-        android:name="com.rimdroid.fragments.LauncherFragment"
+        android:name="com.valdroid.fragments.LauncherFragment"
         android:label="@string/nav_launcher" />
 
     <fragment
         android:id="@+id/settings_fragment"
-        android:name="com.rimdroid.fragments.SettingsFragment"
+        android:name="com.valdroid.fragments.SettingsFragment"
         android:label="@string/nav_settings" />
 
     <fragment
         android:id="@+id/app_settings_fragment"
-        android:name="com.rimdroid.fragments.AppSettingsFragment"
+        android:name="com.valdroid.fragments.AppSettingsFragment"
         android:label="@string/nav_settings" />
 
     <fragment
         android:id="@+id/new_instance_fragment"
-        android:name="com.rimdroid.fragments.NewInstanceFragment"
+        android:name="com.valdroid.fragments.NewInstanceFragment"
         android:label="@string/nav_new_instance" />
 
     <fragment
         android:id="@+id/download_fragment"
-        android:name="com.rimdroid.fragments.DownloadFragment"
+        android:name="com.valdroid.fragments.DownloadFragment"
         android:label="@string/nav_download_game" />
 
     <fragment
         android:id="@+id/cloud_saves_fragment"
-        android:name="com.rimdroid.fragments.CloudSavesFragment"
+        android:name="com.valdroid.fragments.CloudSavesFragment"
         android:label="@string/nav_cloud_saves" />
 
     <fragment
         android:id="@+id/install_content_fragment"
-        android:name="com.rimdroid.fragments.InstallContentFragment"
+        android:name="com.valdroid.fragments.InstallContentFragment"
         android:label="@string/nav_install_content" />
 
     <fragment
         android:id="@+id/driver_fragment"
-        android:name="com.rimdroid.fragments.DriverImportFragment"
+        android:name="com.valdroid.fragments.DriverImportFragment"
         android:label="@string/nav_custom_driver" />
 
     <fragment
         android:id="@+id/gog_login_fragment"
-        android:name="com.rimdroid.fragments.GogLoginFragment"
+        android:name="com.valdroid.fragments.GogLoginFragment"
         android:label="@string/nav_gog_login" />
 
     <fragment
         android:id="@+id/wiki_fragment"
-        android:name="com.rimdroid.fragments.WikiFragment"
+        android:name="com.valdroid.fragments.WikiFragment"
         android:label="@string/nav_wiki" />
 
     <action android:id="@+id/action_settings"

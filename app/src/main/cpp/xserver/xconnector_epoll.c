@@ -267,12 +267,12 @@ static void XConnectorEpoll_stopEpollThread(XConnectorEpoll* connector) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_closeFd(jint fd) {
+Java_com_valdroid_xconnector_XConnectorEpoll_closeFd(jint fd) {
     CLOSEFD(fd);
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_nativeAllocate(JNIEnv* env, jobject obj,
+Java_com_valdroid_xconnector_XConnectorEpoll_nativeAllocate(JNIEnv* env, jobject obj,
                                                             jstring sockPath) {
     const char* pathPtr = (*env)->GetStringUTFChars(env, sockPath, 0);
     XConnectorEpoll* connector = XConnectorEpoll_allocate(env, obj, pathPtr);
@@ -282,24 +282,24 @@ Java_com_rimdroid_xconnector_XConnectorEpoll_nativeAllocate(JNIEnv* env, jobject
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_destroy(JNIEnv *env, jobject obj, jlong nativePtr) {
+Java_com_valdroid_xconnector_XConnectorEpoll_destroy(JNIEnv *env, jobject obj, jlong nativePtr) {
     XConnectorEpoll_destroy(env, (XConnectorEpoll*)nativePtr);
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_startEpollThread(JNIEnv *env, jobject obj,
+Java_com_valdroid_xconnector_XConnectorEpoll_startEpollThread(JNIEnv *env, jobject obj,
                                                               jlong nativePtr, jboolean multithreadedClients) {
     XConnectorEpoll_startEpollThread((XConnectorEpoll*)nativePtr, multithreadedClients);
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_stopEpollThread(JNIEnv *env, jobject obj,
+Java_com_valdroid_xconnector_XConnectorEpoll_stopEpollThread(JNIEnv *env, jobject obj,
                                                              jlong nativePtr) {
     XConnectorEpoll_stopEpollThread((XConnectorEpoll*)nativePtr);
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XConnectorEpoll_killConnection(JNIEnv *env, jclass obj,
+Java_com_valdroid_xconnector_XConnectorEpoll_killConnection(JNIEnv *env, jclass obj,
                                                             jlong connectorPtr, jlong clientPtr) {
     XConnectorEpoll_killConnection((XConnectorEpoll*)connectorPtr, (ConnectedClient*)clientPtr);
 }

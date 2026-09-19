@@ -59,26 +59,26 @@ static jboolean XOutputStream_send(XOutputStream* outputStream) {
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_nativeAllocate(JNIEnv *env, jobject obj, jint fd,
+Java_com_valdroid_xconnector_XOutputStream_nativeAllocate(JNIEnv *env, jobject obj, jint fd,
                                                           jint initialCapacity) {
     XOutputStream* outputStream = XOutputStream_allocate(fd, initialCapacity);
     return (jlong)outputStream;
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_setAncillaryFd(jlong nativePtr, jint ancillaryFd) {
+Java_com_valdroid_xconnector_XOutputStream_setAncillaryFd(jlong nativePtr, jint ancillaryFd) {
     ((XOutputStream*)nativePtr)->ancillaryFd = ancillaryFd;
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeByte(jlong nativePtr, jbyte value) {
+Java_com_valdroid_xconnector_XOutputStream_writeByte(jlong nativePtr, jbyte value) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     ensureSpaceIsAvailable(outputStream, 1);
     *(jbyte*)(outputStream->buffer.data + outputStream->buffer.position++) = value;
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeShort(jlong nativePtr, jshort value) {
+Java_com_valdroid_xconnector_XOutputStream_writeShort(jlong nativePtr, jshort value) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     ensureSpaceIsAvailable(outputStream, 2);
     *(jshort*)(outputStream->buffer.data + outputStream->buffer.position) = value;
@@ -86,7 +86,7 @@ Java_com_rimdroid_xconnector_XOutputStream_writeShort(jlong nativePtr, jshort va
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeInt(jlong nativePtr, jint value) {
+Java_com_valdroid_xconnector_XOutputStream_writeInt(jlong nativePtr, jint value) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     ensureSpaceIsAvailable(outputStream, 4);
     *(jint*)(outputStream->buffer.data + outputStream->buffer.position) = value;
@@ -94,7 +94,7 @@ Java_com_rimdroid_xconnector_XOutputStream_writeInt(jlong nativePtr, jint value)
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeLong(jlong nativePtr, jlong value) {
+Java_com_valdroid_xconnector_XOutputStream_writeLong(jlong nativePtr, jlong value) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     ensureSpaceIsAvailable(outputStream, 8);
     *(jlong*)(outputStream->buffer.data + outputStream->buffer.position) = value;
@@ -102,7 +102,7 @@ Java_com_rimdroid_xconnector_XOutputStream_writeLong(jlong nativePtr, jlong valu
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writePad(jlong nativePtr, jint length) {
+Java_com_valdroid_xconnector_XOutputStream_writePad(jlong nativePtr, jint length) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     ensureSpaceIsAvailable(outputStream, length);
     memset(outputStream->buffer.data + outputStream->buffer.position, 0, length);
@@ -110,7 +110,7 @@ Java_com_rimdroid_xconnector_XOutputStream_writePad(jlong nativePtr, jint length
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeAt(JNIEnv *env, jclass obj,
+Java_com_valdroid_xconnector_XOutputStream_writeAt(JNIEnv *env, jclass obj,
                                                    jlong nativePtr, jint position, jbyteArray data) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     jbyte* dataPtr = (*env)->GetByteArrayElements(env, data, 0);
@@ -120,7 +120,7 @@ Java_com_rimdroid_xconnector_XOutputStream_writeAt(JNIEnv *env, jclass obj,
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_writeByteBuffer(JNIEnv *env, jclass obj,
+Java_com_valdroid_xconnector_XOutputStream_writeByteBuffer(JNIEnv *env, jclass obj,
                                                            jlong nativePtr, jobject data,
                                                            jint offset, jint length) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
@@ -131,17 +131,17 @@ Java_com_rimdroid_xconnector_XOutputStream_writeByteBuffer(JNIEnv *env, jclass o
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_sendData(JNIEnv *env, jclass obj, jlong nativePtr) {
+Java_com_valdroid_xconnector_XOutputStream_sendData(JNIEnv *env, jclass obj, jlong nativePtr) {
     return XOutputStream_send((XOutputStream*)nativePtr);
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_destroy(JNIEnv *env, jclass obj, jlong nativePtr) {
+Java_com_valdroid_xconnector_XOutputStream_destroy(JNIEnv *env, jclass obj, jlong nativePtr) {
     XOutputStream_destroy((XOutputStream*)nativePtr);
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_xconnector_XOutputStream_length(jlong nativePtr) {
+Java_com_valdroid_xconnector_XOutputStream_length(jlong nativePtr) {
     XOutputStream* outputStream = (XOutputStream*)nativePtr;
     return outputStream->buffer.position;
 }
