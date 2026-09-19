@@ -16,7 +16,7 @@ import java.util.List;
  * libmonobdwgc-2.0.so to its wrapper when RIMDROID_NATIVE_MONO_PATH is set.
  *
  * The runtime is packaged as ordinary APK native libraries from app/src/main/jniLibs/arm64-v8a, so Android
- * extracts it next to librimdroid.so: libmonobdwgc-2.0.so (Unity's Mono fork, commit c11bc9adba, built for
+ * extracts it next to libvaldroid.so: libmonobdwgc-2.0.so (Unity's Mono fork, commit c11bc9adba, built for
  * Android ARM64 and stripped), libmono-native.so from the same build, and libsteam_api.so, a stub whose
  * Steamworks functions all return 0. An APK built without them simply does not offer the switch.
  */
@@ -107,7 +107,7 @@ public final class NativeMono {
                         return false;   // e.g. the game's normal quit
                 }
             case ApplicationExitInfo.REASON_EXIT_SELF:
-                return e.getStatus() == 139;   // rimdroid.c handle_fatal_signal
+                return e.getStatus() == 139;   // valdroid.c handle_fatal_signal
             default:
                 return false;
         }

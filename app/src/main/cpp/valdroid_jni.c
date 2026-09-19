@@ -1,5 +1,5 @@
 #include <jni.h>
-#include "rimdroid.h"
+#include "valdroid.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -15,13 +15,13 @@ extern char** environ;
 
 #define LOG_TAG "valdroid-jni"
 
-// Launch the standalone box64+RimWorld binary (librimdroid_exec.so) as a FRESH
+// Launch the standalone box64+RimWorld binary (libvaldroid_exec.so) as a FRESH
 // process via fork()+execve().  execve wipes the ART heap → clean address space
 // (RimWorld's fixed 0x021a9000 is free → box64 needs NO internal fork) and the
 // new process gets a FRESH binder ProcessState → GPU context can be created+used
 // without fork (fixes the GPU-after-fork crash).  execve inherits `environ`,
 // which already has all the Os.setenv() box64/renderer vars from GameLauncher.
-// The binary lives next to librimdroid.so in nativeLibraryDir (resolved via
+// The binary lives next to libvaldroid.so in nativeLibraryDir (resolved via
 // dladdr; requires android:extractNativeLibs="true" so it's on disk + exec'able).
 JNIEXPORT jint JNICALL
 Java_com_valdroid_GameLauncher_execStandaloneGame(
@@ -40,7 +40,7 @@ Java_com_valdroid_GameLauncher_execStandaloneGame(
     }
     char* native_lib_dir = dirname(self_copy);   // mutates self_copy, returns dir
     char bin[4096];
-    snprintf(bin, sizeof(bin), "%s/librimdroid_exec.so", native_lib_dir);
+    snprintf(bin, sizeof(bin), "%s/libvaldroid_exec.so", native_lib_dir);
 
     LOGI("execStandaloneGame: bin=%s game=%s lib=%s extra=%s LD=%s",
          bin, game_dir, lib_dir, extra ? extra : "(none)", native_lib_dir);
@@ -144,7 +144,7 @@ Java_com_valdroid_GameLauncher_nativeOsmesaSmokeTest(JNIEnv* env, jclass clazz, 
     return rc;
 }
 
-// --- Phase A input injection (touch → SDL mouse); rd_input_* declared in rimdroid.h ---
+// --- Phase A input injection (touch → SDL mouse); rd_input_* declared in valdroid.h ---
 // action: 0 = move, 1 = down, 2 = up. x,y are game-window pixels (already scaled).
 JNIEXPORT void JNICALL
 Java_com_valdroid_GameActivity_nativeTouch(JNIEnv* env, jclass clazz,

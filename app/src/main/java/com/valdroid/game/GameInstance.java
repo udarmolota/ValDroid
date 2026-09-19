@@ -76,7 +76,7 @@ public class GameInstance {
 
         ArrayList<String> paths = new ArrayList<>();
 
-        // APK native libs (librimdroid.so, librimdroidlinker.so etc.)
+        // APK native libs (libvaldroid.so, libvaldroidlinker.so etc.)
         paths.add(storage.getLibraryPath());
         paths.add("/system/lib64");
 

@@ -11,7 +11,7 @@ public class SysVSharedMemory {
     private int maxSHMemoryId = 0;
 
     static {
-        System.loadLibrary("rimdroidxserver");
+        System.loadLibrary("valdroidxserver");
     }
 
     private static class SHMemory {

@@ -10,7 +10,7 @@ public class XInputStream {
     private final long nativePtr;
 
     static {
-        System.loadLibrary("rimdroidxserver");
+        System.loadLibrary("valdroidxserver");
     }
 
     public XInputStream(int clientFd, int initialCapacity) {

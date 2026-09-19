@@ -219,7 +219,7 @@ public class GameLauncher {
         }
 
         // On devices where the game's fixed load address is already taken (see the reservation in
-        // rimdroid.c), run RimWorld 1.6 through our relocatable stand-in launcher instead. No-op
+        // valdroid.c), run RimWorld 1.6 through our relocatable stand-in launcher instead. No-op
         // everywhere else, and it puts the game's own binary back if the address becomes available.
         UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
 
@@ -472,9 +472,9 @@ public class GameLauncher {
                 Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }
-        // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c
+        // The enum name maps 1:1 to the native renderer token parsed in valdroid.c
         // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
-        Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by rimdroid.c on init
+        Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by valdroid.c on init
         Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
         Os.unsetenv("RIMDROID_MG_STORAGE_EXT");
 
@@ -497,7 +497,7 @@ public class GameLauncher {
                 if (gltSo.contains("ng_gl4es")) {
                     // NG-GL4ES (Krypton): per the 2026-08-07 audit — GLES3 backend, EXPLICIT GL 3.3
                     // (an explicit LIBGL_GL also bypasses its internal Qualcomm gate). The mandatory
-                    // updateSimpleShaderConvState(0) call happens native-side (rimdroid.c, GLT block).
+                    // updateSimpleShaderConvState(0) call happens native-side (valdroid.c, GLT block).
                     Os.setenv("LIBGL_ES", "3", true);
                     Os.setenv("LIBGL_GL", "33", true);
                 } else if (gltSo.contains("mobileglues")) {
@@ -610,7 +610,7 @@ public class GameLauncher {
                 // via the rimdroid namespace search path by linkernsbypass.
                 // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
                 // Empty string = "System" option = use the phone's own Vulkan driver
-                // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
+                // (valdroid.c treats empty as NULL and skips the bundled Turnip ICD).
                 // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
                 String configuredDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
                 launchGpu = GpuInfo.query();
@@ -641,12 +641,12 @@ public class GameLauncher {
             }
             case SOFTPIPE: {
                 // CPU software renderer: Mesa softpipe via OSMesa (OFFSCREEN) + a
-                // manual blit to the surface (rimdroid.c). Bypasses GPU/Vulkan/EGL
+                // manual blit to the surface (valdroid.c). Bypasses GPU/Vulkan/EGL
                 // entirely → works on ANY device (Mali/PowerVR/old Mali where Zink
                 // fails or mis-renders), supports all texture formats incl. BC, but
                 // is slower (CPU). Unlike Zink it does NOT go through libzfa (the zfa
                 // frontend hardcodes a Zink screen and ignores GALLIUM_DRIVER), so we
-                // load libOSMesa directly. libOSMesa.so is loaded by rimdroid.c via
+                // load libOSMesa directly. libOSMesa.so is loaded by valdroid.c via
                 // the rimdroid linker namespace (so libcutils/liblog resolve); box64
                 // resolves GL entry points from that handle (g_osmesa_handle).
                 Os.setenv("BOX64_LIBGL", "libOSMesa.so", true);
@@ -662,7 +662,7 @@ public class GameLauncher {
                 // (faster). The black-large-texture bug is tracked separately (likely a
                 // softpipe mip/sampling issue). softpipe also has the full libOSMesa, so
                 // unlike ZFA we don't need the DSA/query-disable overrides either.
-                // Pure CPU → no Vulkan ICD. Empty = rimdroid.c skips the Turnip inject.
+                // Pure CPU → no Vulkan ICD. Empty = valdroid.c skips the Turnip inject.
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", "", true);
                 // Same SDL_DYNAPI interception as GL4ES/ZFA so the game's static SDL2
                 // loads our stub and box64's my2_SDL_GL_* (CreateContext / MakeCurrent

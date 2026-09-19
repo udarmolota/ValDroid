@@ -17,7 +17,7 @@ public class XOutputStream {
     private boolean closed = false;
 
     static {
-        System.loadLibrary("rimdroidxserver");
+        System.loadLibrary("valdroidxserver");
     }
 
     public XOutputStream(int clientFd, int initialCapacity) {

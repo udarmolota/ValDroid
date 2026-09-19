@@ -35,7 +35,7 @@ static const char* get_self_path() {
     const char* fname = info.dli_fname;
     // On Android with extractNativeLibs=false, .so files are mapped directly
     // from the APK, so dladdr returns a ZIP-entry path like:
-    //   /data/app/~~.../base.apk!/lib/arm64-v8a/librimdroidlinker.so
+    //   /data/app/~~.../base.apk!/lib/arm64-v8a/libvaldroidlinker.so
     // realpath() cannot resolve this; strip everything from '!' onward and
     // return just the APK path, which IS a real file realpath() can handle.
     const char* bang = strchr(fname, '!');

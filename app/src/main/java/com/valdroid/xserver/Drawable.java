@@ -24,7 +24,7 @@ public class Drawable extends XResource {
     public final Object renderLock = new Object();
 
     static {
-        System.loadLibrary("rimdroidxserver");
+        System.loadLibrary("valdroidxserver");
     }
 
     public Drawable(int id, int width, int height, Visual visual) {

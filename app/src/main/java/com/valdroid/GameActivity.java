@@ -24,7 +24,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public static final String EXTRA_INSTANCE_NAME = "instance_name";
     private boolean smokeTest;
 
-    // Native input injection (rimdroid_jni.c → box64). action 0=move,1=Ldown,2=Lup.
+    // Native input injection (valdroid_jni.c → box64). action 0=move,1=Ldown,2=Lup.
     public static native void nativeTouch(int action, int x, int y);
     public static native void nativeButton(int button, int down, int x, int y); // 1=L,2=M,3=R
     public static native void nativeScroll(int x, int y, int dy);

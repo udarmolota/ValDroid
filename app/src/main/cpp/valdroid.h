@@ -70,7 +70,7 @@ int  rd_input_poll(unsigned char* out);  /* out >= 56 bytes; returns 1 if filled
 unsigned int rd_input_get_mouse(int* x, int* y);  /* current cursor + SDL button mask */
 
 /**
- * NO-FORK entry point for the standalone exec'd binary (librimdroid_exec.so).
+ * NO-FORK entry point for the standalone exec'd binary (libvaldroid_exec.so).
  * Runs box64+RimWorld in a fresh process (clean address space, fresh binder) so
  * the GPU context can be created+used without fork.  See rimdroid.c for details.
  */

@@ -5,7 +5,7 @@
 // Vorbis decode. This is the de-risk for an on-device "generate sound pack from your own
 // game files" feature (no redistribution: the user's files, decoded locally).
 //
-// Throwaway spike: librimdroid exports one JNI method; Java passes the FSB blob path, the
+// Throwaway spike: libvaldroid exports one JNI method; Java passes the FSB blob path, the
 // libfmod.so path, an output WAV path, the clip's sample rate, and the FMOD version of that
 // lib. We dlopen/dlsym FMOD, create a NOSOUND system, CreateSound(OPENMEMORY|CREATESAMPLE),
 // lock the decoded PCM, write a WAV. Returns a human-readable status string.

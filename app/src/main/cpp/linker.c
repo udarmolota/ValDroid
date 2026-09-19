@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include "logger.h"
 #include "emulation.h"
-#include "rimdroid_globals.h"
+#include "valdroid_globals.h"
 #include "mg_caps.h"
 #include "liblinkernsbypass/android_linker_ns.h"
 

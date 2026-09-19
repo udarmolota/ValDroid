@@ -37,15 +37,15 @@ public class ValDroidApplication extends Application {
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
                 LauncherPreferences.requireSingleton().getThemeMode());
         // Load native libraries built by CMake — ONLY in the main process. The ":fmoddec"
-        // process (the offline FMOD audio decoder) must NOT load librimdroidlinker, because it
+        // process (the offline FMOD audio decoder) must NOT load libvaldroidlinker, because it
         // interposes dlopen process-wide and loads normal arm64 libs (libfmod) into box64's
         // namespace, crashing them. In :fmoddec, dlopen stays the real bionic one. See
         // FmodDecodeService / [[audio_fmod_plan]].
         String proc = getProcessName();
         boolean mainProcess = (proc == null) || proc.equals(getPackageName());
         if (mainProcess) {
-            System.loadLibrary("rimdroid");
-            System.loadLibrary("rimdroidlinker");
+            System.loadLibrary("valdroid");
+            System.loadLibrary("valdroidlinker");
         } else {
             Log.i("ValDroid", "Secondary process '" + proc + "' — skipping box64 native load");
         }

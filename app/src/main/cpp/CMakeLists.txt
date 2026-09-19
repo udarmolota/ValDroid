@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.4.1)
-project(rimdroid)
+project(valdroid)
 message(STATUS "CMake configuring at: ${CMAKE_CURRENT_SOURCE_DIR}")
 string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M:%S")
 message(STATUS "Build time: ${BUILD_TIME}")
@@ -12,15 +12,15 @@ set(CMAKE_C_STANDARD 11)
 add_subdirectory(liblinkernsbypass)
 
 # ---------------------------------------------------------------------------
-# librimdroid — surface management, renderer init, JNI bridge
+# libvaldroid — surface management, renderer init, JNI bridge
 # Equivalent to libzomdroid in Zomdroid (without GLFW / JVM parts)
 # ---------------------------------------------------------------------------
-add_library(rimdroid SHARED
-    rimdroid.c
-    rimdroid_jni.c
+add_library(valdroid SHARED
+    valdroid.c
+    valdroid_jni.c
     mg_caps.c
 )
-target_link_libraries(rimdroid
+target_link_libraries(valdroid
     log
     android
     EGL
@@ -29,12 +29,12 @@ target_link_libraries(rimdroid
 )
 
 # ---------------------------------------------------------------------------
-# librimdroidxserver.so — native side of the ported Winlator X server (LGPL-2.1,
+# libvaldroidxserver.so — native side of the ported Winlator X server (LGPL-2.1,
 # from brunodev85/winlator-app): unix-socket epoll transport (xconnector), 2D
 # drawable primitives, SysV-SHM emulation. JNI symbols renamed com_winlator ->
-# com_rimdroid. Used by the RimWorld 1.6 X11/Vulkan path (memory rimworld_16_port).
+# com_valdroid. Used by the RimWorld 1.6 X11/Vulkan path (memory rimworld_16_port).
 # ---------------------------------------------------------------------------
-add_library(rimdroidxserver SHARED
+add_library(valdroidxserver SHARED
     xserver/jni_onload.c
     xserver/xconnector_epoll.c
     xserver/xinput_stream.c
@@ -43,8 +43,8 @@ add_library(rimdroidxserver SHARED
     xserver/sysvshared_memory.c
     xserver/arrays.c
 )
-target_include_directories(rimdroidxserver PRIVATE xserver)
-target_link_libraries(rimdroidxserver
+target_include_directories(valdroidxserver PRIVATE xserver)
+target_link_libraries(valdroidxserver
     log
     android
     jnigraphics
@@ -53,7 +53,7 @@ target_link_libraries(rimdroidxserver
 # ---------------------------------------------------------------------------
 # libfmoddecode.so — STANDALONE offline FSB5-Vorbis -> PCM WAV decoder (native FMOD).
 # Deliberately does NOT link linkernsbypass/box64: it is loaded ONLY in the separate
-# ":fmoddec" process (where librimdroidlinker is NOT loaded), so its dlopen of the
+# ":fmoddec" process (where libvaldroidlinker is NOT loaded), so its dlopen of the
 # bundled libfmod.so is the real bionic dlopen in the normal app namespace — avoiding
 # the in-process crash (box64's interposed dlopen loads libfmod into a namespace that
 # lacks libc++_shared/libaaudio -> libfmod init SIGSEGVs). See fmod_decode_spike.c.
@@ -162,47 +162,47 @@ if(_box64_wrapper_srcs)
 endif()
 
 # ---------------------------------------------------------------------------
-# librimdroidlinker — box64 + linker hook + emulation
+# libvaldroidlinker — box64 + linker hook + emulation
 # Equivalent to libzomdroidlinker in Zomdroid
 # Link order: c before box64 to prevent mmap override
 # ---------------------------------------------------------------------------
-add_library(rimdroidlinker SHARED
+add_library(valdroidlinker SHARED
     linker.c
     emulation.c
 )
-target_include_directories(rimdroidlinker PRIVATE
+target_include_directories(valdroidlinker PRIVATE
     ${BOX64_ROOT}/src/include
     ${BOX64_ROOT}/src
 )
 # Must match the DYNAREC/ARM64 flags used when building box64 so box64context_t layout is identical
-target_compile_definitions(rimdroidlinker PRIVATE DYNAREC ARM64)
-target_link_libraries(rimdroidlinker PRIVATE
+target_compile_definitions(valdroidlinker PRIVATE DYNAREC ARM64)
+target_link_libraries(valdroidlinker PRIVATE
     c
     log
     $<TARGET_OBJECTS:mainobj>
     $<TARGET_OBJECTS:interpreter>
     dynarec
-    rimdroid
+    valdroid
 )
-target_link_options(rimdroidlinker PRIVATE "-Wl,-z,global")
+target_link_options(valdroidlinker PRIVATE "-Wl,-z,global")
 
 # ---------------------------------------------------------------------------
-# librimdroid_exec.so — STANDALONE EXECUTABLE (not a library).
+# libvaldroid_exec.so — STANDALONE EXECUTABLE (not a library).
 # The "lib*.so" name is the Android packaging trick: the APK build extracts it
 # into the app's nativeLibraryDir with exec permission, so the Java launcher can
 # exec() it as a fresh process.  A fresh process gives box64 a clean address
 # space (RimWorld's fixed 0x021a9000 free, no ART heap → NO fork needed) and a
 # fresh binder ProcessState → GPU context can be created+used without fork.
-# It links librimdroid.so (which has rimdroid_run_standalone + the launch logic;
-# box64 itself is dlopen'd at runtime via librimdroidlinker.so, same as the JNI
+# It links libvaldroid.so (which has rimdroid_run_standalone + the launch logic;
+# box64 itself is dlopen'd at runtime via libvaldroidlinker.so, same as the JNI
 # path).  Android NDK builds executables as PIE by default.
 # ---------------------------------------------------------------------------
-add_executable(rimdroid_exec rimdroid_main.c)
-set_target_properties(rimdroid_exec PROPERTIES
+add_executable(valdroid_exec valdroid_main.c)
+set_target_properties(valdroid_exec PROPERTIES
     PREFIX "lib"
     SUFFIX ".so"
-    OUTPUT_NAME "rimdroid_exec")
-target_link_libraries(rimdroid_exec
-    rimdroid
+    OUTPUT_NAME "valdroid_exec")
+target_link_libraries(valdroid_exec
+    valdroid
     log
     android)

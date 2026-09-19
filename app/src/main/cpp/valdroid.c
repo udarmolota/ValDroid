@@ -24,8 +24,8 @@
 #include <stdio.h>
 #include <sys/syscall.h>
 
-#include "rimdroid_globals.h"
-#include "rimdroid.h"
+#include "valdroid_globals.h"
+#include "valdroid.h"
 #include "mg_caps.h"
 #include "android_linker_ns.h"
 #include "logger.h"
@@ -418,8 +418,8 @@ int rimdroid_osmesa_smoketest(const char* osmesa_lib_path) {
 // to the ANativeWindow. These globals/functions mirror the ZFA ones: box64
 // (wrappedsdl2.c) weak-references g_osmesa_context (non-NULL ⇒ softpipe active),
 // g_osmesa_handle (GL proc source), rimdroid_osmesa_make_current and
-// rimdroid_osmesa_swap. Default visibility (librimdroid is built without
-// -fvisibility=hidden) so librimdroidlinker.so resolves them at link time.
+// rimdroid_osmesa_swap. Default visibility (libvaldroid is built without
+// -fvisibility=hidden) so libvaldroidlinker.so resolves them at link time.
 void* g_osmesa_handle  = NULL;   // libOSMesa.so dlopen handle (box64 resolves GL procs from it)
 void* g_osmesa_context = NULL;   // OSMesaCreateContext* — non-NULL selects the softpipe path
 static void* g_osmesa_buffer = NULL;        // persistent RGBA8888 CPU render target
@@ -1503,10 +1503,10 @@ static int init_rimdroid_namespace(const char* ld_library_path) {
 
 static int load_linker_hook() {
     void* rimdroid_linker = linkernsbypass_namespace_dlopen(
-        "librimdroidlinker.so", RTLD_LOCAL, rimdroid_ns);
+        "libvaldroidlinker.so", RTLD_LOCAL, rimdroid_ns);
 
     if (!rimdroid_linker) {
-        LOGE("Failed to load librimdroidlinker.so: %s", dlerror());
+        LOGE("Failed to load libvaldroidlinker.so: %s", dlerror());
         return -1;
     }
 
@@ -1521,7 +1521,7 @@ static int load_linker_hook() {
 
     if (!rimdroid_linker_init || !rimdroid_linker_set_proc_addrs ||
         !rimdroid_linker_set_vulkan_loader_handle || !rimdroid_linker_set_vulkan_driver_handle) {
-        LOGE("Failed to locate symbols in librimdroidlinker.so");
+        LOGE("Failed to locate symbols in libvaldroidlinker.so");
         return -1;
     }
 
@@ -1567,9 +1567,9 @@ static int load_linker_hook() {
 // ---- ELF launch via box64 ---------------------------------------------------
 
 static void launch_rimworld_elf(const char* game_dir_path, int argc, const char** argv) {
-    void* linker = dlopen("librimdroidlinker.so", RTLD_NOLOAD);
+    void* linker = dlopen("libvaldroidlinker.so", RTLD_NOLOAD);
     if (!linker) {
-        LOGE("librimdroidlinker.so not loaded when trying to run ELF");
+        LOGE("libvaldroidlinker.so not loaded when trying to run ELF");
         return;
     }
 

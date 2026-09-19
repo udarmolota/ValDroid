@@ -20,7 +20,7 @@ public class XConnectorEpoll {
     private long nativePtr;
 
     static {
-        System.loadLibrary("rimdroidxserver");
+        System.loadLibrary("valdroidxserver");
     }
 
     public XConnectorEpoll(UnixSocketConfig socketConfig, ConnectionHandler connectionHandler, RequestHandler requestHandler) {

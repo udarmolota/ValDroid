@@ -13,7 +13,7 @@ import java.io.FileWriter;
 /**
  * SPIKE: runs the offline FMOD FSB5-Vorbis -> PCM WAV decode in a SEPARATE process
  * ({@code android:process=":fmoddec"} in the manifest) that does NOT load
- * librimdroidlinker. In that process dlopen is the real bionic one, so the bundled
+ * libvaldroidlinker. In that process dlopen is the real bionic one, so the bundled
  * native libfmod.so loads in the normal app namespace (with libc++_shared/libaaudio)
  * instead of box64's namespace — fixing the in-process load crash.
  *

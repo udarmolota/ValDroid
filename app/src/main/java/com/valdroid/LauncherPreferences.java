@@ -11,7 +11,7 @@ import java.util.List;
 
 public class LauncherPreferences {
 
-    // Must match names used in rimdroid.c / rimdroid_globals.h
+    // Must match names used in valdroid.c / valdroid_globals.h
     public enum Renderer {
         GL4ES("libGL.so.1"),
         ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window (GPU, Vulkan)
@@ -20,7 +20,7 @@ public class LauncherPreferences {
         // MobileGlues: desktop GL 4.0 translated to the phone's own GLES 3.2 driver — hardware
         // rendering with ZERO Vulkan involved. First full RimWorld 1.5 session 2026-08-09 (S25,
         // 62 fps single-thread, see memory gl_translator_smoke). Launch-wise it is the GL4ES/EGL
-        // plumbing with libmobileglues.so; GameLauncher maps it there and rimdroid.c never sees
+        // plumbing with libmobileglues.so; GameLauncher maps it there and valdroid.c never sees
         // this enum name (it receives the GL4ES token).
         MOBILEGLUES("libGL.so.1");
 
