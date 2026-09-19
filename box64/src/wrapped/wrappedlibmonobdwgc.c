@@ -1016,16 +1016,27 @@ EXPORT void my_mono_profiler_set_coverage_filter_callback(x64emu_t* emu, void* h
  * the calculation functions. One state is used at a time.
  */
 static uintptr_t rd_cb_liveness_register;
-static uintptr_t rd_cb_liveness_realloc;
 
 static void rd_cb_liveness_register_thunk(void** array, int size, void* user_data)
 {
     RunFunctionFmt(rd_cb_liveness_register, "pip", array, size, user_data);
 }
 
-static void* rd_cb_liveness_realloc_thunk(void* ptr, int size, void* user_data)
+// Mono uses this callback only for its own 8 KB liveness blocks, which it frees again through the same
+// callback with size 0; the engine never sees them. Unity 6's x86 allocator behind the guest callback tried to
+// reserve ~252 GB of address space from Mono's worker threads, failed on the 39-bit Android address space and
+// returned NULL, which Mono writes through (block_array_push_back). A native allocator keeps the engine out of
+// this path entirely and avoids an emulated call per block.
+static void* rd_liveness_realloc_native(void* ptr, int size, void* user_data)
 {
-    return (void*)RunFunctionFmt(rd_cb_liveness_realloc, "pip", ptr, size, user_data);
+    (void)user_data;
+    if (size <= 0) {
+        free(ptr);
+        return NULL;
+    }
+    void* r = realloc(ptr, (size_t)size);
+    if (!r) printf_log(LOG_NONE, "[RD-MONO] liveness block allocation of %d bytes failed\n", size);
+    return r;
 }
 
 EXPORT void* my_mono_unity_liveness_allocate_struct(x64emu_t* emu, void* filter, uint32_t max_count,
@@ -1037,12 +1048,9 @@ EXPORT void* my_mono_unity_liveness_allocate_struct(x64emu_t* emu, void* filter,
         rd_cb_liveness_register = (uintptr_t)callback;
         native_callback = rd_cb_liveness_register_thunk;
     }
-    void* native_realloc = reallocate ? GetNativeFnc((uintptr_t)reallocate) : NULL;
-    if (reallocate && !native_realloc) {
-        rd_cb_liveness_realloc = (uintptr_t)reallocate;
-        native_realloc = rd_cb_liveness_realloc_thunk;
-    }
-    return my->mono_unity_liveness_allocate_struct(filter, max_count, native_callback, user_data, native_realloc);
+    (void)reallocate;   // the engine's allocator is not needed for Mono-internal blocks, see above
+    return my->mono_unity_liveness_allocate_struct(filter, max_count, native_callback, user_data,
+                                                   rd_liveness_realloc_native);
 }
 
 // unitytls is a table of x86 function pointers used by Mono's TLS provider; not needed to reach the menu.
