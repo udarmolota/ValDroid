@@ -386,9 +386,9 @@ public class SettingsFragment extends Fragment {
         final int sLong  = Math.max(bounds.width(), bounds.height());   // landscape width
         final int sShort = Math.min(bounds.width(), bounds.height());   // landscape height = native render height
         final int MIN = LauncherPreferences.minRenderScalePercent(sLong, sShort);
-        final int MID = Math.max(MIN + 1, Math.min(99, (MIN + 100) / 2));
         java.util.LinkedHashSet<Integer> pctSet = new java.util.LinkedHashSet<>();
-        pctSet.add(MIN); pctSet.add(MID); pctSet.add(100);
+        pctSet.add(MIN); pctSet.add(100);
+        for (int p : new int[]{ 60, 72, 85 }) if (p > MIN) pctSet.add(p);   // finer steps for the GPU/CPU balance
         final java.util.List<Integer> pcts = new java.util.ArrayList<>(pctSet);
         java.util.Collections.sort(pcts);   // ascending; displayed native (high) → floor (low)
 

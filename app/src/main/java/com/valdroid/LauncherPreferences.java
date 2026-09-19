@@ -201,14 +201,16 @@ public class LauncherPreferences {
     public float getRenderScale() { return getRenderScalePercent() / 100f; }
 
     /**
-     * Lowest render-scale percent that still yields a &gt;=1280x720 internal resolution
+     * Lowest render-scale percent that still yields a &gt;=960x540 internal resolution
      * for the given physical surface, so high-res phones can scale further down than
      * low-res ones. Pass landscape dimensions (the larger value as width). Clamped to
      * [RENDER_SCALE_ABS_MIN, 100].
      */
     public static int minRenderScalePercent(int surfaceW, int surfaceH) {
-        if (surfaceW <= 0 || surfaceH <= 0) return 67;   // safe fallback (1080p floor)
-        double need = Math.max(1280.0 / surfaceW, 720.0 / surfaceH);
+        // Valheim scales its UI to any resolution; the old 1280x720 floor was RimWorld's UI minimum.
+        // Floor at 960x540 so the render scale can go well below 72% on 1080p-class panels.
+        if (surfaceW <= 0 || surfaceH <= 0) return 50;   // safe fallback (1080p floor)
+        double need = Math.max(960.0 / surfaceW, 540.0 / surfaceH);
         int pct = (int) Math.ceil(need * 100.0);
         return Math.max(RENDER_SCALE_ABS_MIN, Math.min(100, pct));
     }
