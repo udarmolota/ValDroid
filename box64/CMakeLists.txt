@@ -65,10 +65,13 @@ endif()
 if(TERMUX OR ANDROID)
     # [RD-O1-BISECT 2026-06-21] global -O1; dynarec targets forced back to -O0 below (~line 1272)
     # to test if the -O1 Mono miscompile lives in the dynarec. REVERT all to -O0 after the bisect.
-    set(CMAKE_C_FLAGS_RELEASE "-O1")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O1")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O1 -g")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O1 -g")
+    # [VD 2026-09-19] Valheim runs its managed code on native ARM64 Mono, so the emulated-Mono
+    # miscompile no longer applies: full -O2 for the runtime, and the dynarec too except the one
+    # file the bisection pinned (dynarec_arm64_00.c stays -O0, see the dynarec block below).
+    set(CMAKE_C_FLAGS_RELEASE "-O2")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif()
 
 if(LARCH64)
@@ -1293,11 +1296,11 @@ if(DYNAREC)
     # box64 runtime (helpers/mem/flags) at -O1 carries the win: 65-70 FPS (vs 42-50 all-O0), beats GameHub.
     # Verified stable on S25U. (Root of the -O1 breakage = dynarec_arm64_00.c; keeping all dynarec -O0 is the
     # safe superset. A future precise fix = only that one file -O0.)
-    target_compile_options(dynarec_native PRIVATE -O0)
-    target_compile_options(native_pass0 PRIVATE -O0)
-    target_compile_options(native_pass1 PRIVATE -O0)
-    target_compile_options(native_pass2 PRIVATE -O0)
-    target_compile_options(native_pass3 PRIVATE -O0)
+    # [VD 2026-09-19] That precise fix: the dynarec now takes the global -O2 and only dynarec_arm64_00.c
+    # (compiled into every native_pass* target) is pinned to -O0. Source properties win over the
+    # target-level options, so the per-file -O0 is the last one on the command line.
+    set_source_files_properties("${BOX64_ROOT}/src/dynarec/arm64/dynarec_arm64_00.c"
+        PROPERTIES COMPILE_OPTIONS "${CFLAGS};-O0")
     add_dependencies(native_pass0 WRAPPERS)
     add_dependencies(native_pass1 WRAPPERS)
     add_dependencies(native_pass2 WRAPPERS)
