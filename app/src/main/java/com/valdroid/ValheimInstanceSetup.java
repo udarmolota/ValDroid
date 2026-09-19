@@ -153,9 +153,19 @@ public final class ValheimInstanceSetup {
         File dir = new File(instanceDir, GameDescriptor.VALHEIM.dataDirectory() + "/Plugins/steam_settings");
         dir.mkdirs();
         writeIfMissing(new File(dir, "steam_appid.txt"), GameDescriptor.VALHEIM.steamAppId() + "\n");
-        // No sockets, no LAN broadcast, Steam "offline": the game is single-player here.
-        writeIfMissing(new File(dir, "configs.main.ini"),
+        // No sockets, no LAN broadcast, Steam "offline": the game is single-player here. steam_deck makes
+        // the emulator answer IsSteamRunningOnSteamDeck() = true, which is what Valheim keys its Steam
+        // Deck platform config on (the ARM64 stub for native Mono answers the same). Added to an
+        // existing ini too, since instances set up before this key existed keep their file.
+        File mainIni = new File(dir, "configs.main.ini");
+        writeIfMissing(mainIni,
                 "[main::connectivity]\ndisable_networking=1\ndisable_lan_only=1\noffline=1\n");
+        String ini = new String(java.nio.file.Files.readAllBytes(mainIni.toPath()), StandardCharsets.UTF_8);
+        if (!ini.contains("steam_deck=")) {
+            java.nio.file.Files.write(mainIni.toPath(),
+                    (ini + (ini.endsWith("\n") ? "" : "\n") + "[main::general]\nsteam_deck=1\n")
+                            .getBytes(StandardCharsets.UTF_8));
+        }
         writeIfMissing(new File(dir, "configs.user.ini"),
                 "[user::general]\naccount_name=Viking\nlanguage=english\n");
     }
