@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- ============================ VIDEO (renderer + driver) ============================ -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_video"
+            android:layout_marginBottom="6dp" />
+
+        <!-- Renderer chooser, back from the dead (2026-08-09): the A11/Adreno-640 hang proved
+             SOFTPIPE (CPU, no Vulkan at all) is the only path for devices whose Vulkan driver
+             breaks zink — a player got RimWorld's loading screen with it on a phone where zink
+             hangs forever. Known defect being debugged: Unity's scene mostly misses FBO 0
+             (pale/dark picture) — see SettingsFragment for state. GL4ES/ZINK_OSMESA stay gone. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/renderer"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_renderer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+          <RadioButton
+              android:id="@+id/rb_zink_zfa"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/zink_zfa_label" />
+
+          <RadioButton
+              android:id="@+id/rb_mobileglues"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/mobileglues_label" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vulkan_driver"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vulkan_driver_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/spinner_vulkan_driver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp" />
+
+        <Button
+            android:id="@+id/btn_recommend_driver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/driver_recommend"
+            android:textSize="14dp" />
+
+        <!-- Small text link to the device-global custom-driver import screen. -->
+        <TextView
+            android:id="@+id/tv_upload_driver"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/upload_custom_driver"
+            android:textColor="?attr/colorPrimary"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:clickable="true"
+            android:focusable="true" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ RESOLUTION ============================ -->
+    <!-- Render resolution (re-enabled 2026-06-28; the "flicker" hold reason was the missing-mods grey, not a render bug) -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/render_res_label"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/render_res_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_render_res"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ COMPRESSION ============================ -->
+    <!-- Texture quality: Half = the GL-layer shim halves mipped textures (4x less texture
+         memory) — for DLC-heavy loads and weaker phones. The chooser sits ABOVE its
+         explanatory text so the choice reads first and the "why" follows. -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/texq_label"
+            android:layout_marginBottom="6dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_texq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/rb_texq_no"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/texq_no" />
+
+            <RadioButton
+                android:id="@+id/rb_texq_low"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/texq_low" />
+
+            <RadioButton
+                android:id="@+id/rb_texq_ultra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/texq_ultra" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/texq_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ FRAME RATE ============================ -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_fps"
+            android:layout_marginBottom="6dp" />
+
+        <Switch
+            android:id="@+id/sw_show_fps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:text="@string/show_fps_label" />
+
+        <!-- FPS cap: even out the frame-rate swings and free CPU for the simulation. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_cap_label"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_cap_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_fps_cap"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rb_fps_30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/fps_cap_30" />
+
+            <RadioButton
+                android:id="@+id/rb_fps_60"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/fps_cap_60" />
+
+            <RadioButton
+                android:id="@+id/rb_fps_off"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/fps_cap_off" />
+        </RadioGroup>
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ CONTROLS ============================ -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_controls"
+            android:layout_marginBottom="6dp" />
+
+        <Button
+            android:id="@+id/btn_edit_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/edit_controls" />
+
+        <Button
+            android:id="@+id/btn_gamepad_mapper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/gamepad_mapper_settings_btn" />
+
+        <Switch
+            android:id="@+id/sw_haptic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
+            android:text="@string/haptic_label" />
+
+        <Switch
+            android:id="@+id/sw_drag_pan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp"
+            android:text="@string/drag_pan_label" />
+
+        <Switch
+            android:id="@+id/sw_reverse_landscape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp"
+            android:text="@string/reverse_landscape_label" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:alpha="0.7"
+            android:text="@string/reverse_landscape_hint" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- SOUND card removed: audio is always on (raw Vorbis works since the box64 qsort_r fix), so
+         there's no toggle and no on-device pack generation to expose. -->
+
+    <!-- ============================ ADVANCED ============================ -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <!-- The whole Advanced card is collapsible: this header toggles ll_advanced_content (collapsed
+             by default, so testers stop wandering in). Toggle + arrow flip wired in SettingsFragment. -->
+        <TextView
+            android:id="@+id/tv_advanced_header"
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/card_advanced"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <LinearLayout
+            android:id="@+id/ll_advanced_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+          <Switch
+              android:id="@+id/sw_debug"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="12dp"
+              android:textSize="14sp"
+              android:text="@string/debug_mode" />
+
+          <!-- Environment variables sits ABOVE Compatibility mode, and its field above its own
+               description: it's the only text input here, and at the bottom of the last card the
+               soft keyboard covered it (typing blind). Everything below it is push-down padding. -->
+          <TextView
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:text="@string/env_section_header"
+              android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+          <EditText
+              android:id="@+id/et_env_vars"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="4dp"
+              android:fontFamily="monospace"
+              android:textSize="13sp"
+              android:inputType="textNoSuggestions|textMultiLine|textVisiblePassword"
+              android:hint="@string/env_vars_hint_example" />
+
+          <TextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/env_vars_hint"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:layout_marginTop="4dp"
+              android:layout_marginBottom="4dp" />
+
+          <Switch
+              android:id="@+id/sw_compat_mode"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:textSize="14sp"
+              android:text="@string/compat_mode_label" />
+
+          <TextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="2dp"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:alpha="0.7"
+              android:text="@string/compat_mode_hint" />
+
+          <!-- Native ARM64 Mono (experimental). Shown by SettingsFragment only for a RimWorld 1.6
+               instance when the runtime is packaged in this APK. -->
+          <Switch
+              android:id="@+id/sw_native_mono"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:textSize="14sp"
+              android:visibility="gone"
+              android:text="@string/native_mono_label" />
+
+          <TextView
+              android:id="@+id/tv_native_mono_hint"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="2dp"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:alpha="0.7"
+              android:visibility="gone"
+              android:text="@string/native_mono_hint" />
+
+          <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
+               them (set GONE in code). Do not remove. -->
+          <Switch
+              android:id="@+id/sw_strict_barriers"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/strict_barriers"
+              android:visibility="gone" />
+
+          <Button
+              android:id="@+id/btn_smoketest"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/smoketest_label"
+              android:visibility="gone" />
+
+          <Button
+              android:id="@+id/btn_steam_dl"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/steam_dl_label"
+              android:visibility="gone" />
+
+          <TextView
+              android:id="@+id/tv_steam_dl_status"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:textIsSelectable="true"
+              android:visibility="gone"
+              android:textSize="12sp" />
+
+          <!-- Render scale HIDDEN (no-op while PIN_GAME_PREFS is disabled); ids kept, code still binds. -->
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_render_scale_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Render scale: 60%"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+            <SeekBar
+                android:id="@+id/sb_render_scale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="33"
+                android:progress="5" />
+          </LinearLayout>
+        </LinearLayout>
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+  </LinearLayout>
+</ScrollView>

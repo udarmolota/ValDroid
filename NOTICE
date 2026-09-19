@@ -1,0 +1,113 @@
+RimDroid
+Copyright (c) 2026 udarmolota
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See the LICENSE file for the full GPL-3.0 text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+RimDroid is an unofficial, community-developed compatibility launcher for running
+the Linux x86_64 version of RimWorld on ARM64 Android devices.
+
+Using RimDroid requires a complete Linux installation of RimWorld and any DLC the
+user chooses to enable. RimWorld and its related names and trademarks belong to
+Ludeon Studios Inc.
+
+"Portions of the materials used to create this content/mod are trademarks and/or
+copyrighted works of Ludeon Studios Inc. All rights reserved by Ludeon. This
+content/mod is not official and is not endorsed by Ludeon."
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+RimDroid's own source code is licensed under GPL-3.0 unless a source file states
+otherwise. RimDroid also bundles and/or uses third-party components under their
+respective open-source or proprietary licenses.
+
+Third-party components remain the property of their respective copyright holders
+and are not relicensed under GPL-3.0 by their inclusion in RimDroid.
+
+Per-file exception (MIT, not GPL-3.0): the anonymous Steam Workshop mod-download
+mechanism — app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
+app/src/main/java/com/rimdroid/SteamAnonModSpike.java (original work by udarmolota) —
+is licensed under the MIT License. The author may reuse it in her other projects
+(e.g. Zomdroid) and others may reuse it too, provided the copyright notice is preserved.
+MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of RimDroid.
+
+--- Native (bundled .so / linked / git submodules) ---
+
+box64                  MIT License          Copyright (c) 2020 ptitSeb
+                       (RimDroid uses a fork: github.com/udarmolota/rimdroid-box64,
+                        which remains MIT, same as upstream.)
+
+liblinkernsbypass      BSD 2-Clause License Copyright (c) 2021 Billy Laws
+
+Mesa (libOSMesa,       MIT License          Copyright (c) The Mesa 3D Graphics
+libzfa / Zink,                              Library contributors
+softpipe, freedreno)
+
+SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
+                       (statically linked inside the user-supplied game)
+
+MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
+                       https://github.com/MobileGL-Dev/MobileGlues
+
+Mono (Unity fork)      MIT License          Copyright (c) .NET Foundation and Contributors;
+(libmonobdwgc-2.0.so,                       fork by Unity Technologies
+ libmono-native.so)                         github.com/Unity-Technologies/mono, commit c11bc9adba,
+                                            built for Android ARM64 by RimDroid
+                       Includes the Boehm-Demers-Weiser garbage collector (MIT-style license),
+                       Copyright (c) 1988-1989 Hans-J. Boehm, Alan J. Demers; 1991-1995 Xerox
+                       Corporation; 1996-1999 Silicon Graphics; 1999-2001 Hewlett-Packard.
+
+libsteam_api.so        RimDroid original work (GPL-3.0): an ARM64 stub that only exports the
+(arm64 stub)           Steamworks function names and returns 0; contains no Valve code.
+
+--- Proprietary runtime components ---
+
+FMOD Engine runtimes   FMOD EULA            Copyright (c) Firelight Technologies Pty Ltd.
+Versions: 2.02.06, 2.02.24, and 2.03.09
+Used by RimDroid's on-device audio decoding path.
+Audio engine: FMOD by Firelight Technologies Pty Ltd.
+https://www.fmod.com/legal
+
+Steamworks API runtime (libsteam_api.so)
+Copyright (c) Valve Corporation.
+Valve proprietary software; not covered by RimDroid's GPL-3.0 license.
+
+--- Java / Gradle dependencies ---
+
+AndroidX libraries     Apache License 2.0   Copyright (c) The Android Open Source Project
+Material Components     Apache License 2.0   Copyright (c) Google LLC
+Apache Commons Compress Apache License 2.0   Copyright (c) The Apache Software Foundation
+Gson                   Apache License 2.0   Copyright (c) Google LLC
+protobuf-java          BSD 3-Clause License Copyright (c) Google LLC
+XZ for Java            Public Domain (0BSD)  by Lasse Collin and contributors
+Bouncy Castle (bcprov) Bouncy Castle License Copyright (c) The Legion of the Bouncy
+                       (MIT-style)           Castle Inc.
+JavaSteam              MIT License          Copyright (c) Lossy / JavaSteam contributors
+javasteam-depotdownloader  MIT License      Copyright (c) JavaSteam contributors
+zstd-jni               BSD 2-Clause License Copyright (c) 2015-2024 Luben Karavelov
+
+--------------------------------------------------------------------------------
+ICONS
+--------------------------------------------------------------------------------
+
+Donate icon (app/src/main/res/drawable/ic_donate.xml): "Donate" by Edward Boatman
+from the Noun Project, licensed under CC BY 3.0.
+https://thenounproject.com/icon/donate-285/
+
+================================================================================
+Each third-party component remains subject to its own license terms. The links
+above identify the applicable upstream projects and terms; components distributed
+in binary form remain subject to any notice and redistribution requirements of
+their respective licenses.
+
+The presence of a component in this list does not imply endorsement of RimDroid
+by its copyright holder.
+================================================================================

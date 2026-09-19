@@ -1,0 +1,24 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Local scratch / debugging artifacts (not part of the project)
+_*
+*_INSTRUCTIONS.md
+AUDIO_FMOD_*.md
+
+# Unused duplicate checkout of box64 (the APK builds the root-level box64/, see app/src/main/cpp/box64_UNUSED_README.txt)
+app/src/main/cpp/box64/

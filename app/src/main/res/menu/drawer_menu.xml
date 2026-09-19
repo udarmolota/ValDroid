@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 1) Set up an instance: add it, pick a GPU driver, install mods/DLC -->
+    <group android:id="@+id/group_game" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_install_instance"
+            android:icon="@drawable/mt_icon_add"
+            android:title="@string/nav_new_instance" />
+        <item
+            android:id="@+id/action_custom_driver"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_custom_driver" />
+        <item
+            android:id="@+id/action_install_content"
+            android:icon="@drawable/mt_icon_mods"
+            android:title="@string/nav_install_content" />
+    </group>
+
+    <!-- 2) Get the game from a store you own it on (Steam, GOG) -->
+    <group android:id="@+id/group_store" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_download_game"
+            android:icon="@drawable/ic_steam"
+            android:title="@string/nav_download_game" />
+        <item
+            android:id="@+id/action_cloud_saves"
+            android:icon="@drawable/mt_icon_save"
+            android:title="@string/nav_cloud_saves" />
+        <item
+            android:id="@+id/action_gog_login"
+            android:icon="@drawable/ic_gog"
+            android:title="@string/nav_gog_login" />
+    </group>
+
+    <!-- 3) Settings + data transfer (saves / settings / controls layout) -->
+    <group android:id="@+id/group_data" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_settings"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_settings" />
+        <item
+            android:id="@+id/action_export_saves"
+            android:icon="@drawable/mt_icon_save"
+            android:title="@string/nav_export_saves" />
+        <item
+            android:id="@+id/action_import_saves"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_saves" />
+        <item
+            android:id="@+id/action_export_settings"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_export_settings" />
+        <item
+            android:id="@+id/action_import_settings"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_settings" />
+        <item
+            android:id="@+id/action_export_layout"
+            android:icon="@drawable/mt_icon_folder"
+            android:title="@string/nav_export_layout" />
+        <item
+            android:id="@+id/action_import_layout"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_layout" />
+    </group>
+
+    <!-- 4) Diagnostics -->
+    <group android:id="@+id/group_files" android:checkableBehavior="none">
+        <!-- "Manage storage" lives on each instance card's own menu (menu_game_instance.xml), where
+             it acts on that instance — a global duplicate only made this drawer longer. -->
+        <item
+            android:id="@+id/action_export_logs"
+            android:icon="@drawable/mt_icon_logfile"
+            android:title="@string/nav_export_logs" />
+        <item
+            android:id="@+id/action_bug_report"
+            android:icon="@drawable/ic_bug_report"
+            android:title="@string/nav_bug_report" />
+    </group>
+
+    <!-- The four external links (GitHub / X / Reddit / Support) are a row of icons in the drawer
+         HEADER (nav_header_links.xml), not menu rows, to keep this list short. -->
+
+</menu>

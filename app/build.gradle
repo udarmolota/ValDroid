@@ -1,0 +1,112 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.rimdroid'
+    compileSdk 35
+    // Pin the exact NDK the working build used; r27 supports 16 KB page size when
+    // opted in via ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES below (Android 15+ requirement).
+    ndkVersion "27.0.12077973"
+
+    defaultConfig {
+        applicationId "com.valdroid"
+        minSdk = 30
+        targetSdk = 35
+        versionCode 27
+        versionName "0.2.7"
+        // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
+        // native multidex, but the build still needs this flag to split the dex.
+        multiDexEnabled true
+
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+                // ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON => link with
+                // -Wl,-z,max-page-size=16384 so our libs load on 16 KB-page devices.
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+            }
+        }
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true   // expose BuildConfig.VERSION_NAME/CODE (used in the launch-config log)
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Test-cycle convenience: debug-signed release so adb install -r replaces the
+            // debug build without wiping app data. Real distribution re-signs anyway.
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            jniDebuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            // versionName above is the single source of truth for local and CI filenames.
+            outputFileName = "valdroid-${variant.buildType.name}-${variant.versionName}.apk"
+        }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+
+    // FMOD Android Java classes (org.fmod.AudioDevice / FMOD / MediaCodec). Required on the classpath
+    // so the bundled native libfmod.so's JNI_OnLoad can FindClass("org/fmod/AudioDevice") — without it
+    // System.load(libfmod) aborts with ClassNotFoundException. Used by the offline FSB5 audio decoder
+    // (FmodDecodeService, ":fmoddec" process). From the shared Zomdroid FMOD bundle.
+    implementation files('libs/fmod.jar')
+
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.activity:activity:1.8.2'
+    implementation 'androidx.fragment:fragment:1.6.2'
+    implementation 'androidx.navigation:navigation-fragment:2.7.6'
+    implementation 'androidx.navigation:navigation-ui:2.7.6'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'org.apache.commons:commons-compress:1.26.1'
+    implementation 'commons-io:commons-io:2.15.1'   // required by commons-compress 1.26.x at runtime
+    implementation 'org.tukaani:xz:1.11'   // VZipUtil (LZMAInputStream); 1.11 = version JavaSteam 1.8.0 was built against
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // --- In-app Steam downloader SPIKE (Milestone 0) — JavaSteam (MIT, SteamKit2 port) ---
+    // Proves on-device QR/Steam-Mobile login + (later) depot download, no Termux/PC.
+    // bcprov + protobuf-java are JavaSteam's "optional" deps the consumer must add at the
+    // versions JavaSteam 1.8.0 was built against (gradle/libs.versions.toml). xz (1.9) is
+    // already above; zstd-jni is only needed for the depot-download step (add later).
+    implementation 'in.dragonbra:javasteam:1.8.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.83'      // crypto provider JavaSteam needs
+    implementation 'com.google.protobuf:protobuf-java:4.31.1'  // must match JavaSteam's protobuf
+
+    // --- Milestone 1: depot download (DepotDownloader high-level API) ---
+    // Separate Maven artifact in 1.8.0. Transitively pulls ktor-client-cio (pure-Kotlin/nio HTTP
+    // engine used for CDN chunk downloads — Android-compatible) + kotlinx-serialization + okio.
+    // The downloader is Android-aware: it REQUIRES an absolute installDirectory (else throws) and
+    // writes its .DepotDownloader/staging under it, never to the process CWD.
+    implementation 'in.dragonbra:javasteam-depotdownloader:1.8.0'
+    // VZstdUtil decompresses zstd-compressed depot chunks via com.github.luben.zstd (native .so).
+    // The @aar variant bundles jni/arm64-v8a/libzstd-jni-*.so — the desktop .jar has no Android natives.
+    implementation 'com.github.luben:zstd-jni:1.5.7-6@aar'
+}

@@ -1,0 +1,18 @@
+---
+BasedOnStyle: WebKit
+AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+ColumnLimit: 0
+IndentWidth: 4
+SortIncludes: false
+MaxEmptyLinesToKeep: 2
+IndentCaseLabels: true
+AlignConsecutiveMacros: true
+WhitespaceSensitiveMacros: ['QUOTE']
+IfMacros: ['IFX', 'IFXORNAT', 'IFX2', 'IFXA', 'IFX_PENDOR0', 'IFXX', 'IFX2X', 'IFXN', 'UFLAG_IF', 'PASS2IF', 'IF_UNALIGNED', 'IF_ALIGNED']
+UseTab: Never
+IndentPPDirectives: None
+---

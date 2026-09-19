@@ -1,0 +1,17 @@
+LIBRARY wowbox64.dll
+
+EXPORTS
+  BTCpuFlushInstructionCache2
+  BTCpuFlushInstructionCacheHeavy
+  BTCpuGetBopCode
+  BTCpuGetContext
+  BTCpuNotifyMemoryDirty
+  BTCpuNotifyMemoryFree
+  BTCpuNotifyMemoryProtect
+  BTCpuNotifyUnmapViewOfSection
+  BTCpuProcessInit
+  BTCpuResetToConsistentState
+  BTCpuSetContext
+  BTCpuSimulate
+  BTCpuThreadInit
+  __wine_get_unix_opcode

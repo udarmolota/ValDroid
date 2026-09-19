@@ -1,0 +1,72 @@
+
+#define INIT    uintptr_t sav_addr=addr
+#define FINI    \
+    dyn->isize = addr-sav_addr;         \
+    dyn->insts[ninst].x64.addr = addr;  \
+    if(ninst) dyn->insts[ninst-1].x64.size = dyn->insts[ninst].x64.addr - dyn->insts[ninst-1].x64.addr
+
+#define MESSAGE(A, ...) do {} while (0)
+#define READFLAGS(A)    \
+        dyn->insts[ninst].x64.use_flags = A; if(dyn->f!=status_none_pending) dyn->f = status_none;\
+        if(!BOX64ENV(dynarec_df) && (A)&X_PEND) dyn->insts[ninst].x64.use_flags = X_ALL; \
+        dyn->f = status_none
+#define SETFLAGS(A,B)   \
+        dyn->insts[ninst].x64.set_flags = A;    \
+        dyn->insts[ninst].x64.state_flags = (B)&~SF_DF;  \
+        dyn->f=((B)&SF_SET)?(((B)==SF_SET_NODF)?dyn->f:status_none_pending):(((B)&SF_SET_PENDING)?status_set:status_none_pending);  \
+        if(!BOX64ENV(dynarec_df)) {dyn->f=status_none; if((A)==SF_PENDING){printf_log(LOG_INFO, "Warning, some opcode use SF_PENDING, forcing deferedflags ON\n"); SET_BOX64ENV(dynarec_df, 1); }}
+#define EMIT(A)         dyn->native_size+=4
+#define JUMP(A, C)         add_jump(dyn, ninst); add_next(dyn, (uintptr_t)A); SMEND(); dyn->insts[ninst].x64.jmp = A; dyn->insts[ninst].x64.jmp_cond = C; dyn->insts[ninst].x64.jmp_insts = 0
+#define BARRIER(A)      if(A!=BARRIER_MAYBE) {fpu_purgecache(dyn, ninst, 0, x1, x2, x3, 0); dyn->insts[ninst].x64.barrier = A;} else dyn->insts[ninst].barrier_maybe = 1
+#define SET_HASCALLRET()    dyn->insts[ninst].x64.has_callret = 1
+#define NEW_INST \
+        ++dyn->size;                            \
+        dyn->insts[ninst].x64.addr = ip;        \
+        dyn->n.combined1 = dyn->n.combined2 = 0;\
+        dyn->n.swapped = 0; dyn->n.barrier = 0; \
+        dyn->insts[ninst].f_entry = dyn->f;     \
+        if(ninst) {dyn->insts[ninst-1].x64.size = dyn->insts[ninst].x64.addr - dyn->insts[ninst-1].x64.addr;}   \
+        AREFLAGSNEEDED()
+
+#define INST_EPILOG                             \
+        dyn->insts[ninst].f_exit = dyn->f;      \
+        dyn->insts[ninst].n = dyn->n;           \
+        if(dyn->insts[ninst].nat_flags_op==NAT_FLAG_OP_TOUCH && !dyn->insts[ninst].set_nat_flags)       \
+                dyn->insts[ninst].nat_flags_op=NAT_FLAG_OP_UNUSABLE;                                    \
+        dyn->insts[ninst].x64.has_next = (ok>0)?1:0;
+#define INST_NAME(name)
+#define DEFAULT                                                                                                               \
+    --dyn->size;                                                                                                              \
+    *ok = -1;                                                                                                                 \
+    if (ninst) { dyn->insts[ninst - 1].x64.size = ip - dyn->insts[ninst - 1].x64.addr; }                                      \
+    if (BOX64ENV(dynarec_log) >= LOG_INFO || dyn->need_dump || BOX64ENV(dynarec_missing) == 1)                                \
+        if (!dyn->size || BOX64ENV(dynarec_log) > LOG_INFO || dyn->need_dump) {                                               \
+            dynarec_stopped(dyn->insts[ninst].x64.addr, rex.is32bits);                                                        \
+        }
+
+
+#define FEMIT(A)        dyn->insts[ninst].nat_flags_op = dyn->insts[ninst].x64.set_flags?NAT_FLAG_OP_TOUCH:NAT_FLAG_OP_UNUSABLE
+#define IFNATIVE(A)     if(mark_natflag(dyn, ninst, A, 0))
+#define IFNATIVEN(A)    if(mark_natflag(dyn, ninst, A, 0))
+#define UFLAG_IF if(dyn->insts[ninst].x64.set_flags)
+#define UFLAG_IF2(A) if(dyn->insts[ninst].x64.set_flags A)
+#define IFX(A)  if((dyn->insts[ninst].x64.set_flags&(A)))
+#define IFX2(A, B)  if((dyn->insts[ninst].x64.set_flags&(A)) B)
+#define IFX_PENDOR0  if((dyn->insts[ninst].x64.set_flags&(X_PEND) || !dyn->insts[ninst].x64.set_flags))
+#define IFXX(A) if((dyn->insts[ninst].x64.set_flags==(A)))
+#define IFX2X(A, B) if((dyn->insts[ninst].x64.set_flags==(A) || dyn->insts[ninst].x64.set_flags==(B) || dyn->insts[ninst].x64.set_flags==((A)|(B))))
+#define IFXN(A, B)  if((dyn->insts[ninst].x64.set_flags&(A) && !(dyn->insts[ninst].x64.set_flags&(B))))
+#define IFXNATIVE(X, N)  if((dyn->insts[ninst].x64.set_flags&(X)) && mark_natflag(dyn, ninst, N, 0))
+#define GEN_INVERTED_CARRY()        dyn->insts[ninst].gen_inverted_carry = 1
+#define IFNATIVE_BEFORE(A)     if(mark_natflag(dyn, ninst, A, 1))
+#define INVERT_CARRY(A) dyn->insts[ninst].invert_carry = 1
+#define INVERT_CARRY_BEFORE(A) dyn->insts[ninst].invert_carry_before = 1
+// mark opcode as "unaligned" possible only if the current address is not marked as already unaligned
+#define IF_UNALIGNED(A) if((dyn->insts[ninst].unaligned=is_addr_unaligned(A)))
+#define IF_ALIGNED(A)   if(!(dyn->insts[ninst].unaligned=is_addr_unaligned(A)))
+
+#define NATIVE_RESTORE_X87PC()
+#define X87_CHECK_PRECISION(A)                                      \
+    do {                                                            \
+        if (dyn->need_x87check) dyn->insts[ninst].x87precision = 1; \
+    } while (0)

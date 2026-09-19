@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="launch">Запуск</string>
+    <string name="stop">Стоп</string>
+    <string name="install_instance">Установить инстанс (ZIP)…</string>
+    <string name="no_instances">Нет установленных инстансов</string>
+    <string name="choose_instance_prompt">— Выберите инстанс —</string>
+    <string name="choose_instance_first">Выберите инстанс для установки</string>
+    <string name="incomplete_game_title">Файлы игры неполные</string>
+    <string name="incomplete_game_msg">Этот инстанс не запустится — эти файлы игры отсутствуют или повреждены:\n\n%1$s\n\nОбычно это значит, что загрузка не завершилась. Скачайте игру заново с ТЕМ ЖЕ именем инстанса — загрузка продолжится с места остановки.</string>
+    <string name="delete_instance">Удалить инстанс</string>
+    <string name="more_options">Ещё</string>
+    <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
+    <string name="log">Лог</string>
+    <string name="renderer">Рендерер</string>
+    <string name="renderer_info">Сейчас RimDroid работает только через Zink ZFA.</string>
+    <string name="vulkan_driver">Vulkan-драйвер</string>
+    <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU — на устройствах не с Snapdragon выбирайте системный. Если не сработало — попробуйте другой.</string>
+    <string name="upload_custom_driver">Загрузить свой драйвер</string>
+    <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
+    <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
+    <string name="reverse_landscape_label">Зеркальная ориентация (180°)</string>
+    <string name="nav_cloud_saves">Сейвы из Steam Cloud</string>
+    <string name="cloud_saves_title">Сейвы из Steam Cloud</string>
+    <string name="cloud_saves_hint">Если ты играешь в RimWorld ещё и на ПК через Steam, твои сейвы синхронизируются в Steam Cloud — здесь их можно забрать на телефон.\n\nВход подтверждается через приложение Steam Mobile: в него нужно хотя бы раз войти и включить в нём Steam Guard. После нажатия кнопки Steam пришлёт туда запрос на подтверждение. Пароль уходит напрямую в Steam и здесь нигде не сохраняется.</string>
+    <string name="cloud_saves_user">Логин Steam</string>
+    <string name="cloud_saves_pass">Пароль Steam</string>
+    <string name="cloud_saves_instance">Скопировать сейвы в</string>
+    <string name="cloud_saves_pull">Забрать сейвы из Steam Cloud</string>
+    <string name="cloud_saves_push">Отправить сейвы в Steam Cloud</string>
+    <string name="cloud_saves_pull_note">Сначала скачивается всё, что есть в облаке, потом копируется в этот инстанс. Если сейв с таким же именем уже здесь — ты выберешь, какой оставить.</string>
+    <string name="cloud_saves_push_note">Сейвы, которых в облаке ещё нет, уходят сразу. Те, что заменили бы уже лежащие там, сначала показываются списком — решишь сама. Перед отправкой закрой игру.</string>
+    <string name="cloud_saves_log_connecting">Подключаюсь к Steam…</string>
+    <string name="cloud_saves_log_placed">Скопирован: %1$s</string>
+    <string name="cloud_saves_log_kept">Оставлен свой: %1$s</string>
+    <string name="cloud_saves_place_done">Готово: скопировано %1$d, оставлено без изменений %2$d.</string>
+    <string name="cloud_saves_clash_title">%1$s уже есть</string>
+    <string name="cloud_saves_clash_msg">На телефоне: %1$s
+В облаке: %2$s
+
+%3$s</string>
+    <string name="cloud_saves_clash_cloud_newer">Облачная копия новее.</string>
+    <string name="cloud_saves_clash_local_newer">Копия на телефоне новее.</string>
+    <string name="cloud_saves_clash_replace">Взять из облака</string>
+    <string name="cloud_saves_clash_keep">Оставить свой</string>
+    <string name="cloud_saves_clash_both">Оставить оба</string>
+    <string name="cloud_saves_clash_in_cloud">в облаке: %1$s</string>
+    <string name="cloud_saves_clash_on_phone">на телефоне: %1$s</string>
+    <string name="cloud_saves_from_cloud_suffix">(из облака)</string>
+    <string name="cloud_saves_push_replace">Заменить</string>
+    <string name="cloud_saves_push_only_new">Только новые</string>
+    <string name="cloud_saves_dir_pull">Из облака</string>
+    <string name="cloud_saves_dir_push">В облако</string>
+    <string name="cloud_saves_keepalive">Синхронизация сейвов со Steam — можно переключиться в Steam Mobile для подтверждения</string>
+    <string name="cloud_saves_push_confirm_title">Отправить сейвы в облако?</string>
+    <string name="cloud_saves_push_confirm_replace">Эти сейвы уже есть в облаке и будут ЗАМЕНЕНЫ копией с телефона — на ПК загрузится именно эта версия:\n\n• %1$s\n\nУбедись, что игра закрыта на обоих устройствах.</string>
+    <string name="cloud_saves_no_instances">Инстансов пока нет</string>
+    <string name="cloud_saves_need_login">Введи логин и пароль Steam</string>
+    <string name="cloud_saves_code_title">Введи код Steam Guard</string>
+    <string name="cloud_saves_code_wrong">Код неверный — попробуй ещё раз</string>
+    <string name="cloud_saves_code">Код Steam Guard</string>
+    <string name="cloud_saves_code_email">Код отправлен на %1$s</string>
+    <string name="reverse_landscape_hint">Разворачивает картинку в противоположную сторону — тоже фиксированно, без свободного вращения. Включи, если геймпад или держатель фиксирует телефон «вверх ногами».</string>
+    <string name="compat_mode_label">Режим совместимости</string>
+    <string name="compat_mode_hint">Включи, если игра не запускается (чёрный экран / зависает на загрузке). Чуть медленнее, но помогает запуститься на некоторых устройствах.</string>
+    <string name="native_mono_label">Нативный ARM64 Mono (экспериментально)</string>
+    <string name="native_mono_hint">Код самой игры выполняется напрямую, без эмуляции x86. Обычно быстрее и плавнее на высокой скорости игры, особенно в больших колониях. Только RimWorld 1.6. Экспериментально: сначала сделай копию сохранений и выключи, если что-то сломается.</string>
+    <string name="native_mono_off_msg">Игра будет работать в прежнем, более медленном режиме. Если вы выключили из-за проблемы, пришлите нам логи — это поможет её исправить.</string>
+    <string name="native_mono_crash_title">Игра не запустилась</string>
+    <string name="native_mono_crash_msg">RimWorld дважды подряд вылетел при запуске с нативным ARM64 Mono. Выключить его и запустить игру как обычно? Включить обратно можно в настройках этого инстанса.</string>
+    <string name="native_mono_crash_off">Выключить и играть</string>
+    <string name="native_mono_crash_keep">Оставить включённым</string>
+    <string name="haptic_label">Вибрация при нажатии кнопок</string>
+    <string name="audio_label">Звук в игре</string>
+    <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
+    <string name="fps_cap_label">Ограничение FPS</string>
+    <string name="fps_cap_hint">Ограничивает FPS, чтобы сгладить скачки и освободить CPU под игру — это может поднять скорость игры (TPS) на слабых устройствах. Попробуй 60 или 30, если счётчик прыгает.</string>
+    <string name="texq_label">Сжатие текстур</string>
+    <string name="texq_hint">Ужимает текстуры ради памяти и FPS — без этого несколько DLC могут не загрузиться на слабых телефонах. Затрагивает в основном растительность и ресурсы; пешки и животные не трогаются никогда. «Низкое» — хороший баланс, «Очень низкое» чуть быстрее, но растения выглядят мыльными.</string>
+    <string name="texq_no">Нет</string>
+    <string name="texq_low">Низкое</string>
+    <string name="texq_ultra">Очень низкое</string>
+    <string name="fps_cap_30">30 FPS</string>
+    <string name="fps_cap_60">60 FPS</string>
+    <string name="fps_cap_off">Без ограничения</string>
+    <string name="render_res_label">Разрешение рендера</string>
+    <string name="render_res_relative">Во весь экран</string>
+    <string name="render_res_fixed_169">С чёрными краями 1280×720 — самое быстрое</string>
+    <string name="render_res_fullscreen">весь экран</string>
+    <string name="render_res_black_margins">чёрные поля</string>
+    <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
+    <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
+    <string name="driver_auto_set_title">Драйвер выставлен</string>
+    <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
+    <string name="nav_import_mods">Импорт модов (ZIP)…</string>
+    <string name="nav_export_saves">Экспорт сейвов</string>
+    <string name="nav_import_saves">Импорт сейвов</string>
+    <string name="nav_export_settings">Экспорт настроек</string>
+    <string name="nav_import_settings">Импорт настроек</string>
+    <string name="nav_export_logs">Экспорт логов (ZIP)</string>
+    <string name="nav_export_layout">Экспорт раскладки управления</string>
+    <string name="nav_import_layout">Импорт раскладки управления</string>
+    <string name="nav_updates">Новые версии (GitHub)</string>
+    <string name="nav_bug_report">Сообщить об ошибке</string>
+    <string name="nav_wiki">Вики</string>
+    <string name="wiki_more">Подробнее — в вики</string>
+    <string name="launcher_empty_title">С чего начать</string>
+    <string name="launcher_empty_quick_start">Быстрый старт</string>
+    <string name="launcher_empty_steam">Скачать из Steam</string>
+    <string name="launcher_empty_gog">Скачать из GOG</string>
+    <string name="launcher_empty_guide">Чтобы начать играть, создайте инстанс — установленную копию RimWorld. Добавьте в лаунчер файлы игры кнопкой + вверху или скачайте игру прямо из Steam или GOG кнопками ниже. Из Steam инстанс создастся сам, из GOG — кнопкой «Создать инстанс».</string>
+    <string name="link_x">RimDroid в X</string>
+    <string name="link_reddit">RimDroid на Reddit</string>
+    <string name="link_support">Поддержать разработчика</string>
+    <string name="link_soon">Скоро</string>
+    <string name="nav_label_donate">Донат</string>
+    <string name="zomdroid_dialog_message">Zomdroid запускает Project Zomboid на Android — так же, как этот лаунчер запускает RimWorld. Тот же автор, тот же подход.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
+    <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
+    <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
+    <string name="bug_report_no_mail">На устройстве нет почтового приложения.</string>
+    <string name="donate_title">Поддержать разработку</string>
+    <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
+    <string name="on_screen_controls">Экранное управление</string>
+    <string name="edit_controls">Редактировать экранные кнопки</string>
+    <string name="editor_bg_set">Фон</string>
+    <string name="editor_bg_clear">Без фона</string>
+    <string name="editor_add">Добавить</string>
+    <string name="editor_reset">Сброс</string>
+    <string name="editor_done">Готово</string>
+    <string name="editor_delete">Удалить элемент</string>
+    <string name="editor_hint">Тап — выбрать • перетащить — двигать</string>
+    <string name="editor_reset_confirm">Сбросить все экранные кнопки к раскладке по умолчанию?</string>
+    <string name="nav_launcher">Лаунчер</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="app_settings_theme">Тема</string>
+    <string name="app_settings_note">Игровые настройки (рендерер, драйвер, отладка, масштаб, управление) у каждого инстанса свои — откройте их по шестерёнке на карточке игры.</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="custom_driver_title">Свой Vulkan-драйвер</string>
+    <string name="custom_driver_note">Импортируйте Vulkan/Turnip-драйвер (файл .so или AdrenoTools .zip). Затем на карточке игры → шестерёнка → Vulkan-драйвер выберите \"Custom driver (imported)\". Драйвер общий для всех инстансов на этом устройстве.</string>
+    <string name="custom_driver_import">Импорт драйвера (.so / .zip)</string>
+    <string name="custom_driver_remove">Удалить</string>
+    <string name="custom_driver_status_none">Свой драйвер не импортирован.</string>
+    <string name="custom_driver_status_installed">Импортирован ✓ (%1$s)</string>
+    <string name="custom_driver_importing">Импорт драйвера…</string>
+    <string name="custom_driver_imported">Свой драйвер импортирован (%1$s)</string>
+    <string name="custom_driver_import_failed">Не удалось импортировать: %1$s</string>
+    <string name="custom_driver_removed">Свой драйвер удалён</string>
+    <string name="nav_new_instance">Добавить игру (инстанс)</string>
+    <string name="nav_download_game">Загрузки из Steam</string>
+    <string name="nav_install_content">Установить мод / DLC (ZIP)</string>
+    <string name="nav_custom_driver">Свой Vulkan-драйвер</string>
+    <string name="install_content_note">Выберите .zip (мод или DLC) на телефоне, укажите инстанс и тип, затем «Установить».</string>
+    <string name="install_content_instance">Установить в инстанс</string>
+    <string name="install_content_type">Тип</string>
+    <string name="install_content_mod">МОДЫ</string>
+    <string name="install_content_dlc">DLC</string>
+    <string name="install_content_pick">Выбрать ZIP-файл</string>
+    <string name="install_content_no_file">Файл не выбран</string>
+    <string name="install_content_go">Установить</string>
+
+    <!-- Экран загрузки -->
+    <string name="download_game_title">Загрузка RimWorld из Steam</string>
+    <string name="download_version_note">Загружает Linux-сборку прямо в новый инстанс — без Termux и без ПК.</string>
+    <string name="download_instance_hint">Имя инстанса (например, RimWorld 1.5)</string>
+    <string name="download_version_label">Версия игры</string>
+    <string name="download_version_15">RimWorld 1.5</string>
+    <string name="download_version_16">RimWorld 1.6</string>
+    <string name="download_user_hint">Логин Steam</string>
+    <string name="download_pass_hint">Пароль Steam</string>
+    <string name="download_login_note">Логин отправляется в Steam (так же, как это делает DepotDownloader) и НЕ сохраняется. Подтвердите вход в приложении Steam Mobile или введите код Steam Guard, когда попросят.</string>
+
+    <string name="nav_gog_login">Вход в GOG</string>
+    <string name="gog_login_note">Входите по почте и паролю GOG. Вход через привязанный аккаунт внутри приложения не доходит до конца — если вы обычно заходите так, сначала задайте пароль GOG: gog.com → Sign in → Password reset.</string>
+    <string name="gog_disclaimer_title">Дисклеймер</string>
+    <string name="gog_disclaimer_text">Пароль RimDroid не видит — вы вводите его на странице самого GOG. Токен доступа хранится только в памяти и исчезает при закрытии приложения; куки входа остаются в личном хранилище приложения, чтобы не спрашивать каждый раз, а выход из аккаунта удаляет и то, и другое.</string>
+    <string name="gog_login_finishing">Завершаем вход…</string>
+    <string name="gog_login_ok">Вход в GOG выполнен</string>
+    <string name="gog_login_failed">Не удалось войти: %1$s</string>
+    <string name="gog_user_id">ID пользователя: %1$s</string>
+    <string name="gog_check_library">Проверить библиотеку</string>
+    <string name="gog_sign_out">Выйти</string>
+    <string name="gog_checking">Читаем библиотеку…</string>
+    <string name="gog_probe_owned">Игр в аккаунте: %1$d</string>
+    <string name="gog_probe_failed">Не удалось прочитать библиотеку: %1$s</string>
+    <string name="gog_download">Скачать</string>
+    <string name="gog_needs_all_files">Загрузки складываются в общую папку Download/RimDroid, а для записи туда нужен доступ ко всем файлам. Выдайте его и попробуйте снова.</string>
+    <string name="gog_saved_to">Сохранено в Download/RimDroid/%1$s\n\nТеперь из него можно создать инстанс. Файл остаётся на месте — переустановить получится без повторной загрузки.</string>
+    <string name="gog_create_instance">Создать инстанс</string>
+    <string name="gog_scanning">Проверяем библиотеку — %1$d из %2$d</string>
+    <string name="gog_no_rimworld">RimWorld в этом аккаунте нет — показаны все игры с Linux-установщиком.</string>
+    <string name="gog_nothing_linux">Ни у одной игры в этом аккаунте нет Linux-установщика.</string>
+    <string name="gog_item_installer">%1$s · %2$s</string>
+    <string name="gog_keepalive">Скачивание с GOG — можно переключаться на другие приложения</string>
+    <string name="gog_download_interrupted">Загрузка прервалась. Нажмите «%1$s» ещё раз, чтобы продолжить.</string>
+    <string name="gog_download_failed">Не удалось скачать: %1$s</string>
+    <string name="gog_queued">В очереди</string>
+    <string name="gog_downloading">Скачивание…</string>
+    <string name="gog_percent">%1$d%%</string>
+    <string name="gog_install_dlc">Установить</string>
+    <string name="gog_item_dlc">DLC · %1$s</string>
+    <string name="new_instance_with_dlc">%1$s\n+ DLC: %2$d</string>
+    <string name="download_manifest_hint">Дополнительно: Manifest ID — пусто = рекомендуемая 1.5</string>
+    <string name="download_start">Загрузить</string>
+    <string name="download_tab_game">Игра</string>
+    <string name="download_tab_dlc">DLC</string>
+    <string name="download_tab_mods">Моды</string>
+    <string name="download_dlc_note">Выберите DLC, которыми владеет ваш аккаунт. Каждое скачивается портативным .zip в /Download/RimDroid — затем импортируйте его в любой инстанс из меню. (Чужие DLC пропускаются.)</string>
+    <string name="download_dlc_start">Скачать выбранные DLC</string>
+    <string name="download_install_content">Установить мод / DLC в инстанс</string>
+    <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Логин Steam не нужен. Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/RimDroid.</string>
+    <string name="download_mods_hint">ID Мастерской — через пробел</string>
+    <string name="download_mods_hint_single">ID Мастерской</string>
+    <string name="download_mods_start">Скачать моды</string>
+    <string name="download_mods_login_head">Прямое скачивание (без логина)</string>
+    <string name="download_mods_browser_head">Скачать через браузер (ggntw.com)</string>
+    <string name="download_mods_browser_note">Открывает сторонний загрузчик — скачайте .zip там, затем установите в инстанс. (Сторонний сервис; на ваше усмотрение.)</string>
+    <string name="download_mods_browser_start">Получить ссылку (браузер)</string>
+    <string name="download_cancel">Отменить скачивание</string>
+    <string name="download_cancel_confirm">Отменить текущее скачивание?</string>
+    <string name="gl4es_label">GL4ES (совместимый, старые GPU)</string>
+    <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
+    <string name="zink_osmesa_label">Zink OSMesa (Vulkan, запасной)</string>
+    <string name="softpipe_label">Программный (медленный, любой GPU — для Mali/PowerVR)</string>
+    <string name="mobileglues_label">MobileGlues (GL через GLES — экспериментальный, без Vulkan)</string>
+    <string name="debug_mode">Режим отладки (подробный лог)</string>
+    <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
+    <string name="env_vars_title">Дополнительно: переменные запуска</string>
+    <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>
+    <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
+
+    <!-- Settings cards -->
+    <string name="card_video">Видео</string>
+    <string name="card_fps">Частота кадров</string>
+    <string name="card_controls">Управление</string>
+    <string name="card_sound">Звук</string>
+    <string name="card_advanced">Дополнительно</string>
+    <string name="sound_generate">Установить звук в игре</string>
+    <string name="sound_generate_note">Звук в игре ставится отдельным модом из-за сложностей с кодировщиком. Тумблер ниже включает или отключает этот мод. С включённым звуком игра загружается чуть дольше.</string>
+    <string name="sound_installing_title">Установка звука</string>
+    <string name="sound_generate_toast">Может занять до 2 минут. Можно продолжать пользоваться приложением.</string>
+    <string name="sound_done">Звуковой пак готов! Включи «Звук в игре» в настройках.</string>
+    <string name="sound_failed">Не удалось создать звуковой пак. Подробности в Download/_fmod_spike_result.txt.</string>
+    <string name="env_section_header">Переменные окружения</string>
+
+    <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
+    <string name="steam_spike_label">Проба входа в Steam (QR)</string>
+    <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>
+    <string name="pick_zip">Выбрать ZIP-файл</string>
+    <string name="install">Установить</string>
+    <string name="installing">Установка…</string>
+    <string name="instance_name_hint">Имя инстанса</string>
+    <string name="selected_zip_hint">Файл не выбран</string>
+    <string name="error_name_required">Нужно указать имя</string>
+    <string name="error_name_too_long">Имя слишком длинное (максимум %1$d символов)</string>
+    <string name="error_name_exists">Инстанс с таким именем уже существует</string>
+    <string name="nav_manage_storage">Управление файлами</string>
+    <string name="clear">Очистить</string>
+
+    <!-- Gamepad button remapper -->
+    <string name="gamepad_mapper_settings_btn">Раскладка геймпада</string>
+    <string name="gamepad_mapper_title">Раскладка геймпада</string>
+    <string name="gamepad_mapper_instructions">Настройка контроллера с перепутанными кнопками. Нажми «Начать», затем нажимай нужную физическую кнопку для каждого действия.</string>
+    <string name="gamepad_mapper_start">Начать</string>
+    <string name="gamepad_mapper_reset">Сбросить по умолчанию</string>
+    <string name="gamepad_mapper_reset_done">Раскладка сброшена</string>
+    <string name="gamepad_mapper_step">Нажми кнопку для:\n%1$s</string>
+    <string name="gamepad_mapper_done">Раскладка сохранена</string>
+    <string name="gamepad_mapper_dup">Уже назначено — нажми другую кнопку</string>
+    <string-array name="gamepad_mapper_labels">
+        <item>A — F1</item>
+        <item>B — Escape</item>
+        <item>X — F2</item>
+        <item>Y — Q (поворот)</item>
+        <item>LB — Отдалить</item>
+        <item>RB — Приблизить</item>
+        <item>Select — Tab</item>
+        <item>Start — Следующий колонист (.)</item>
+        <item>L3 — Shift (множ. выделение)</item>
+        <item>R3 — нажатие правого стика (не исп.)</item>
+    </string-array>
+</resources>

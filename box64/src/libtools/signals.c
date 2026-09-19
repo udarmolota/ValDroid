@@ -1,0 +1,2121 @@
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <syscall.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <ucontext.h>
+#include <setjmp.h>
+#include <sys/mman.h>
+#include <pthread.h>
+#ifndef ANDROID
+#include <execinfo.h>
+#endif
+#include <fcntl.h>
+
+#include "x64_signals.h"
+#include "os.h"
+#include "backtrace.h"
+#include "box64context.h"
+#include "debug.h"
+#include "x64emu.h"
+#include "emu/x64emu_private.h"
+#include "emu/x64run_private.h"
+#include "signals.h"
+#include "box64stack.h"
+#include "box64cpu.h"
+#include "callback.h"
+#include "elfloader.h"
+#include "threads.h"
+#include "emu/x87emu_private.h"
+#include "custommem.h"
+#include "bridge.h"
+#include "khash.h"
+#include "x64trace.h"
+#ifdef DYNAREC
+#include "dynablock.h"
+#include "../dynarec/dynablock_private.h"
+#include "dynarec_native.h"
+#include "dynarec/dynarec_arch.h"
+#include "dynarec/dynarec_next.h"
+#include "gdbjit.h"
+#endif
+#include "sigtools.h"
+
+#include "signal_private.h"
+
+static void sigstack_destroy(void* p)
+{
+    x64_stack_t *ss = (x64_stack_t*)p;
+    box_free(ss);
+}
+
+static pthread_key_t sigstack_key;
+static pthread_once_t sigstack_key_once = PTHREAD_ONCE_INIT;
+
+static void sigstack_key_alloc() {
+    pthread_key_create(&sigstack_key, sigstack_destroy);
+}
+
+x64_stack_t* sigstack_getstack() {
+    return (x64_stack_t*)pthread_getspecific(sigstack_key);
+}
+
+#ifndef DYNAREC
+dynablock_t* FindDynablockFromNativeAddress(void* addr) {return NULL;}
+uintptr_t getX64Address(dynablock_t* db, uintptr_t pc) {return 0;}
+#endif
+
+// this allow handling "safe" function that just abort if accessing a bad address
+static __thread JUMPBUFF signal_jmpbuf;
+#ifdef ANDROID
+#define SIG_JMPBUF signal_jmpbuf
+#else
+#define SIG_JMPBUF &signal_jmpbuf
+#endif
+static __thread int signal_jmpbuf_active = 0;
+
+uint64_t RunFunctionHandler(x64emu_t* emu, int* exit, int dynarec, x64_ucontext_t* sigcontext, uintptr_t fnc, int nargs, ...)
+{
+    if(fnc==0 || fnc==1) {
+        va_list va;
+        va_start (va, nargs);
+        int sig = va_arg(va, int);
+        siginfo_t* _info = NULL;
+        if(nargs >= 2) _info = va_arg(va, siginfo_t*);
+        va_end (va);
+        printf_log(LOG_NONE, "%04d|Warning, calling Signal %d function handler %s\n", GetTID(), sig, fnc?"SIG_IGN":"SIG_DFL");
+        if(fnc==0) {
+            printf_log(LOG_NONE, "Unhandled signal caught, aborting\n");
+            { const char* _h=getenv("HOME"); char _p[512],_b[256];
+              snprintf(_p,sizeof(_p),"%s/abort_site.log",_h?_h:"/data/local/tmp");
+              int _f=open(_p,O_WRONLY|O_CREAT|O_APPEND,0644);
+              if(_f>=0){
+                  void* _si_addr = _info ? _info->si_addr : (void*)-1UL;
+                  int _si_code  = _info ? _info->si_code  : -1;
+                  int _n=snprintf(_b,sizeof(_b),
+                      "ABORT: SIG_DFL sig=%d RIP=0x%lx RSP=0x%lx si_addr=%p si_code=%d\n",
+                      sig,(unsigned long)R_RIP,(unsigned long)R_RSP,_si_addr,_si_code);
+                  write(_f,_b,_n);
+                  // Dump /proc/self/maps so we can see what is actually mapped at crash time
+                  { int _fm=open("/proc/self/maps",O_RDONLY);
+                    if(_fm>=0){ char _mb[512]; int _nr;
+                        _nr=snprintf(_mb,sizeof(_mb),"=== /proc/self/maps (sig=%d RIP=0x%lx) ===\n",sig,(unsigned long)R_RIP);
+                        write(_f,_mb,_nr);
+                        while((_nr=read(_fm,_mb,sizeof(_mb)))>0) write(_f,_mb,_nr);
+                        close(_fm);
+                    }
+                  }
+                  close(_f);
+              }
+            }
+            // Fix SIGABRT recursion: abort() → SIGABRT → box64 handler → here (sig=SIGABRT) → abort() → ...
+            // Break the loop by resetting SIGABRT to SIG_DFL before raising, so OS writes a tombstone.
+            if(sig == SIGABRT) {
+                struct sigaction _dfl; memset(&_dfl,0,sizeof(_dfl));
+                _dfl.sa_handler = SIG_DFL;
+                sigaction(SIGABRT, &_dfl, NULL);
+                raise(SIGABRT);
+                _exit(134); // fallback
+            }
+            abort();
+        }
+        return 0;
+    }
+#ifdef HAVE_TRACE
+    uintptr_t old_start = trace_start, old_end = trace_end;
+#if 0
+    trace_start = 0; trace_end = 1; // disabling trace, globably for now...
+#endif
+#endif
+    if(!emu)
+        emu = thread_get_emu();
+    #ifdef DYNAREC
+    if (BOX64ENV(dynarec_test))
+        emu->test.test = 0;
+    #endif
+
+    int align = nargs&1;
+
+    if(nargs>6)
+        R_RSP -= (nargs-6+align)*sizeof(void*);   // need to push in reverse order
+
+    uint64_t *p = (uint64_t*)R_RSP;
+
+    va_list va;
+    va_start (va, nargs);
+    for (int i=0; i<nargs; ++i) {
+        if(i<6) {
+            int nn[] = {_DI, _SI, _DX, _CX, _R8, _R9};
+            emu->regs[nn[i]].q[0] = va_arg(va, uint64_t);
+        } else {
+            *p = va_arg(va, uint64_t);
+            p++;
+        }
+    }
+    va_end (va);
+
+    printf_log(LOG_DEBUG, "%04d|signal #%d function handler %p called, RSP=%p\n", GetTID(), R_EDI, (void*)fnc, (void*)R_RSP);
+
+    int oldquitonlongjmp = emu->flags.quitonlongjmp;
+    emu->flags.quitonlongjmp = 2;
+    int old_cs = R_CS;
+    R_CS = 0x33;
+
+    if(dynarec)
+        DynaCall(emu, fnc, 0);
+    else
+        EmuCall(emu, fnc);
+
+    if(nargs>6 && !emu->flags.longjmp)
+        R_RSP+=((nargs-6+align)*sizeof(void*));
+
+    if(!emu->flags.longjmp && R_CS==0x33)
+        R_CS = old_cs;
+
+    emu->flags.quitonlongjmp = oldquitonlongjmp;
+
+    #ifdef DYNAREC
+    if (BOX64ENV(dynarec_test)) {
+        emu->test.test = 0;
+        emu->test.clean = 0;
+    }
+#endif
+
+    if(emu->flags.longjmp) {
+        // longjmp inside signal handler, lets grab all relevent value and do the actual longjmp in the signal handler
+        emu->flags.longjmp = 0;
+        if(sigcontext) {
+            sigcontext->uc_mcontext.gregs[X64_R8] = R_R8;
+            sigcontext->uc_mcontext.gregs[X64_R9] = R_R9;
+            sigcontext->uc_mcontext.gregs[X64_R10] = R_R10;
+            sigcontext->uc_mcontext.gregs[X64_R11] = R_R11;
+            sigcontext->uc_mcontext.gregs[X64_R12] = R_R12;
+            sigcontext->uc_mcontext.gregs[X64_R13] = R_R13;
+            sigcontext->uc_mcontext.gregs[X64_R14] = R_R14;
+            sigcontext->uc_mcontext.gregs[X64_R15] = R_R15;
+            sigcontext->uc_mcontext.gregs[X64_RAX] = R_RAX;
+            sigcontext->uc_mcontext.gregs[X64_RCX] = R_RCX;
+            sigcontext->uc_mcontext.gregs[X64_RDX] = R_RDX;
+            sigcontext->uc_mcontext.gregs[X64_RDI] = R_RDI;
+            sigcontext->uc_mcontext.gregs[X64_RSI] = R_RSI;
+            sigcontext->uc_mcontext.gregs[X64_RBP] = R_RBP;
+            sigcontext->uc_mcontext.gregs[X64_RSP] = R_RSP;
+            sigcontext->uc_mcontext.gregs[X64_RBX] = R_RBX;
+            sigcontext->uc_mcontext.gregs[X64_RIP] = R_RIP;
+            // flags
+            sigcontext->uc_mcontext.gregs[X64_EFL] = emu->eflags.x64;
+            // get segments
+            sigcontext->uc_mcontext.gregs[X64_CSGSFS] = ((uint64_t)(R_CS)) | (((uint64_t)(R_GS))<<16) | (((uint64_t)(R_FS))<<32) | (((uint64_t)(R_SS))<<48) ;
+        } else {
+            printf_log(LOG_NONE, "Warning, longjmp in signal but no sigcontext to change\n");
+        }
+    }
+    if(exit)
+        *exit = emu->exit;
+
+    uint64_t ret = R_RAX;
+
+#ifdef HAVE_TRACE
+    trace_start = old_start; trace_end = old_end;
+#endif
+
+    return ret;
+}
+
+EXPORT int my_sigaltstack(x64emu_t* emu, const x64_stack_t* ss, x64_stack_t* oss)
+{
+    if(!ss && !oss) {   // this is not true, ss can be NULL to retreive oss info only
+        errno = EFAULT;
+        return -1;
+    }
+    signal_jmpbuf_active = 1;
+    if(sigsetjmp(SIG_JMPBUF, 1)) {
+        // segfault while gathering function name...
+        errno = EFAULT;
+        return -1;
+    }
+
+    x64_stack_t *new_ss = (x64_stack_t*)pthread_getspecific(sigstack_key);
+    if(oss) {
+        if(!new_ss) {
+            oss->ss_flags = SS_DISABLE;
+            oss->ss_sp = emu->init_stack;
+            oss->ss_size = emu->size_stack;
+        } else {
+            oss->ss_flags = new_ss->ss_flags;
+            oss->ss_sp = new_ss->ss_sp;
+            oss->ss_size = new_ss->ss_size;
+        }
+    }
+    if(!ss) {
+        signal_jmpbuf_active = 0;
+        return 0;
+    }
+    printf_log(LOG_DEBUG, "%04d|sigaltstack called ss=%p[flags=0x%x, sp=%p, ss=0x%lx], oss=%p\n", GetTID(), ss, ss->ss_flags, ss->ss_sp, ss->ss_size, oss);
+    if(ss->ss_flags && ss->ss_flags!=SS_DISABLE && ss->ss_flags!=SS_ONSTACK) {
+        errno = EINVAL;
+        signal_jmpbuf_active = 0;
+        return -1;
+    }
+
+    if(ss->ss_flags==SS_DISABLE) {
+        if(new_ss)
+            box_free(new_ss);
+        pthread_setspecific(sigstack_key, NULL);
+        signal_jmpbuf_active = 0;
+        return 0;
+    }
+
+    if(!new_ss)
+        new_ss = (x64_stack_t*)box_calloc(1, sizeof(x64_stack_t));
+    new_ss->ss_flags = 0;
+    new_ss->ss_sp = ss->ss_sp;
+    new_ss->ss_size = ss->ss_size;
+
+    pthread_setspecific(sigstack_key, new_ss);
+    signal_jmpbuf_active = 0;
+    return 0;
+}
+
+#ifdef DYNAREC
+x64emu_t* getEmuSignal(x64emu_t* emu, ucontext_t* p, dynablock_t* db)
+{
+    if(db && CONTEXT_REG(p, xEmu)>0x10000) {
+        emu = (x64emu_t*)CONTEXT_REG(p, xEmu);
+    }
+    return emu;
+}
+#endif
+
+void my_sigactionhandler_oldcode(x64emu_t* emu, int32_t sig, int simple, siginfo_t* info, void* ucntx, int* old_code, void* cur_db, uintptr_t x64pc);
+#ifdef BOX32
+int my_sigactionhandler_oldcode_32(x64emu_t* emu, int32_t sig, int simple, siginfo_t* info, void * ucntx, int* old_code, void* cur_db);
+#endif
+
+static int is_signal_deferrable(int sig)
+{
+    switch (sig) {
+        case X64_SIGSEGV:
+        case X64_SIGBUS:
+        case X64_SIGILL:
+        case X64_SIGABRT:
+            return 0;
+    }
+    return 1;
+}
+
+int defer_signal(x64emu_t* emu, int signum, siginfo_t* info)
+{
+    if (!emu || signum < 0 || signum > MAX_SIGNAL || !is_signal_deferrable(signum) || emu->critical_section <= 0)
+        return 0;
+
+    if (info)
+        emu->deferred_siginfo[signum] = *info;
+    else
+        memset(&emu->deferred_siginfo[signum], 0, sizeof(emu->deferred_siginfo[signum]));
+    emu->deferred_siginfo[signum].si_signo = signum;
+    if (!emu->deferred_signal_pending[signum])
+        ++emu->deferred_signal_count;
+    emu->deferred_signal_pending[signum] = 1;
+    return 1;
+}
+
+void cancel_deferred_signal_processing(x64emu_t* emu)
+{
+    if (!emu) return;
+    emu->critical_section = 0;
+    emu->deferred_signal_processing = 0;
+}
+
+void enter_critical_section()
+{
+    x64emu_t* emu = thread_get_emu_no_create();
+    if (emu) ++emu->critical_section;
+}
+
+void leave_critical_section()
+{
+    x64emu_t* emu = thread_get_emu_no_create();
+    if (!emu || emu->critical_section <= 0)
+        return;
+    if (--emu->critical_section || !emu->deferred_signal_count || emu->deferred_signal_processing)
+        return;
+
+    emu->deferred_signal_processing = 1;
+    while (emu->deferred_signal_count) {
+        int handled = 0;
+        for (int sig = 1; sig <= MAX_SIGNAL; ++sig) {
+            if (!emu->deferred_signal_pending[sig])
+                continue;
+            siginfo_t info = emu->deferred_siginfo[sig];
+            emu->deferred_signal_pending[sig] = 0;
+            --emu->deferred_signal_count;
+            handled = 1;
+            my_sigactionhandler_oldcode(emu, sig, 0, &info, NULL, NULL, NULL, R_RIP);
+        }
+        if (!handled) {
+            emu->deferred_signal_count = 0;
+            break;
+        }
+    }
+    emu->deferred_signal_processing = 0;
+}
+
+int my_sigactionhandler_oldcode_64(x64emu_t* emu, int32_t sig, int simple, siginfo_t* info, void * ucntx, int* old_code, void* cur_db)
+{
+    int Locks = unlockMutex();
+    int log_minimum = (BOX64ENV(showsegv))?LOG_NONE:LOG_DEBUG;
+
+    printf_log(LOG_DEBUG, "Sigactionhanlder for signal #%d called (jump to %p/%s)\n", sig, (void*)my_context->signals[sig], GetNativeName((void*)my_context->signals[sig], 1));
+
+    uintptr_t restorer = my_context->restorer[sig];
+    // get that actual ESP first!
+    if(!emu)
+        emu = thread_get_emu();
+    // [RD] IMT-dispatch diagnostic (ExposeData->AnythingToStrip save/load bug). When a Mono-JIT'd
+    // method (sub-4GB region) takes a low-address null-deref (= the NRE we chase), dump the guest
+    // registers at the fault: rip = where dispatch LANDED, r10 = the IMT method-cookie that was
+    // requested, rdi = this. Lets us tell r10-clobber (garbage r10) from thunk-misresolve (correct
+    // r10, wrong landing). Gated by env RIMDROID_DISPATCH_LOG, prints at LOG_NONE. Non-destructive.
+    if(sig==X64_SIGSEGV && info) {
+        static int rd_disp = -1;
+        if(rd_disp==-1) rd_disp = getenv("RIMDROID_DISPATCH_LOG")?1:0;
+        if(rd_disp && (uintptr_t)info->si_addr < 0x10000
+           && R_RIP>=0x30000000ULL && R_RIP<0x40000000ULL) {
+            printf_log(LOG_NONE, "[RD-DISP] rip=%p fault=%p rax=%p r10=%p r11=%p rdi=%p rsi=%p\n",
+                (void*)R_RIP, info->si_addr, (void*)R_RAX, (void*)R_R10, (void*)R_R11,
+                (void*)R_RDI, (void*)R_RSI);
+        }
+    }
+    uintptr_t frame = R_RSP;
+#if defined(DYNAREC)
+    dynablock_t* db = (dynablock_t*)cur_db;//FindDynablockFromNativeAddress(pc);
+    ucontext_t *p = (ucontext_t *)ucntx;
+    void* pc = NULL;
+    if(p) {
+        pc = (void*)CONTEXT_PC(p);
+        if(db)
+            frame = (uintptr_t)CONTEXT_REG(p, xRSP);    //this should not be needed, as emu has been "adjusted" to dynablock value already in the caller
+    }
+#else
+    (void)ucntx; (void)cur_db;
+    void* pc = NULL;
+#endif
+
+    // stack tracking
+    x64_stack_t *new_ss = my_context->onstack[sig]?(x64_stack_t*)pthread_getspecific(sigstack_key):NULL;
+    int used_stack = 0;
+    if(new_ss && (new_ss->ss_flags!=SS_ONSTACK)) {  // alt stack and not already using it
+        frame = (uintptr_t)(((uintptr_t)new_ss->ss_sp + new_ss->ss_size - 16ULL) & ~0x0fULL);
+        used_stack = 1;
+        new_ss->ss_flags = SS_ONSTACK;
+    } else {
+        frame = frame&~15ULL;
+        frame -= 0x200ULL; // redzone
+    }
+
+    // TODO: do I need to really setup 2 stack frame? That doesn't seems right!
+    // setup stack frame
+    frame -= 512+64+16*16;
+    void* xstate = (void*)frame;
+    frame -= sizeof(siginfo_t);
+    siginfo_t* info2 = (siginfo_t*)frame;
+    memcpy(info2, info, sizeof(siginfo_t));
+    // try to fill some sigcontext....
+    frame -= sizeof(x64_ucontext_t);
+    x64_ucontext_t   *sigcontext = (x64_ucontext_t*)frame;
+    // get general register
+    emu2mctx(&sigcontext->uc_mcontext, emu);
+    CLEAR_FLAG(F_TF);   // now clear TF flags inside the signal handler
+    // get FloatPoint status
+    sigcontext->uc_mcontext.fpregs = xstate;//(struct x64_libc_fpstate*)&sigcontext->xstate;
+    fpu_xsave_mask(emu, xstate, 0, 0b111);
+    memcpy(&sigcontext->xstate, xstate, sizeof(sigcontext->xstate));
+    ((struct x64_fpstate*)xstate)->res[12] = 0x46505853;   // magic number to signal an XSTATE type of fpregs
+    ((struct x64_fpstate*)xstate)->res[13] = 0; // offset to xstate after this?
+    // get signal mask
+
+    if(new_ss) {
+        sigcontext->uc_stack.ss_sp = new_ss->ss_sp;
+        sigcontext->uc_stack.ss_size = new_ss->ss_size;
+        sigcontext->uc_stack.ss_flags = new_ss->ss_flags;
+    } else
+        sigcontext->uc_stack.ss_flags = SS_DISABLE;
+    // Try to guess some X64_TRAPNO
+    /*
+    TRAP_x86_DIVIDE     = 0,   // Division by zero exception
+    TRAP_x86_TRCTRAP    = 1,   // Single-step exception
+    TRAP_x86_NMI        = 2,   // NMI interrupt
+    TRAP_x86_BPTFLT     = 3,   // Breakpoint exception
+    TRAP_x86_OFLOW      = 4,   // Overflow exception
+    TRAP_x86_BOUND      = 5,   // Bound range exception
+    TRAP_x86_PRIVINFLT  = 6,   // Invalid opcode exception
+    TRAP_x86_DNA        = 7,   // Device not available exception
+    TRAP_x86_DOUBLEFLT  = 8,   // Double fault exception
+    TRAP_x86_FPOPFLT    = 9,   // Coprocessor segment overrun
+    TRAP_x86_TSSFLT     = 10,  // Invalid TSS exception
+    TRAP_x86_SEGNPFLT   = 11,  // Segment not present exception
+    TRAP_x86_STKFLT     = 12,  // Stack fault
+    TRAP_x86_PROTFLT    = 13,  // General protection fault
+    TRAP_x86_PAGEFLT    = 14,  // Page fault
+    TRAP_x86_ARITHTRAP  = 16,  // Floating point exception
+    TRAP_x86_ALIGNFLT   = 17,  // Alignment check exception
+    TRAP_x86_MCHK       = 18,  // Machine check exception
+    TRAP_x86_CACHEFLT   = 19   // SIMD exception (via SIGFPE) if CPU is SSE capable otherwise Cache flush exception (via SIGSEV)
+    */
+    uint32_t prot = getProtection((uintptr_t)info->si_addr);
+    uint32_t mmapped = memExist((uintptr_t)info->si_addr);
+    uint32_t sysmapped = (info->si_addr<(void*)box64_pagesize)?1:mmapped;
+    uint32_t real_prot = 0;
+    int skip = 1;   // in case sigjump is used to restore exectuion, 1 will switch to interpreter, 3 will switch to dynarec
+    if(prot&PROT_READ) real_prot|=PROT_READ;
+    if(prot&PROT_WRITE) real_prot|=PROT_WRITE;
+    if(prot&PROT_EXEC) real_prot|=PROT_WRITE;
+    if(prot&PROT_DYNAREC) real_prot|=PROT_WRITE;
+    sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+    sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 0;
+    if(sig==X64_SIGBUS)
+        sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 17;
+    else if(sig==X64_SIGSEGV) {
+        if((uintptr_t)info->si_addr == sigcontext->uc_mcontext.gregs[X64_RIP]) {
+            if(info->si_errno==0xbad0) {
+                //bad opcode
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 13;
+                info2->si_code = 128;
+                info2->si_errno = 0;
+                info2->si_addr = NULL;
+            } else if (info->si_errno==0xecec) {
+                // no excute bit on segment
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0x14|((sysmapped && !(real_prot&PROT_READ))?0:1);
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 14;
+                if(!mmapped) info2->si_code = 1;
+                info2->si_errno = 0;
+            } else if (info->si_errno==0xb09d) {
+                // bound exception
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 5;
+                info2->si_errno = 0;
+            }else {
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0x14|((sysmapped && !(real_prot&PROT_READ))?0:1);
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 14;
+            }
+        } else {
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 14;
+            sigcontext->uc_mcontext.gregs[X64_ERR] = 4|((sysmapped && !(real_prot&PROT_READ))?0:1);
+            if(write_opcode(sigcontext->uc_mcontext.gregs[X64_RIP], (uintptr_t)pc, (R_CS==0x23)))
+                sigcontext->uc_mcontext.gregs[X64_ERR] |= 2;
+        }
+        if(info->si_code == SEGV_ACCERR && old_code)
+            *old_code = -1;
+        if(info->si_errno==0x1234) {
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 13;
+            info2->si_errno = 0;
+        } else if(info->si_errno==0xdead) {
+            // INT x
+            uint8_t int_n = info->si_code;
+            info2->si_errno = 0;
+            info2->si_code = 128;
+            info2->si_addr = NULL;
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 13;
+            skip = 3;   // can resume in dynarec
+            // some special cases...
+            if(int_n==3) {
+                info2->si_signo = X64_SIGTRAP;
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 3;
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+            } else if(int_n==0x04) {
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 4;
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+            } else if (int_n==0x29 || int_n==0x2c || int_n==0x2d) {
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0x02|(int_n<<3);
+            } else {
+                sigcontext->uc_mcontext.gregs[X64_ERR] = 0x0a|(int_n<<3);
+                sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 13;
+            }
+        } else if(info->si_errno==0xcafe) { // divide by 0
+            info2->si_errno = 0;
+            sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 0;
+            info2->si_signo = X64_SIGFPE;
+            skip = 3; // can resume in dynarec
+        }
+    } else if(sig==X64_SIGFPE) {
+        if (info->si_code == FPE_INTOVF)
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 4;
+        else
+            sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 19;
+        skip = 3;
+    } else if(sig==X64_SIGILL) {
+        info2->si_code = 2;
+        sigcontext->uc_mcontext.gregs[X64_TRAPNO] = 6;
+        info2->si_addr = (void*)sigcontext->uc_mcontext.gregs[X64_RIP];
+    } else if(sig==X64_SIGTRAP) {
+        if(info->si_code==1) {  //single step
+            info2->si_code = 2;
+            info2->si_addr = (void*)sigcontext->uc_mcontext.gregs[X64_RIP];
+        } else
+            info2->si_code = 128;
+        sigcontext->uc_mcontext.gregs[X64_TRAPNO] = info->si_code;
+        sigcontext->uc_mcontext.gregs[X64_ERR] = 0;
+    } else {
+        skip = 3;   // other signal can resume in dynarec
+    }
+    //TODO: SIGABRT generate what?
+    // RimDroid: force SIGSEGV forwarded to a guest handler to LOG_NONE so the RELIABLE
+    // box64 fault RIP/RBP/RSP is visible even at BOX64_LOG=0 (Mono catches SIGSEGV for
+    // implicit null-checks AND fatal crashes, then mangles its own backtrace — this line,
+    // printed BEFORE forwarding, is the trustworthy crash locator). Grep "RIMDROID SEGV".
+    // When the fault hit NATIVE code (e.g. inside libzfa via a bridge), the guest RIP only
+    // names the bridge; log the real native PC + dladdr module/symbol to pinpoint it.
+    if ((sig==X64_SIGSEGV || sig==X64_SIGABRT || sig==X64_SIGBUS) && ucntx) {
+        uintptr_t npc = (uintptr_t)((ucontext_t*)ucntx)->uc_mcontext.pc;
+        Dl_info dli = {0};
+        extern volatile int rd_glx_swap_phase;   // wrappedlibgl.c: 1=glFinish, 2=zfaFlushFront
+        if (npc && dladdr((void*)npc, &dli) && dli.dli_fname) {
+            const char* base = strrchr(dli.dli_fname, '/');
+            printf_log(LOG_NONE, "RIMDROID SEGV native pc=%p %s(%s+0x%lx) swap_phase=%d\n", (void*)npc,
+                       base?base+1:dli.dli_fname, dli.dli_sname?dli.dli_sname:"?",
+                       (unsigned long)(npc - (uintptr_t)(dli.dli_saddr?dli.dli_saddr:dli.dli_fbase)),
+                       rd_glx_swap_phase);
+        } else {
+            printf_log(LOG_NONE, "RIMDROID SEGV native pc=%p (no dladdr) swap_phase=%d\n", (void*)npc, rd_glx_swap_phase);
+        }
+    }
+    // RimDroid: log the RAW kernel si_code (before any reclassification below) + RBX. si_code is the
+    // decider for the SMC-backpatch crash hypothesis: a write to a PROT_DYNAREC page (prot=0x87) that
+    // the kernel MISreports as SEGV_MAPERR(1) instead of SEGV_ACCERR(2) is a false-MAPERR that the fix
+    // at ~L1106 must reclassify; si_code==2 here would mean it reached the SMC handler and failed
+    // (a different bug). RBX because the observed fatal RIP (libmono+0x111610) is `lock cmpxchg [rbx-4]`.
+    printf_log((sig==10)?LOG_DEBUG:((sig==X64_SIGSEGV||sig==X64_SIGABRT||sig==X64_SIGBUS)?LOG_NONE:log_minimum), "RIMDROID SEGV Signal %d: si_addr=%p, si_code=%d, TRAPNO=%d, ERR=%d, RIP=%p(%s), RBP=%p, RSP=%p, RBX=%p, prot=%x, mmapped:%d\n", sig, (void*)info2->si_addr, info->si_code, sigcontext->uc_mcontext.gregs[X64_TRAPNO], sigcontext->uc_mcontext.gregs[X64_ERR],sigcontext->uc_mcontext.gregs[X64_RIP], getAddrFunctionName(sigcontext->uc_mcontext.gregs[X64_RIP]), (void*)sigcontext->uc_mcontext.gregs[X64_RBP], (void*)sigcontext->uc_mcontext.gregs[X64_RSP], (void*)sigcontext->uc_mcontext.gregs[X64_RBX], prot, mmapped);
+    #ifdef DYNAREC
+    if(sig==3)
+        SerializeAllMapping();  // Signal Interupt: it's a good time to serialize the mappings if needed
+    #endif
+    // call the signal handler
+    x64_ucontext_t sigcontext_copy = *sigcontext;
+    // save old value from emu
+    #define GO(A) uint64_t old_##A = R_##A
+    GO(RAX);
+    GO(RDI);
+    GO(RSI);
+    GO(RDX);
+    GO(RCX);
+    GO(R8);
+    GO(R9);
+    GO(RBP);
+    #undef GO
+    // set stack pointer
+    R_RSP = frame;
+    // set frame pointer
+    R_RBP = sigcontext->uc_mcontext.gregs[X64_RBP];
+
+    int exits = 0;
+    int ret;
+    int dynarec = 0;
+    #ifdef DYNAREC
+    if(!(sig==X64_SIGSEGV || (Locks&is_dyndump_locked) || (Locks&is_memprot_locked)))
+        dynarec = BOX64ENV(dynarec_interp_signal)?0:1;
+    #endif
+    ret = RunFunctionHandler(emu, &exits, dynarec, sigcontext, my_context->signals[info2->si_signo], 3, info2->si_signo, info2, sigcontext);
+    if(used_stack)  // release stack
+        new_ss->ss_flags = 0;
+    // restore old value from emu
+    #define GO(A) R_##A = old_##A
+    GO(RAX);
+    GO(RDI);
+    GO(RSI);
+    GO(RDX);
+    GO(RCX);
+    GO(R8);
+    GO(R9);
+    GO(RBP);
+    #undef GO
+
+    if(memcmp(sigcontext, &sigcontext_copy, sizeof(x64_ucontext_t))) {
+        #if defined(DYNAREC)
+        if(db) {
+            // if signal was inside a dynablock, just mirror all the new regs in the right place to simple run native_next
+            mctx2emu(emu, &sigcontext->uc_mcontext);
+            copyEmu2USignalCTXreg(p, emu, native_next);
+            printf_log((sig==10)?LOG_DEBUG:log_minimum, "Context has been changed in Sigactionhanlder, jumping to native_next from DynaBlock at %p, RSP=%p\n", (void*)R_RIP, (void*)R_RSP);
+            return 1;
+        }
+        #endif
+        if(emu->jmpbuf) {
+            if((skip==1) && (emu->ip.q[0]!=sigcontext->uc_mcontext.gregs[X64_RIP]))
+                skip = 3;   // if it jumps elsewhere, it can resume with dynarec...
+            mctx2emu(emu, &sigcontext->uc_mcontext);
+            printf_log((sig==10)?LOG_DEBUG:log_minimum, "Context has been changed in Sigactionhanlder, doing siglongjmp to resume emu at %p, RSP=%p (resume with %s)\n", (void*)R_RIP, (void*)R_RSP, (skip==3)?"Dynarec":"Interp");
+            if(old_code)
+                *old_code = -1;    // re-init the value to allow another segfault at the same place
+            //relockMutex(Locks);   // do not relock mutex, because of the siglongjmp, whatever was running is canceled
+            #ifdef DYNAREC
+            if(Locks & is_dyndump_locked)
+                CancelBlock64(1);
+            #endif
+            #if defined(RV64) || defined(PPC64LE)
+            emu->xSPSave = emu->old_savedsp;
+            #endif
+            #ifdef DYNAREC
+            dynablock_leave_runtime((dynablock_t*)cur_db);
+            #endif
+            cancel_deferred_signal_processing(emu);
+            #ifdef ANDROID
+            siglongjmp(*emu->jmpbuf, skip);
+            #else
+            siglongjmp(emu->jmpbuf, skip);
+            #endif
+        }
+        printf_log(LOG_INFO, "Warning, context has been changed in Sigactionhanlder%s\n", (sigcontext->uc_mcontext.gregs[X64_RIP]!=sigcontext_copy.uc_mcontext.gregs[X64_RIP])?" (EIP changed)":"");
+    }
+    // restore regs...
+    #define GO(R)   R_##R=sigcontext->uc_mcontext.gregs[X64_##R]
+    GO(RAX);
+    GO(RCX);
+    GO(RDX);
+    GO(RDI);
+    GO(RSI);
+    GO(RBP);
+    GO(RSP);
+    GO(RBX);
+    GO(R8);
+    GO(R9);
+    GO(R10);
+    GO(R11);
+    GO(R12);
+    GO(R13);
+    GO(R14);
+    GO(R15);
+    GO(RIP);
+    #undef GO
+    emu->eflags.x64=sigcontext->uc_mcontext.gregs[X64_EFL];
+    uint16_t seg;
+    seg = (sigcontext->uc_mcontext.gregs[X64_CSGSFS] >> 0)&0xffff;
+    #define GO(S) emu->segs[_##S]=seg;
+    GO(CS);
+    seg = (sigcontext->uc_mcontext.gregs[X64_CSGSFS] >> 16)&0xffff;
+    GO(GS);
+    seg = (sigcontext->uc_mcontext.gregs[X64_CSGSFS] >> 32)&0xffff;
+    GO(FS);
+    seg = (sigcontext->uc_mcontext.gregs[X64_CSGSFS] >> 48)&0xffff;
+    GO(SS);
+    #undef GO
+
+    printf_log(LOG_DEBUG, "Sigactionhanlder main function returned (exit=%d, restorer=%p)\n", exits, (void*)restorer);
+    if(exits) {
+        //relockMutex(Locks);   // the thread will exit, so no relock there
+        #ifdef DYNAREC
+        if(Locks & is_dyndump_locked)
+            CancelBlock64(1);
+        #endif
+        exit(ret);
+    }
+    if(restorer)
+        RunFunctionHandler(emu, &exits, 0, NULL, restorer, 0);
+    relockMutex(Locks);
+    return 0;
+}
+
+void my_sigactionhandler_oldcode(x64emu_t* emu, int32_t sig, int simple, siginfo_t* info, void * ucntx, int* old_code, void* cur_db, uintptr_t x64pc)
+{
+    #define GO(A) uintptr_t old_##A = R_##A;
+    GO(RAX);
+    GO(RBX);
+    GO(RCX);
+    GO(RDX);
+    GO(RBP);
+    GO(RSP);
+    GO(RDI);
+    GO(RSI);
+    GO(R8);
+    GO(R9);
+    GO(R10);
+    GO(R11);
+    GO(R12);
+    GO(R13);
+    GO(R14);
+    GO(R15);
+    GO(RIP);
+    #undef GO
+    x64flags_t old_eflags;
+    deferred_flags_t old_df;
+    multiuint_t old_op1;
+    multiuint_t old_op2;
+    multiuint_t old_res;
+    sse_regs_t old_xmm[16];
+    sse_regs_t old_ymm[16];
+    mmx87_regs_t old_mmx[8];
+    mmx87_regs_t old_x87[8];
+    uint32_t old_top = emu->top;
+    uint16_t old_segs[6];
+    uintptr_t old_segs_offs[6];
+    memcpy(old_xmm, emu->xmm, sizeof(old_xmm));
+    memcpy(old_ymm, emu->ymm, sizeof(old_ymm));
+    memcpy(old_mmx, emu->mmx, sizeof(old_mmx));
+    memcpy(old_x87, emu->x87, sizeof(old_x87));
+    memcpy(old_segs, emu->segs, sizeof(old_segs));
+    memcpy(old_segs_offs, emu->segs_offs, sizeof(old_segs_offs));
+    #define GO(A) old_##A = emu->A
+    GO(eflags);
+    GO(df);
+    GO(op1);
+    GO(op2);
+    GO(res);
+    #undef GO
+    #ifdef DYNAREC
+    dynablock_t* db = cur_db;
+    if(db && ucntx) {
+        void * pc =(void*)CONTEXT_PC((ucontext_t*)ucntx);
+        copyUCTXreg2Emu(emu, ucntx, x64pc);
+        adjustregs(emu, pc);
+        if(db && db->arch_size)
+            ARCH_ADJUST(db, emu, ucntx, x64pc);
+    }
+    #endif
+    int direct_ret = 0;
+    #ifdef BOX32
+    if(box64_is32bits) {
+        direct_ret = my_sigactionhandler_oldcode_32(emu, sig, simple, info, ucntx, old_code, cur_db);
+    } else
+    #endif
+    direct_ret = my_sigactionhandler_oldcode_64(emu, sig, simple, info, ucntx, old_code, cur_db);
+    if(direct_ret)
+        return;
+    #define GO(A) R_##A = old_##A
+    GO(RAX);
+    GO(RBX);
+    GO(RCX);
+    GO(RDX);
+    GO(RBP);
+    GO(RSP);
+    GO(RDI);
+    GO(RSI);
+    GO(R8);
+    GO(R9);
+    GO(R10);
+    GO(R11);
+    GO(R12);
+    GO(R13);
+    GO(R14);
+    GO(R15);
+    GO(RIP);
+    #undef GO
+    #define GO(A) emu->A = old_##A
+    GO(eflags);
+    GO(df);
+    GO(op1);
+    GO(op2);
+    GO(res);
+    #undef GO
+    memcpy(emu->xmm, old_xmm, sizeof(old_xmm));
+    memcpy(emu->ymm, old_ymm, sizeof(old_ymm));
+    memcpy(emu->mmx, old_mmx, sizeof(old_mmx));
+    memcpy(emu->x87, old_x87, sizeof(old_x87));
+    memcpy(emu->segs, old_segs, sizeof(old_segs));
+    memcpy(emu->segs_offs, old_segs_offs, sizeof(old_segs_offs));
+    emu->top = old_top;
+}
+
+extern void* current_helper;
+extern int fillblock_active;
+#define USE_SIGNAL_MUTEX
+#ifdef USE_SIGNAL_MUTEX
+#ifdef USE_CUSTOM_MUTEX
+static uint32_t mutex_dynarec_prot = 0;
+#else
+static pthread_mutex_t mutex_dynarec_prot = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#endif
+#define lock_signal()     mutex_lock(&mutex_dynarec_prot)
+#define unlock_signal()   mutex_unlock(&mutex_dynarec_prot)
+#else   // USE_SIGNAL_MUTEX
+#define lock_signal()
+#define unlock_signal()
+#endif
+
+extern int box64_quit;
+extern int box64_exit_code;
+
+void my_box64signalhandler(int32_t sig, siginfo_t* info, void * ucntx)
+{
+    // --- RimDroid: per-signal file logging, GATED (RIMDROID_SIGLOG=1) ---------
+    // box64's normal bridge mechanism faults thousands of times (si_addr in the
+    // 0x3b34xxxx bridge region, si_code=2) and handles each internally.  Logging
+    // every one to signal_debug.log + crash_signal.log (open/write/close ×2 per
+    // signal) added catastrophic overhead — ~34k faults during init alone, which
+    // is the real reason runs "hung"/crawled.  OFF by default; enable only to
+    // capture a specific crash.  (The fatal-crash path still records sigsegv_fault.log.)
+    static int rd_siglog = -1;
+    if (rd_siglog < 0) { const char* _e = getenv("RIMDROID_SIGLOG"); rd_siglog = (_e && _e[0]=='1') ? 1 : 0; }
+    if (rd_siglog) {
+        const char* sname = "?";
+        int raw_sig = sig;
+        if(raw_sig == SIGILL)       sname = "SIGILL";
+        else if(raw_sig == SIGBUS)  sname = "SIGBUS";
+        else if(raw_sig == SIGSEGV) sname = "SIGSEGV";
+        else if(raw_sig == SIGABRT) sname = "SIGABRT";
+        void* fault_addr = info ? info->si_addr : (void*)-1;
+        int si_code = info ? info->si_code : -1;
+        ucontext_t* _up = (ucontext_t*)ucntx;
+#ifdef __aarch64__
+        void* native_pc = _up ? (void*)_up->uc_mcontext.pc : (void*)-1;
+#else
+        void* native_pc = (void*)-1;
+#endif
+        const char* home = getenv("HOME");
+        char path[512];
+        snprintf(path, sizeof(path), "%s/signal_debug.log", home ? home : "/data/local/tmp");
+        int fd = open(path, O_WRONLY|O_CREAT|O_APPEND, 0644);
+        if(fd >= 0) {
+            char buf[256];
+            int n = snprintf(buf, sizeof(buf),
+                "=== SIGNAL %d (%s) addr=%p code=%d native_pc=%p ===\n",
+                raw_sig, sname, fault_addr, si_code, native_pc);
+            write(fd, buf, n);
+            close(fd);
+        }
+        // Write SIGSEGV/SIGBUS/SIGILL to separate crash file as well
+        if(raw_sig == SIGSEGV || raw_sig == SIGBUS || raw_sig == SIGILL) {
+            char path2[512];
+            snprintf(path2, sizeof(path2), "%s/crash_signal.log", home ? home : "/data/local/tmp");
+            int fd2 = open(path2, O_WRONLY|O_CREAT|O_APPEND, 0644);
+            if(fd2 >= 0) {
+                char buf2[512];
+                int n2 = snprintf(buf2, sizeof(buf2),
+                    "=== %s si_addr=%p si_code=%d native_pc=%p tid=%d ===\n",
+                    sname, fault_addr, si_code, native_pc, GetTID());
+                write(fd2, buf2, n2);
+                close(fd2);
+            }
+        }
+    }
+    // -------------------------------------------------------------------------
+    sig = signal_to_x64(sig);
+    // sig==X64_SIGSEGV || sig==X64_SIGBUS || sig==X64_SIGILL || sig==X64_SIGABRT here!
+    int log_minimum = (BOX64ENV(showsegv))?LOG_NONE:((((sig==X64_SIGSEGV) || (sig==X64_SIGILL)) && my_context->is_sigaction[sig])?LOG_DEBUG:LOG_INFO);
+    if(signal_jmpbuf_active) {
+        signal_jmpbuf_active = 0;
+        longjmp(SIG_JMPBUF, 1);
+    }
+    ucontext_t *p = (ucontext_t *)ucntx;
+    void* addr = (void*)info->si_addr;  // address that triggered the issue
+    void* rsp = NULL;
+    x64emu_t* emu = thread_get_emu();
+    int tid = GetTID();
+#ifdef __aarch64__
+    void * pc = (void*)p->uc_mcontext.pc;
+    struct fpsimd_context *fpsimd = NULL;
+    // find fpsimd struct
+    {
+        struct _aarch64_ctx * ff = (struct _aarch64_ctx*)p->uc_mcontext.__reserved;
+        while (ff->magic && !fpsimd) {
+            if(ff->magic==FPSIMD_MAGIC)
+                fpsimd = (struct fpsimd_context*)ff;
+            else
+                ff = (struct _aarch64_ctx*)((uintptr_t)ff + ff->size);
+        }
+    }
+#elif defined __x86_64__
+    void * pc = (void*)p->uc_mcontext.gregs[X64_RIP];
+    void* fpsimd = NULL;
+#elif defined __powerpc64__
+    void * pc = (void*)p->uc_mcontext.gp_regs[PT_NIP];
+    void* fpsimd = NULL;
+#elif defined(LA64)
+    void * pc = (void*)p->uc_mcontext.__pc;
+    void* fpsimd = NULL;
+#elif defined(SW64)
+    void * pc = (void*)p->uc_mcontext.sc_pc;
+    void* fpsimd = NULL;
+#elif defined(RV64)
+    void * pc = (void*)p->uc_mcontext.__gregs[REG_PC];
+    void* fpsimd = NULL;
+#else
+    void * pc = NULL;    // unknow arch...
+    void* fpsimd = NULL;
+    #warning Unhandled architecture
+#endif
+    dynablock_t* db = NULL;
+    int db_searched = 0;
+    uintptr_t x64pc = (uintptr_t)-1;
+    x64pc = R_RIP;
+    // --- RimDroid: log x86_64 RIP into signal_debug.log — GATED (RIMDROID_SIGLOG=1)
+    // This fires on EVERY signal; box64's lazy-bridge mechanism throws thousands of
+    // SIGSEGVs during init, so writing each one (open/write/close) wrote ~16 MB/run
+    // and slowed every launch to a crawl ("hangs").  Default OFF.
+    {
+        static int rd_riplog = -1;
+        if (rd_riplog < 0) { const char* _e = getenv("RIMDROID_SIGLOG"); rd_riplog = (_e && _e[0]=='1') ? 1 : 0; }
+        if (rd_riplog) {
+            const char* home2 = getenv("HOME");
+            char path2[512];
+            snprintf(path2, sizeof(path2), "%s/signal_debug.log", home2 ? home2 : "/data/local/tmp");
+            int fd2 = open(path2, O_WRONLY|O_CREAT|O_APPEND, 0644);
+            if(fd2 >= 0) {
+                char buf2[256];
+                int n2 = snprintf(buf2, sizeof(buf2),
+                    "    x86_64 RIP=0x%lx RSP=0x%lx tid=%d\n",
+                    (unsigned long)x64pc,
+                    (unsigned long)R_RSP,
+                    GetTID());
+                write(fd2, buf2, n2);
+                close(fd2);
+            }
+        }
+    }
+    // --------------------------------------------------------
+    if(((sig==X64_SIGBUS) && ((addr!=pc) || ((sig==X64_SIGSEGV) && emu->segs[_CS]==0x23 && ((uintptr_t)addr>>32)==0xffffffff)))
+#ifdef RV64
+    || ((sig==X64_SIGSEGV) && (addr==pc) && (info->si_code==2) && (!checkMutex(is_memprot_locked) && getProtection_fast((uintptr_t)addr)==(PROT_READ|PROT_WRITE|PROT_EXEC)))
+#endif
+    )
+    {
+        db = FindDynablockFromNativeAddress(pc);
+        if(db)
+            x64pc = getX64Address(db, (uintptr_t)pc);
+        db_searched = 1;
+        int fixed = 0;
+        if((fixed=sigbus_specialcases(info, ucntx, pc, fpsimd, db, x64pc, emu->segs[_CS]==0x23))) {
+            // special case fixed, restore everything and just continues
+            if (BOX64ENV(log)>=LOG_DEBUG || BOX64ENV(showsegv)) {
+                static void*  old_pc[2] = {0};
+                static int old_pc_i = 0;
+                if(old_pc[0]!=pc && old_pc[1]!=pc) {
+                    old_pc[old_pc_i++] = pc;
+                    if(old_pc_i==2)
+                        old_pc_i = 0;
+                    uint8_t* x64 = (uint8_t*)x64pc;
+                    if(db)
+                        printf_log(LOG_INFO, "Special unaligned case fixed @%p, opcode=%08x (addr=%p, db=%p, x64pc=%p[%02hhX %02hhX %02hhX %02hhX %02hhX])\n", pc, *(uint32_t*)pc, addr, db, x64pc, x64[0], x64[1], x64[2], x64[3], x64[4], x64[5]);
+                    else
+                        printf_log(LOG_INFO, "Special unaligned case fixed @%p, opcode=%08x (addr=%p)\n", pc, *(uint32_t*)pc, addr);
+                }
+            }
+            return;
+        }
+    }
+    #ifdef ARCH_NOP
+    if(sig==X64_SIGILL) {
+        if(!db_searched) {
+            db = FindDynablockFromNativeAddress(pc);
+            if(db)
+                x64pc = getX64Address(db, (uintptr_t)pc);   // this will be incorect in the case of the callret!
+            db_searched = 1;
+        }
+        if(db && db->callret_size) {
+            int is_callrets = 0;
+            int type_callret = 0;
+            for(int i=0; i<db->callret_size && !is_callrets; ++i)
+                if(pc==(db->block+db->callrets[i].offs)) {
+                    is_callrets = 1;
+                    type_callret = db->callrets[i].type;
+                }
+            if(is_callrets) {
+                if(!type_callret) {
+                    // adjust x64pc for "ret" type
+                    x64pc = CONTEXT_REG(p, xRIP);
+                }
+                // check if block is still valid
+                int is_hotpage = checkInHotPage(x64pc);
+                uint32_t hash = (db->gone || is_hotpage)?0:X31_hash_code(db->x64_addr, db->x64_size);
+                if(!db->gone && (!is_hotpage || db->autocrc) && hash==db->hash) {
+                    dynarec_log(LOG_INFO, "Dynablock (%p, x64addr=%p, always_test=%d, autocrc=%d) is clean, %s continuing at %p (%p)!\n", db, db->x64_addr, db->always_test, db->autocrc, type_callret?"self-loop":"ret from callret", (void*)x64pc, (void*)addr);
+                    // it's good! go next opcode
+                    CONTEXT_PC(p)+=4;
+                    if(db->always_test)
+                        protectDB((uintptr_t)db->x64_addr, 1);
+                    else {
+                        if(db->callret_size) {
+                            // mark all callrets to NOP
+                            for(int i=0; i<db->callret_size; ++i)
+                                *(uint32_t*)(db->block+db->callrets[i].offs) = ARCH_NOP;
+                            ClearCache(db->block, db->size);
+                        }
+                        protectDBJumpTable((uintptr_t)db->x64_addr, db->x64_size, db->block, db->jmpnext);
+                        for(int i=0; i<db->sep_size; ++i) {
+                            uint32_t x64_offs = db->sep[i].x64_offs;
+                            uint32_t nat_offs = db->sep[i].nat_offs;
+                            if(addJumpTableIfDefault64(db->x64_addr+x64_offs, (db->always_test)?db->jmpnext:(db->block+nat_offs)))
+                                db->sep[i].active = 1;
+                            else
+                                db->sep[i].active = 0;
+                        }
+                    }
+                    return;
+                } else {
+                    // dynablock got dirty! need to get out of it!!!
+                    if(emu->jmpbuf) {
+                        copyUCTXreg2Emu(emu, p, x64pc);
+                        // only copy as it's a return address, so there is just the "epilog" to mimic here on "ret" type. "loop" type need everything
+                        if(type_callret) {
+                            adjustregs(emu, pc);
+                            if(db && db->arch_size)
+                                ARCH_ADJUST(db, emu, p, x64pc);
+                        }
+                        dynarec_log(LOG_INFO, "Dynablock (%p, x64addr=%p) %s, getting out at %s %p (%p)!\n", db, db->x64_addr, is_hotpage?"in HotPage":"dirty", getAddrFunctionName(R_RIP), (void*)R_RIP, type_callret?"self-loop":"ret from callret", (void*)addr);
+                        emu->test.clean = 0;
+                        // use "3" to regen a dynablock at current pc (else it will first do an interp run)
+                        dynablock_leave_runtime(db);
+                        #if defined(RV64) || defined(PPC64LE)
+                        emu->xSPSave = emu->old_savedsp;
+                        #endif
+                        cancel_deferred_signal_processing(emu);
+                        #ifdef ANDROID
+                        siglongjmp(*(JUMPBUFF*)emu->jmpbuf, 3);
+                        #else
+                        siglongjmp(emu->jmpbuf, 3);
+                        #endif
+                    }
+                    dynarec_log(LOG_INFO, "Warning, Dirty %s (%p for db %p/%p) detected, but jmpbuffer not ready!\n", type_callret?"self-loop":"ret from callret", (void*)addr, db, (void*)db->x64_addr);
+                }
+            }
+        }
+    }
+    #endif
+    int Locks = unlockMutex();
+    uint32_t prot = getProtection((uintptr_t)addr);
+    #ifdef BAD_SIGNAL
+    // try to see if the si_code makes sense
+    // the RK3588 tend to need a special Kernel that seems to have a weird behaviour sometimes
+    if((sig==X64_SIGSEGV) && (addr) && (info->si_code == 1) && getMmapped((uintptr_t)addr)) {
+        printf_log(LOG_DEBUG, "Workaround for suspicious si_code for %p / prot=0x%hhx\n", addr, prot);
+        info->si_code = 2;
+    }
+    #endif
+#ifdef DYNAREC
+    // [RD] Adreno-725 / Snapdragon 7+ Gen2 black-screen root fix. Some Android kernels report
+    // SEGV_MAPERR (si_code=1) instead of SEGV_ACCERR for a write to one of OUR write-protected
+    // dynarec pages — e.g. Mono rewriting a JIT trampoline in a page box64 already built+protected
+    // (heavy SMC). The SMC handler below requires SEGV_ACCERR, so the fault used to be mis-forwarded
+    // to the guest as fatal → instant fake "OOM" black screen at Mono init. If the faulting page is
+    // box64's own protected code (PROT_DYNAREC/_R), a write there IS self-modifying code no matter
+    // what si_code the kernel reports, so reclassify MAPERR→ACCERR and let the normal unprotect/dirty
+    // path run. This makes the trampoline-NEVERCLEAN workaround (slow, breaks mods via torn-code race)
+    // unnecessary. Safe everywhere: a correct kernel already sends ACCERR, so this branch never fires;
+    // gated on PROT_DYNAREC so a genuinely-unmapped address is left as a real fault. (Generalises the
+    // older #ifdef BAD_SIGNAL/getMmapped RK3588 hack.)
+    // [RD-fixB5] CLEAN false-MAPERR fix (all diagnostic instrumentation removed; only the fix remains).
+    // Some Android kernels report SEGV_MAPERR instead of SEGV_ACCERR for a write to a page box64 OWNS — Mono
+    // backpatching its own JIT code (proven: libmono+0x14df92 lock cmpxchg, page getMmapped + PROT_EXEC,
+    // prot 0x7/0x87). Original only covered PROT_DYNAREC; broaden to any box64-owned EXECUTABLE page
+    // (getMmapped && PROT_EXEC) — the real backpatch case — but NOT data pages (those carry Mono's legit
+    // null-check faults that must reach Mono's handler). SELF-LIMITING: a true false-MAPERR resolves on the
+    // immediate retry and won't fault again; if an addr recurs >=2 times we bail (leave MAPERR → forward to
+    // guest), so a wrongly-grabbed fault is never swallowed. NOTE: the deep "phasic" save/crash bug is
+    // SEPARATE (present even in baseline; reset by reboot) — this fix only addresses the false-MAPERR class.
+    // RimDroid 2026-07-18: split by certainty (Codex hypothesis + a710/SM6450 logs).
+    //  * PROT_DYNAREC/_R page: box64 OWNS it and write-protected it for SMC detection, and the guest
+    //    prot still carries PROT_WRITE (0x87), so a write fault here is UNAMBIGUOUSLY self-modifying
+    //    code and a MAPERR is definitely a kernel misreport — reclassify EVERY time, NO count limit.
+    //    Mono legitimately backpatches the SAME JIT address repeatedly (libmono+0x111610
+    //    `lock cmpxchg [rbx-4]` into a prot=0x87 page). The old 2-hit cap turned the 3rd backpatch of
+    //    one address into a fatal fake SIGSEGV = the RimWorld-1.6 def-load / XML-load crash on
+    //    false-MAPERR kernels (SAME fatal RIP from BOTH Parallel.ForEach AND serial XmlTextReaderImpl
+    //    => shared SMC mechanism, not the parallel path). Unprotect+retry always makes progress, so
+    //    removing the cap here cannot loop (HotPage handles pathological repeats).
+    //  * getMmapped && PROT_EXEC but NOT PROT_DYNAREC: broader heuristic where a wrongly-grabbed fault
+    //    is possible → KEEP the 2-hit-per-address cap as a safety valve, and LOG when it rejects so we
+    //    can tell whether this heuristic ever turns a crash fatal.
+    if((sig==X64_SIGSEGV) && addr && (info->si_code == SEGV_MAPERR)) {
+        int rd_is_dynarec   = (prot & (PROT_DYNAREC|PROT_DYNAREC_R)) != 0;
+        int rd_is_execmapped= getMmapped((uintptr_t)addr) && (prot & PROT_EXEC);
+        if(rd_is_dynarec) {
+            static int rd_reclass_logged = 0;
+            if(!rd_reclass_logged) { rd_reclass_logged = 1;
+                printf_log(LOG_NONE, "[RD] false-MAPERR fix ACTIVE (dynarec page, first hit %p prot=0x%x)\n", (void*)addr, prot);
+            }
+            info->si_code = SEGV_ACCERR;   // no limit — unambiguous SMC on a box64-owned page
+        } else if(rd_is_execmapped) {
+            static __thread uintptr_t rd_rc_addr[8]; static __thread uint8_t rd_rc_cnt[8]; static __thread int rd_rc_n;
+            uintptr_t a = (uintptr_t)addr;
+            int slot = -1;
+            for(int i=0;i<8;i++) if(rd_rc_addr[i]==a){ slot=i; break; }
+            if(slot<0){ slot = (rd_rc_n++)&7; rd_rc_addr[slot]=a; rd_rc_cnt[slot]=0; }
+            if(rd_rc_cnt[slot] < 2) {
+                rd_rc_cnt[slot]++;
+                info->si_code = SEGV_ACCERR;
+            } else {
+                static int rd_cap_logged = 0;
+                if(!rd_cap_logged) { rd_cap_logged = 1;
+                    printf_log(LOG_NONE, "[RD] false-MAPERR CAP hit (exec page %p prot=0x%x forwarded to guest as fatal)\n", (void*)addr, prot);
+                }
+            }
+        }
+    }
+    if((Locks & is_dyndump_locked) && ((sig==X64_SIGSEGV) || (sig==X64_SIGBUS)) && current_helper && fillblock_active) {
+        printf_log(LOG_INFO, "FillBlock triggered a %s at %p from %p\n", (sig==X64_SIGSEGV)?"segfault":"bus error", addr, pc);
+        relockMutex(Locks);
+        cancelFillBlock();  // Segfault inside a Fillblock, cancel it's creation...
+        // cancelFillBlock does not return
+    }
+    if ((sig==X64_SIGSEGV) && (addr) && (info->si_code == SEGV_ACCERR) && (prot&PROT_DYNAREC)) {
+        lock_signal();
+        // check if SMC inside block
+        if(!db_searched) {
+            db = FindDynablockFromNativeAddress(pc);
+            if(db)
+                x64pc = getX64Address(db, (uintptr_t)pc);
+            db_searched = 1;
+        }
+        // access error, unprotect the block (and mark them dirty)
+        unprotectDB((uintptr_t)addr, 1, 1);    // unprotect 1 byte... But then, the whole page will be unprotected
+        CheckHotPage((uintptr_t)addr, prot);
+        int db_need_test = (db && !BOX64ENV(dynarec_dirty))?getNeedTest((uintptr_t)db->x64_addr):0;
+        if(db && ((addr>=db->x64_addr && addr<(db->x64_addr+db->x64_size)) || db_need_test)) {
+            emu = getEmuSignal(emu, p, db);
+            // dynablock got auto-dirty! need to get out of it!!!
+            if(emu->jmpbuf) {
+                uintptr_t x64pc = getX64Address(db, (uintptr_t)pc);
+                copyUCTXreg2Emu(emu, p, x64pc);
+                adjustregs(emu, pc);
+                if(db && db->arch_size)
+                    ARCH_ADJUST(db, emu, p, x64pc);
+                int autosmc = (addr>=db->x64_addr && addr<(db->x64_addr+db->x64_size));
+                if(autosmc && BOX64ENV(dynarec_dirty)) {
+                    // check if current block should be cut there
+                    int inst = getX64AddressInst(db, (uintptr_t)pc);
+                    // is it the last instruction
+                    uintptr_t next = getX64InstAddress(db, inst+1);
+                    if(next!=(uintptr_t)-1LL) {
+                        // there is a next, so lets mark the address and dirty the block
+                        mark_db_autosmc(db, x64pc);
+                    }
+
+                }
+                dynarec_log(LOG_INFO, "Dynablock (%p, x64addr=%p, need_test=%d/%d/%d) %s, getting out at %p (%p)!\n", db, db->x64_addr, db_need_test, db->dirty, db->always_test, autosmc?"Auto-SMC":"unprotected", (void*)R_RIP, (void*)addr);
+                //relockMutex(Locks);
+                unlock_signal();
+                if(Locks & is_dyndump_locked)
+                    CancelBlock64(1);
+                emu->test.clean = 0;
+                // will restore unblocked Signal flags too
+                dynablock_leave_runtime(db);
+                #if defined(RV64) || defined(PPC64LE)
+                emu->xSPSave = emu->old_savedsp;
+                #endif
+                cancel_deferred_signal_processing(emu);
+                #ifdef ANDROID
+                siglongjmp(*(JUMPBUFF*)emu->jmpbuf, 2);
+                #else
+                siglongjmp(emu->jmpbuf, 2);
+                #endif
+            }
+            dynarec_log(LOG_INFO, "Warning, Auto-SMC (%p for db %p/%p) detected, but jmpbuffer not ready!\n", (void*)addr, db, (void*)db->x64_addr);
+        }
+        // done
+        if((prot&PROT_WRITE)/*|| (prot&PROT_DYNAREC)*/) {
+            if(BOX64ENV(dynarec_log)) {
+                char tmp[128] = {0};
+                zydis_dec_t* dec = emu->segs[_CS] == 0x23 ? my_context->dec32 : my_context->dec;
+                if (dec)
+                snprintf(tmp, 127, " %sopcode=%s; native opcode=%08x", (emu->segs[_CS] == 0x23) ? "x86" : "x64", DecodeX64Trace(dec, x64pc, 1), *(uint32_t*)pc);
+                else
+                snprintf(tmp, 127, " %sopcode=%02X %02X %02X %02X %02X %02X %02X %02X (opcode=%08x)", (emu->segs[_CS] == 0x23) ? "x86" : "x64", ((uint8_t*)x64pc)[0], ((uint8_t*)x64pc)[1], ((uint8_t*)x64pc)[2], ((uint8_t*)x64pc)[3], ((uint8_t*)x64pc)[4], ((uint8_t*)x64pc)[5], ((uint8_t*)x64pc)[6], ((uint8_t*)x64pc)[7], *(uint32_t*)pc);
+                dynarec_log(LOG_INFO, "Writting from %04d|%p(%s, native=%s) to %p using %s\n", GetTID(), (void*)x64pc, getAddrFunctionName(x64pc), db?"Dynablock":GetNativeName(pc, 1),(void*)addr, tmp);
+            }
+            // if there is no write permission, don't return and continue to program signal handling
+            unlock_signal();
+            relockMutex(Locks);
+            return;
+        }
+        unlock_signal();
+    } else if ((sig==X64_SIGSEGV) && (addr) && (info->si_code == SEGV_ACCERR) && ((prot&(PROT_READ|PROT_WRITE))==(PROT_READ|PROT_WRITE))) {
+        lock_signal();
+        if(!db_searched) {
+            db = FindDynablockFromNativeAddress(pc);
+            if(db)
+                x64pc = getX64Address(db, (uintptr_t)pc);
+            db_searched = 1;
+        }
+        if(db && db->x64_addr>= addr && (db->x64_addr+db->x64_size)<addr) {
+            dynarec_log(LOG_INFO, "Warning, addr inside current dynablock!\n");
+        }
+        // mark stuff as unclean
+        if(BOX64ENV(dynarec))
+            cleanDBFromAddressRange(((uintptr_t)addr)&~(box64_pagesize-1), box64_pagesize, 0);
+        static void* glitch_pc = NULL;
+        static void* glitch_addr = NULL;
+        static uint32_t glitch_prot = 0;
+        if(addr && pc /*&& db*/) {
+            if((glitch_pc!=pc || glitch_addr!=addr || glitch_prot!=prot)) {
+                // probably a glitch due to intensive multitask...
+                dynarec_log(/*LOG_DEBUG*/LOG_INFO, "%04d|SIGSEGV with Access error on %p for %p, db=%p, prot=0x%x, retrying\n", tid, pc, addr, db, prot);
+                glitch_pc = pc;
+                glitch_addr = addr;
+                glitch_prot = prot;
+                relockMutex(Locks);
+                unlock_signal();
+                return; // try again
+            }
+dynarec_log(/*LOG_DEBUG*/LOG_INFO, "%04d|Repeated SIGSEGV with Access error on %p for %p, db=%p, prot=0x%x\n", tid, pc, addr, db, prot);
+            glitch_pc = NULL;
+            glitch_addr = NULL;
+            glitch_prot = 0;
+            relockMutex(Locks);
+            unlock_signal();
+            return; // try again
+    }
+        if(addr && pc && ((prot&(PROT_READ|PROT_WRITE))==(PROT_READ|PROT_WRITE))) {
+            static void* glitch2_pc = NULL;
+            static void* glitch2_addr = NULL;
+            static int glitch2_prot = 0;
+            if((glitch2_pc!=pc || glitch2_addr!=addr || glitch2_prot!=prot)) {
+                dynarec_log(LOG_INFO, "Is that a multi process glitch too?\n");
+                //printf_log(LOG_INFO, "Is that a multi process glitch too?\n");
+                glitch2_pc = pc;
+                glitch2_addr = addr;
+                glitch2_prot = prot;
+                sched_yield();  // give time to the other process
+                refreshProtection((uintptr_t)addr);
+                relockMutex(Locks);
+                sched_yield();  // give time to the other process
+                unlock_signal();
+                return; // try again
+            }
+            glitch2_pc = NULL;
+            glitch2_addr = NULL;
+            glitch2_prot = 0;
+        }
+        unlock_signal();
+    } else if ((sig==X64_SIGSEGV) && (addr) && (info->si_code == SEGV_ACCERR) && (prot&PROT_DYNAREC_R)) {
+        // unprotect and continue to signal handler, because Write is not there on purpose
+        unprotectDB((uintptr_t)addr, 1, 1);    // unprotect 1 byte... But then, the whole page will be unprotected
+    }
+    if(!db_searched) {
+        db = FindDynablockFromNativeAddress(pc);
+        if(db)
+            x64pc = getX64Address(db, (uintptr_t)pc);
+        db_searched = 1;
+    }
+#endif
+    if((sig==X64_SIGSEGV || sig==X64_SIGBUS) && box64_quit) {
+        printf_log(LOG_INFO, "Sigfault/Segbus while quitting, exiting silently\n");
+        _exit(box64_exit_code);    // Hack, segfault while quiting, exit silently
+    }
+    static int old_code = -1;
+    static void* old_pc = 0;
+    static void* old_addr = 0;
+    static int old_tid = 0;
+    static uint32_t old_prot = 0;
+    int mapped = memExist((uintptr_t)addr);
+    const char* signame = (sig==X64_SIGSEGV)?"SIGSEGV":((sig==X64_SIGBUS)?"SIGBUS":((sig==X64_SIGILL)?"SIGILL":"SIGABRT"));
+    rsp = (void*)R_RSP;
+#if defined(DYNAREC)
+    if(db && CONTEXT_REG(p, xEmu)>0x10000) {
+        emu = (x64emu_t*)CONTEXT_REG(p, xEmu);
+    }
+    if(db) {
+        rsp = (void*)CONTEXT_REG(p, xRSP);
+    }
+#endif //DYNAREC
+    if(!db && (sig==X64_SIGSEGV) && ((uintptr_t)addr==(x64pc-1)))
+        x64pc--;
+    if((sig==X64_SIGSEGV) && (info->si_code == SEGV_ACCERR) && ((prot&~PROT_CUSTOM)==(PROT_READ|PROT_WRITE) || (prot&~PROT_CUSTOM)==(PROT_READ|PROT_WRITE|PROT_EXEC))) {
+        static uintptr_t old_addr = 0;
+        #ifdef DYNAREC
+        if(prot==(PROT_READ|PROT_WRITE|PROT_EXEC))
+            if(cleanDBFromAddressRange(((uintptr_t)addr)&~(box64_pagesize-1), box64_pagesize, 0)) {
+                printf_log(/*LOG_DEBUG*/LOG_INFO, "%04d| Strange SIGSEGV with Access error on %p for %p with DynaBlock(s) in range, db=%p, Lock=0x%x)\n", tid, pc, addr, db, Locks);
+                refreshProtection((uintptr_t)addr);
+                relockMutex(Locks);
+                return;
+            }
+        #endif
+        printf_log(/*LOG_DEBUG*/LOG_INFO, "%04d| Strange SIGSEGV with Access error on %p for %p%s, db=%p, prot=0x%x (old_addr=%p, Lock=0x%x)\n", tid, pc, addr, mapped?" mapped":"", db, prot, (void*)old_addr, Locks);
+        if(!(old_addr==(uintptr_t)addr && old_prot==prot) || mapped) {
+            old_addr = (uintptr_t)addr;
+            old_prot = prot;
+            refreshProtection(old_addr);
+            relockMutex(Locks);
+            sched_yield();  // give time to the other process
+            return; // that's probably just a multi-task glitch, like seen in terraria
+        }
+        old_addr = 0;
+    }
+    old_code = info->si_code;
+    old_pc = pc;
+    old_addr = addr;
+    old_tid = tid;
+    old_prot = prot;
+    const char* name = NULL;
+    const char* x64name = NULL;
+    if (log_minimum<=BOX64ENV(log)) {
+        signal_jmpbuf_active = 1;
+        if(sigsetjmp(SIG_JMPBUF, 1)) {
+            // segfault while gathering function name...
+            name = "???";
+        } else
+            name = GetNativeName(pc, 1);
+        signal_jmpbuf_active = 0;
+    }
+    // Adjust RIP for special case of NULL function run
+    if(sig==X64_SIGSEGV && R_RIP==0x1 && (uintptr_t)info->si_addr==0x0)
+        R_RIP = 0x0;
+    if(log_minimum<=BOX64ENV(log)) {
+        elfheader_t* elf = FindElfAddress(my_context, x64pc);
+        {
+            signal_jmpbuf_active = 1;
+            if(sigsetjmp(SIG_JMPBUF, 1)) {
+                // segfault while gathering function name...
+                x64name = "?";
+            } else
+                x64name = getAddrFunctionName(x64pc);
+            signal_jmpbuf_active = 0;
+        }
+    }
+    if(BOX64ENV(jitgdb)) {
+        pid_t pid = getpid();
+        int v = vfork(); // is this ok in a signal handler???
+        if(v<0) {
+            printf("Error while forking, cannot launch gdb (errp%d/%s)\n", errno, strerror(errno));
+        } else if(v) {
+            // parent process, the one that have the segfault
+            volatile int waiting = 1;
+            printf("Waiting for %s (pid %d)...\n", (BOX64ENV(jitgdb)==2)?"gdbserver":"gdb", pid);
+            while(waiting) {
+                // using gdb, use "set waiting=0" to stop waiting...
+                usleep(1000);
+            }
+        } else {
+            char myarg[50] = {0};
+            sprintf(myarg, "%d", pid);
+            if(BOX64ENV(jitgdb)==2)
+                execlp("gdbserver", "gdbserver", "127.0.0.1:1234", "--attach", myarg, (char*)NULL);
+            else if(BOX64ENV(jitgdb)==3)
+                execlp("lldb", "lldb", "-p", myarg, (char*)NULL);
+            else
+                execlp("gdb", "gdb", "-pid", myarg, (char*)NULL);
+            exit(-1);
+        }
+    }
+    print_rolling_log(log_minimum);
+
+    if((BOX64ENV(showbt) || sig==X64_SIGABRT) && log_minimum<=BOX64ENV(log)) {
+        // show native bt
+        ShowNativeBT(log_minimum);
+
+#define BT_BUF_SIZE 100
+        int nptrs;
+        void *buffer[BT_BUF_SIZE];
+        char **strings;
+
+        extern int my_backtrace_ip(x64emu_t* emu, void** buffer, int size);   // in wrappedlibc
+        extern char** my_backtrace_symbols(x64emu_t* emu, uintptr_t* buffer, int size);
+        // save and set real RIP/RSP
+        #define GO(A) uintptr_t old_##A = R_##A;
+        GO(RAX);
+        GO(RBX);
+        GO(RCX);
+        GO(RDX);
+        GO(RBP);
+        GO(RSP);
+        GO(RDI);
+        GO(RSI);
+        GO(R8);
+        GO(R9);
+        GO(R10);
+        GO(R11);
+        GO(R12);
+        GO(R13);
+        GO(R14);
+        GO(R15);
+        GO(RIP);
+        #undef GO
+        #ifdef DYNAREC
+        if(db)
+            copyUCTXreg2Emu(emu, p, x64pc);
+        #endif
+        nptrs = my_backtrace_ip(emu, buffer, BT_BUF_SIZE);
+        strings = my_backtrace_symbols(emu, (uintptr_t*)buffer, nptrs);
+        if(strings) {
+            for (int j = 0; j < nptrs; j++)
+                printf_log(log_minimum, "EmulatedBT: %s\n", strings[j]);
+            free(strings);
+        } else
+            printf_log(log_minimum, "EmulatedBT: none\n");
+        #define GO(A) R_##A = old_##A
+        GO(RAX);
+        GO(RBX);
+        GO(RCX);
+        GO(RDX);
+        GO(RBP);
+        GO(RSP);
+        GO(RDI);
+        GO(RSI);
+        GO(R8);
+        GO(R9);
+        GO(R10);
+        GO(R11);
+        GO(R12);
+        GO(R13);
+        GO(R14);
+        GO(R15);
+        GO(RIP);
+        #undef GO
+    }
+    if(log_minimum<=BOX64ENV(log)) {
+        static const char* reg_name[] = {"RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", " R8", " R9","R10","R11", "R12","R13","R14","R15"};
+        static const char* seg_name[] = {"ES", "CS", "SS", "DS", "FS", "GS"};
+        int shown_regs = 0;
+#ifdef DYNAREC
+        #ifdef GDBJIT
+        if(db && BOX64ENV(dynarec_gdbjit) == 3) GdbJITBlockReady(db->gdbjit_block);
+        #endif
+        uint32_t hash = 0;
+        if(db)
+            hash = X31_hash_code(db->x64_addr, db->x64_size);
+        printf_log(log_minimum, "%04d|%s @%p (%s) (x64pc=%p/\"%s\", rsp=%p, stack=%p:%p own=%p fp=%p), for accessing %p (code=%d/prot=%x), db=%p(%p:%p/%p:%p/%s:%s, hash:%x/%x) handler=%p",
+            GetTID(), signame, pc, name, (void*)x64pc, x64name?:"???", rsp,
+            emu->init_stack, emu->init_stack+emu->size_stack, emu->stack2free, (void*)R_RBP,
+            addr, info->si_code,
+            prot, db, db?db->block:0, db?(db->block+db->size):0,
+            db?db->x64_addr:0, db?(db->x64_addr+db->x64_size):0,
+            getAddrFunctionName((uintptr_t)(db?db->x64_addr:0)),
+            (db && (db->hash!=hash))?"dirty":((db?getNeedTest((uintptr_t)db->x64_addr):0)?"needs_test":"clean"), db?db->hash:0, hash,
+            (void*)my_context->signals[sig]);
+            if(db) {
+                shown_regs = 1;
+                for (int i=0; i<16; ++i) {
+                    if(!(i%4)) printf_log_prefix(0, log_minimum, "\n");
+                    printf_log_prefix(0, log_minimum, "%s:0x%016llx ", reg_name[i], CONTEXT_REG(p, TO_NAT(i)));
+                }
+                printf_log_prefix(0, log_minimum, "\n");
+                for (int i=0; i<6; ++i)
+                    printf_log_prefix(0, log_minimum, "%s:0x%04x ", seg_name[i], emu->segs[i]);
+                printf_log_prefix(0, log_minimum, "FSBASE=%p ", emu->segs_offs[_FS]);
+                printf_log_prefix(0, log_minimum, "GSBASE=%p", emu->segs_offs[_GS]);
+            }
+            if(rsp!=addr && getProtection((uintptr_t)rsp-4*8) && getProtection((uintptr_t)rsp+4*8))
+                for (int i=-4; i<4; ++i) {
+                    printf_log_prefix(0, log_minimum, "%sRSP%c0x%02x:0x%016lx", (i%4)?" ":"\n", i<0?'-':'+', abs(i)*8, *(uintptr_t*)(rsp+i*8));
+                }
+#else
+        printf_log(log_minimum, "%04d|%s @%p (%s) (x64pc=%p/\"%s\", rsp=%p), for accessing %p (code=%d)", GetTID(), signame, pc, name, (void*)x64pc, x64name?:"???", rsp, addr, info->si_code);
+#endif
+        if(!shown_regs) {
+            for (int i=0; i<16; ++i) {
+                if(!(i%4)) printf_log_prefix(0, log_minimum, "\n");
+                printf_log_prefix(0, log_minimum, "%s:0x%016llx ", reg_name[i], emu->regs[i].q[0]);
+            }
+            for (int i=0; i<6; ++i)
+                printf_log_prefix(0, log_minimum, "%s:0x%04x ", seg_name[i], emu->segs[i]);
+            printf_log_prefix(0, log_minimum, "FSBASE=%p ", emu->segs_offs[_FS]);
+            printf_log_prefix(0, log_minimum, "GSBASE=%p", emu->segs_offs[_GS]);
+            printf_log_prefix(0, log_minimum, "\n");
+        }
+        zydis_dec_t* dec = emu->segs[_CS] == 0x23 ? my_context->dec32 : my_context->dec;
+        if(sig==X64_SIGILL) {
+            if(!db) {
+                const char* fnc = getAddrFunctionName((uintptr_t)pc);
+                if(fnc) printf_log_prefix(0, log_minimum, "pc=%p: %s ", pc, fnc);
+            }
+            printf_log_prefix(0, log_minimum, " opcode=%02X %02X %02X %02X %02X %02X %02X %02X ", ((uint8_t*)pc)[0], ((uint8_t*)pc)[1], ((uint8_t*)pc)[2], ((uint8_t*)pc)[3], ((uint8_t*)pc)[4], ((uint8_t*)pc)[5], ((uint8_t*)pc)[6], ((uint8_t*)pc)[7]);
+            if (dec)
+                printf_log_prefix(0, log_minimum, "(%s)\n", DecodeX64Trace(dec, x64pc, 1));
+            else
+                printf_log_prefix(0, log_minimum, "(%02X %02X %02X %02X %02X)\n", ((uint8_t*)x64pc)[0], ((uint8_t*)x64pc)[1], ((uint8_t*)x64pc)[2], ((uint8_t*)x64pc)[3], ((uint8_t*)x64pc)[4]);
+        } else if(sig==X64_SIGBUS || (sig==X64_SIGSEGV && (x64pc!=(uintptr_t)addr) && (pc!=addr) && (getProtection_fast(x64pc)&PROT_READ) && (getProtection_fast((uintptr_t)pc)&PROT_READ))) {
+            if (dec)
+                printf_log_prefix(0, log_minimum, " %sopcode=%s; native opcode=%08x\n", (emu->segs[_CS] == 0x23) ? "x86" : "x64", DecodeX64Trace(dec, x64pc, 1), *(uint32_t*)pc);
+            else
+                printf_log_prefix(0, log_minimum, " %sopcode=%02X %02X %02X %02X %02X %02X %02X %02X (opcode=%08x)\n", (emu->segs[_CS] == 0x23) ? "x86" : "x64", ((uint8_t*)x64pc)[0], ((uint8_t*)x64pc)[1], ((uint8_t*)x64pc)[2], ((uint8_t*)x64pc)[3], ((uint8_t*)x64pc)[4], ((uint8_t*)x64pc)[5], ((uint8_t*)x64pc)[6], ((uint8_t*)x64pc)[7], *(uint32_t*)pc);
+        } else {
+            printf_log_prefix(0, log_minimum, "\n");
+        }
+    }
+    relockMutex(Locks);
+    // --- RimDroid: log SIGSEGV fault info to dedicated file ---
+    if(sig == X64_SIGSEGV) {
+        // Repeat-suppressor (2026-08-30): Boehm GC writes into dynarec-protected pages as its
+        // normal SMC dance, so a GC-heavy modded game repeats ONE faulting RIP hundreds of
+        // thousands of times — a Tecno field report grew this file to 91 MB / 704k lines, with
+        // an open/write/close from the signal path on every fault. Log the first 32 hits of a
+        // repeating RIP, then every 1024th with a running count. A fatal fault still lands:
+        // its RIP differs from the storm's, so it starts a fresh count. Plain (unsynchronised)
+        // statics on purpose: a cross-thread race only miscounts a diagnostic line.
+        static uintptr_t _rd_last_rip = 0;
+        static unsigned long _rd_rip_n = 0;
+        if ((uintptr_t)x64pc == _rd_last_rip) _rd_rip_n++;
+        else { _rd_last_rip = (uintptr_t)x64pc; _rd_rip_n = 1; }
+        if (_rd_rip_n <= 32 || (_rd_rip_n & 1023) == 0) {
+            const char* _sh = getenv("HOME");
+            char _sp[512];
+            snprintf(_sp, sizeof(_sp), "%s/sigsegv_fault.log", _sh ? _sh : "/data/local/tmp");
+            int _sfd = open(_sp, O_WRONLY|O_CREAT|O_APPEND, 0644);
+            if(_sfd >= 0) {
+                char _rep[40];
+                _rep[0] = 0;
+                if (_rd_rip_n > 32) snprintf(_rep, sizeof(_rep), " (x%lu)", _rd_rip_n);
+                char _sbuf[512];
+                int _sn = snprintf(_sbuf, sizeof(_sbuf),
+                    "SIGSEGV: addr=%p code=%d x64_RIP=0x%lx x64_RSP=0x%lx native_pc=%p tid=%d handler=0x%lx%s\n",
+                    (void*)info->si_addr, info->si_code,
+                    (unsigned long)x64pc, (unsigned long)R_RSP,
+                    pc, tid,
+                    (unsigned long)my_context->signals[sig], _rep);
+                write(_sfd, _sbuf, _sn);
+                close(_sfd);
+            }
+        }
+    }
+    // ----------------------------------------------------------
+    if(my_context->signals[sig] && my_context->signals[sig]!=1) {
+        my_sigactionhandler_oldcode(emu, sig, my_context->is_sigaction[sig]?0:1, info, ucntx, &old_code, db, x64pc);
+        return;
+    }
+    // no handler
+    // set default and that's it, instruction will restart and default segfault handler will be called...
+    if(my_context->signals[sig]!=1 || sig==X64_SIGSEGV || sig==X64_SIGILL || sig==X64_SIGFPE || sig==X64_SIGABRT) {
+        signal(signal_from_x64(sig), (void*)my_context->signals[sig]);
+    }
+}
+
+// RimDroid: async-signal-safe trace for Mono Boehm-GC stop-the-world signals
+// (SIG_SUSPEND=SIGPWR/30, SIG_THR_RESTART=SIGXCPU/24).  Writes to $HOME/gc_signal.log.
+static void rd_gctrace(int sig, const char* what) {
+    if (sig != X64_SIGPWR && sig != X64_SIGXCPU) return;
+    // Off by default: this writes a file per GC signal (thousands during a
+    // GC-heavy load) and badly slows the run.  Enable with RIMDROID_GCTRACE=1
+    // only for diagnosing the GC suspend/restart handshake.
+    static int en = -1;
+    if (en < 0) { const char* e = getenv("RIMDROID_GCTRACE"); en = (e && e[0]=='1') ? 1 : 0; }
+    if (!en) return;
+    const char* home = getenv("HOME");
+    char path[512];
+    snprintf(path, sizeof(path), "%s/gc_signal.log", home ? home : "/data/local/tmp");
+    int fd = open(path, O_WRONLY|O_CREAT|O_APPEND, 0644);
+    if (fd >= 0) {
+        char buf[160];
+        int n = snprintf(buf, sizeof(buf), "GCSIG sig=%d tid=%d %s handler=%p\n",
+                         sig, GetTID(), what,
+                         (sig>=0 && sig<=MAX_SIGNAL) ? (void*)my_context->signals[sig] : NULL);
+        write(fd, buf, n);
+        close(fd);
+    }
+}
+
+void my_sigactionhandler(int32_t sig, siginfo_t* info, void * ucntx)
+{
+    sig = signal_to_x64(sig);
+    rd_gctrace(sig, "ENTER");
+    x64emu_t* emu = thread_get_emu_no_create();
+    if (defer_signal(emu, sig, info)) {
+        rd_gctrace(sig, "DEFERRED(return)");
+        return;
+    }
+    void* pc = NULL;
+    #ifdef DYNAREC
+    ucontext_t *p = (ucontext_t *)ucntx;
+    pc = (void*)CONTEXT_PC(p);
+    #endif
+    dynablock_t* db = FindDynablockFromNativeAddress(pc);
+    if (!emu) emu = thread_get_emu();
+    uintptr_t x64pc = R_RIP;
+    if(db)
+        x64pc = getX64Address(db, (uintptr_t)pc);
+    #ifdef DYNAREC
+    if(db && !x64pc) {
+        printf_log(LOG_INFO, "Warning, ingnoring incoherent dynablock found for address %p (opcode=%x). db=%p(x64_addr=%p-%p, block:%p-%p)\n", pc, *(uint32_t*)pc, db, (void*)db->x64_addr, (void*)db->x64_addr+db->x64_size, db->actual_block, db->actual_block+db->size);
+        db = NULL;
+        x64pc = R_RIP;
+    }
+    #endif
+    if(BOX64ENV(showsegv) && (sig!=10 || BOX64ENV(log)>LOG_INFO)) {
+        printf_log(LOG_INFO, "%04d|sigaction handler for sig %d, pc=%p, x64pc=%p, db=%p%s", GetTID(), sig, pc, x64pc, db, db?"":"\n");
+        #ifdef DYNAREC
+        if(db)
+            printf_log_prefix(0, LOG_INFO, "(x64_addr=%p-%p, block:%p-%p)\n", (void*)db->x64_addr, (void*)db->x64_addr+db->x64_size, db->actual_block, db->actual_block+db->size);
+        #endif
+    }
+    rd_gctrace(sig, "FORWARD->guest");
+    my_sigactionhandler_oldcode(emu, sig, 0, info, ucntx, NULL, db, x64pc);
+    rd_gctrace(sig, "RETURNED<-guest");
+}
+#define MY_SIGHANDLER ((signum==X64_SIGSEGV || signum==X64_SIGBUS || signum==X64_SIGILL || signum==X64_SIGABRT)?my_box64signalhandler:my_sigactionhandler)
+EXPORT sighandler_t my_signal(x64emu_t* emu, int signum, sighandler_t handler)
+{
+    if(signum<0 || signum>MAX_SIGNAL)
+        return SIG_ERR;
+
+    if(signum==X64_SIGSEGV && emu->context->no_sigsegv)
+        return 0;
+
+    // create a new handler
+    my_context->signals[signum] = (uintptr_t)handler;
+    my_context->is_sigaction[signum] = 0;
+    my_context->restorer[signum] = 0;
+    my_context->onstack[signum] = 0;
+
+    if(signum==X64_SIGSEGV || signum==X64_SIGBUS || signum==X64_SIGILL || signum==X64_SIGABRT)
+        return 0;
+
+    if(handler!=NULL && handler!=(sighandler_t)1) {
+        struct sigaction newact = {0};
+        struct sigaction oldact = {0};
+        newact.sa_flags = 0x04;
+        newact.sa_sigaction = MY_SIGHANDLER;
+        sigaction(signal_from_x64(signum), &newact, &oldact);
+        return oldact.sa_handler;
+    } else
+        return signal(signal_from_x64(signum), handler);
+}
+EXPORT sighandler_t my___sysv_signal(x64emu_t* emu, int signum, sighandler_t handler) __attribute__((alias("my_signal")));
+EXPORT sighandler_t my_sysv_signal(x64emu_t* emu, int signum, sighandler_t handler) __attribute__((alias("my_signal")));    // not completely exact
+
+int EXPORT my_sigaction(x64emu_t* emu, int signum, const x64_sigaction_t *act, x64_sigaction_t *oldact)
+{
+    printf_log(LOG_DEBUG, "Sigaction(signum=%d, act=%p(f=%p, flags=0x%x), old=%p)\n", signum, act, act?act->_u._sa_handler:NULL, act?act->sa_flags:0, oldact);
+    // RimDroid: trace Boehm-GC suspend/restart handler registration (gated).
+    static int rd_reg_en = -1;
+    if (rd_reg_en < 0) { const char* e = getenv("RIMDROID_GCTRACE"); rd_reg_en = (e && e[0]=='1') ? 1 : 0; }
+    if (rd_reg_en && (signum == X64_SIGPWR || signum == X64_SIGXCPU)) {
+        const char* home = getenv("HOME");
+        char path[512];
+        snprintf(path, sizeof(path), "%s/gc_signal.log", home ? home : "/data/local/tmp");
+        int fd = open(path, O_WRONLY|O_CREAT|O_APPEND, 0644);
+        if (fd >= 0) {
+            char b[200];
+            int n = snprintf(b, sizeof(b), "GCSIG REGISTER sigaction signum=%d handler=%p flags=0x%x tid=%d\n",
+                             signum, act?act->_u._sa_handler:NULL, act?(unsigned)act->sa_flags:0, GetTID());
+            write(fd, b, n); close(fd);
+        }
+    }
+    if(signum<0 || signum>MAX_SIGNAL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if(signum==X64_SIGSEGV && emu->context->no_sigsegv)
+        return 0;
+
+    if(signum==X64_SIGILL && emu->context->no_sigill)
+        return 0;
+    struct sigaction newact = {0};
+    struct sigaction old = {0};
+    uintptr_t old_handler = my_context->signals[signum];
+    if(act) {
+        // sa_mask is the x86_64 128-byte mask; copy the low bytes into the host
+        // (bionic) sigset_t, which is smaller.
+        memcpy(&newact.sa_mask, act->sa_mask,
+               sizeof(newact.sa_mask) < sizeof(act->sa_mask) ? sizeof(newact.sa_mask) : sizeof(act->sa_mask));
+        newact.sa_flags = act->sa_flags&~0x04000000;  // No sa_restorer...
+        if(act->sa_flags&0x04) {
+            my_context->signals[signum] = (uintptr_t)act->_u._sa_sigaction;
+            my_context->is_sigaction[signum] = 1;
+            if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                newact.sa_sigaction = MY_SIGHANDLER;
+            } else
+                newact.sa_sigaction = act->_u._sa_sigaction;
+        } else {
+            my_context->signals[signum] = (uintptr_t)act->_u._sa_handler;
+            my_context->is_sigaction[signum] = 0;
+            if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                newact.sa_flags|=0x04;
+                newact.sa_sigaction = MY_SIGHANDLER;
+            } else
+                newact.sa_handler = act->_u._sa_handler;
+        }
+        my_context->restorer[signum] = (act->sa_flags&0x04000000)?(uintptr_t)act->sa_restorer:0;
+        my_context->onstack[signum] = (act->sa_flags&SA_ONSTACK)?1:0;
+    }
+    int ret = 0;
+    if(signum!=X64_SIGSEGV && signum!=X64_SIGBUS && signum!=X64_SIGILL && signum!=X64_SIGABRT)
+        ret = sigaction(signal_from_x64(signum), act?&newact:NULL, oldact?&old:NULL);
+    if(oldact) {
+        // Zero-initialize the whole struct first.
+        // On Android the x64_sigaction_t puts sa_flags (int, 4 bytes) at offset 0
+        // followed by 4 bytes of implicit C padding before the 8-byte handler pointer
+        // at offset 8.  The x86_64 Linux ABI puts the handler pointer at offset 0
+        // (8 bytes).  If those 4 pad bytes are left uninitialised, Mono reads them
+        // as part of sa_handler and sees a non-zero value → thinks every signal is
+        // already taken → "Could not find an available signal" → abort.
+        memset(oldact, 0, sizeof(*oldact));
+        oldact->sa_flags = old.sa_flags;
+        memcpy(oldact->sa_mask, &old.sa_mask,
+               sizeof(old.sa_mask) < sizeof(oldact->sa_mask) ? sizeof(old.sa_mask) : sizeof(oldact->sa_mask));
+        if(old.sa_flags & 0x04)
+            oldact->_u._sa_sigaction = old.sa_sigaction; //TODO should wrap...
+        else
+            oldact->_u._sa_handler = old.sa_handler;  //TODO should wrap...
+        if((uintptr_t)oldact->_u._sa_sigaction == (uintptr_t)MY_SIGHANDLER && old_handler)
+            oldact->_u._sa_sigaction = (void*)old_handler;
+        oldact->sa_restorer = NULL; // no handling for now...
+    }
+    return ret;
+}
+int EXPORT my___sigaction(x64emu_t* emu, int signum, const x64_sigaction_t *act, x64_sigaction_t *oldact)
+__attribute__((alias("my_sigaction")));
+
+int EXPORT my_syscall_rt_sigaction(x64emu_t* emu, int signum, const x64_sigaction_restorer_t *act, x64_sigaction_restorer_t *oldact, int sigsetsize)
+{
+    printf_log(LOG_DEBUG, "Syscall/Sigaction(signum=%d, act=%p, old=%p, size=%d)\n", signum, act, oldact, sigsetsize);
+    if(signum<0 || signum>MAX_SIGNAL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if(signum==X64_SIGSEGV && emu->context->no_sigsegv)
+        return 0;
+    // TODO, how to handle sigsetsize>4?!
+    if(signum==32 || signum==33) {
+        // cannot use libc sigaction, need to use syscall!
+        struct kernel_sigaction newact = {0};
+        struct kernel_sigaction old = {0};
+        if(act) {
+            printf_log(LOG_DEBUG, " New (kernel) action flags=0x%x mask=0x%lx\n", act->sa_flags, *(uint64_t*)&act->sa_mask);
+            memcpy(&newact.sa_mask, &act->sa_mask, (sigsetsize>16)?16:sigsetsize);
+            newact.sa_flags = act->sa_flags&~0x04000000;  // No sa_restorer...
+            if(act->sa_flags&0x04) {
+                my_context->signals[signum] = (uintptr_t)act->_u._sa_sigaction;
+                my_context->is_sigaction[signum] = 1;
+                if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                    newact.k_sa_handler = (void*)MY_SIGHANDLER;
+                } else {
+                    newact.k_sa_handler = (void*)act->_u._sa_sigaction;
+                }
+            } else {
+                my_context->signals[signum] = (uintptr_t)act->_u._sa_handler;
+                my_context->is_sigaction[signum] = 0;
+                if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                    newact.sa_flags|=0x4;
+                    newact.k_sa_handler = (void*)MY_SIGHANDLER;
+                } else {
+                    newact.k_sa_handler = act->_u._sa_handler;
+                }
+            }
+            my_context->restorer[signum] = (act->sa_flags&0x04000000)?(uintptr_t)act->sa_restorer:0;
+        }
+
+        if(oldact) {
+            old.sa_flags = oldact->sa_flags;
+            memcpy(&old.sa_mask, &oldact->sa_mask, (sigsetsize>16)?16:sigsetsize);
+        }
+
+        int ret = syscall(__NR_rt_sigaction, signum, act?&newact:NULL, oldact?&old:NULL, (sigsetsize>16)?16:sigsetsize);
+        if(oldact && ret==0) {
+            memset(oldact, 0, sizeof(*oldact));
+            oldact->sa_flags = old.sa_flags;
+            memcpy(&oldact->sa_mask, &old.sa_mask, (sigsetsize>16)?16:sigsetsize);
+            if(old.sa_flags & 0x04)
+                oldact->_u._sa_sigaction = (void*)old.k_sa_handler; //TODO should wrap...
+            else
+                oldact->_u._sa_handler = old.k_sa_handler;  //TODO should wrap...
+        }
+        return ret;
+    } else {
+        // using libc sigaction
+        struct sigaction newact = {0};
+        struct sigaction old = {0};
+        if(act) {
+            printf_log(LOG_DEBUG, " New action for signal #%d flags=0x%x mask=0x%lx\n", signum, act->sa_flags, *(uint64_t*)&act->sa_mask);
+            newact.sa_mask = act->sa_mask;
+            newact.sa_flags = act->sa_flags&~0x04000000;  // No sa_restorer...
+            if(act->sa_flags&0x04) {
+                if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                    my_context->signals[signum] = (uintptr_t)act->_u._sa_sigaction;
+                    newact.sa_sigaction = MY_SIGHANDLER;
+                } else {
+                    newact.sa_sigaction = act->_u._sa_sigaction;
+                }
+            } else {
+                if(act->_u._sa_handler!=NULL && act->_u._sa_handler!=(sighandler_t)1) {
+                    my_context->signals[signum] = (uintptr_t)act->_u._sa_handler;
+                    my_context->is_sigaction[signum] = 0;
+                    newact.sa_sigaction = MY_SIGHANDLER;
+                    newact.sa_flags|=0x4;
+                } else {
+                    newact.sa_handler = act->_u._sa_handler;
+                }
+            }
+            my_context->restorer[signum] = (act->sa_flags&0x04000000)?(uintptr_t)act->sa_restorer:0;
+        }
+
+        if(oldact) {
+            old.sa_flags = oldact->sa_flags;
+            old.sa_mask = oldact->sa_mask;
+        }
+        int ret = 0;
+
+        if(signum!=X64_SIGSEGV && signum!=X64_SIGBUS && signum!=X64_SIGILL && signum!=X64_SIGABRT)
+            ret = sigaction(signal_from_x64(signum), act?&newact:NULL, oldact?&old:NULL);
+        if(oldact && ret==0) {
+            memset(oldact, 0, sizeof(*oldact));
+            oldact->sa_flags = old.sa_flags;
+            memcpy(&oldact->sa_mask, &old.sa_mask, (sigsetsize>8)?8:sigsetsize);
+            if(old.sa_flags & 0x04)
+                oldact->_u._sa_sigaction = old.sa_sigaction; //TODO should wrap...
+            else
+                oldact->_u._sa_handler = old.sa_handler;  //TODO should wrap...
+        }
+        return ret;
+    }
+}
+
+EXPORT sighandler_t my_sigset(x64emu_t* emu, int signum, sighandler_t handler)
+{
+    signum = signal_from_x64(signum);
+    // emulated SIG_HOLD
+    if(handler == (sighandler_t)2) {
+        x64_sigaction_t oact;
+        sigset_t nset;
+        sigset_t oset;
+        if (sigemptyset (&nset) < 0)
+            return (sighandler_t)-1;
+        if (sigaddset (&nset, signum) < 0)
+            return (sighandler_t)-1;
+        if (sigprocmask (SIG_BLOCK, &nset, &oset) < 0)
+            return (sighandler_t)-1;
+        if (sigismember (&oset, signum))
+            return (sighandler_t)2;
+        if (my_sigaction (emu, signum, NULL, &oact) < 0)
+            return (sighandler_t)-1;
+        return oact._u._sa_handler;
+    }
+    return my_signal(emu, signum, handler);
+}
+
+EXPORT int my_getcontext(x64emu_t* emu, void* ucp)
+{
+//    printf_log(LOG_NONE, "Warning: call to partially implemented getcontext\n");
+    x64_ucontext_t *u = (x64_ucontext_t*)ucp;
+    // stack traking
+    u->uc_stack.ss_sp = NULL;
+    u->uc_stack.ss_size = 0;    // this need to filled
+    // get general register
+    u->uc_mcontext.gregs[X64_RAX] = R_RAX;
+    u->uc_mcontext.gregs[X64_RCX] = R_RCX;
+    u->uc_mcontext.gregs[X64_RDX] = R_RDX;
+    u->uc_mcontext.gregs[X64_RDI] = R_RDI;
+    u->uc_mcontext.gregs[X64_RSI] = R_RSI;
+    u->uc_mcontext.gregs[X64_RBP] = R_RBP;
+    u->uc_mcontext.gregs[X64_RIP] = *(uint64_t*)R_RSP;
+    u->uc_mcontext.gregs[X64_RSP] = R_RSP+sizeof(uintptr_t);
+    u->uc_mcontext.gregs[X64_RBX] = R_RBX;
+    u->uc_mcontext.gregs[X64_R8] = R_R8;
+    u->uc_mcontext.gregs[X64_R9] = R_R9;
+    u->uc_mcontext.gregs[X64_R10] = R_R10;
+    u->uc_mcontext.gregs[X64_R11] = R_R11;
+    u->uc_mcontext.gregs[X64_R12] = R_R12;
+    u->uc_mcontext.gregs[X64_R13] = R_R13;
+    u->uc_mcontext.gregs[X64_R14] = R_R14;
+    u->uc_mcontext.gregs[X64_R15] = R_R15;
+    // get segments
+    u->uc_mcontext.gregs[X64_CSGSFS] = ((uint64_t)(R_CS)) | (((uint64_t)(R_GS))<<16) | (((uint64_t)(R_FS))<<32) | (((uint64_t)(R_SS))<<48);
+    // get FloatPoint status
+    u->uc_mcontext.fpregs = ucp + 408;
+    fpu_savenv(emu, (void*)u->uc_mcontext.fpregs, 1);
+    *(uint32_t*)(ucp + 432) = emu->mxcsr.x32;
+
+    // get signal mask
+    sigprocmask(SIG_SETMASK, NULL, (sigset_t*)&u->uc_sigmask);
+
+    return 0;
+}
+
+EXPORT int my_setcontext(x64emu_t* emu, void* ucp)
+{
+//    printf_log(LOG_NONE, "Warning: call to partially implemented setcontext\n");
+    x64_ucontext_t *u = (x64_ucontext_t*)ucp;
+    // stack tracking
+    emu->init_stack = u->uc_stack.ss_sp;
+    emu->size_stack = u->uc_stack.ss_size;
+    // set general register
+    R_RAX = u->uc_mcontext.gregs[X64_RAX];
+    R_RCX = u->uc_mcontext.gregs[X64_RCX];
+    R_RDX = u->uc_mcontext.gregs[X64_RDX];
+    R_RDI = u->uc_mcontext.gregs[X64_RDI];
+    R_RSI = u->uc_mcontext.gregs[X64_RSI];
+    R_RBP = u->uc_mcontext.gregs[X64_RBP];
+    R_RIP = u->uc_mcontext.gregs[X64_RIP];
+    R_RSP = u->uc_mcontext.gregs[X64_RSP];
+    R_RBX = u->uc_mcontext.gregs[X64_RBX];
+    R_R8  = u->uc_mcontext.gregs[X64_R8];
+    R_R9  = u->uc_mcontext.gregs[X64_R9];
+    R_R10 = u->uc_mcontext.gregs[X64_R10];
+    R_R11 = u->uc_mcontext.gregs[X64_R11];
+    R_R12 = u->uc_mcontext.gregs[X64_R12];
+    R_R13 = u->uc_mcontext.gregs[X64_R13];
+    R_R14 = u->uc_mcontext.gregs[X64_R14];
+    R_R15 = u->uc_mcontext.gregs[X64_R15];
+    // get segments
+    R_CS = (u->uc_mcontext.gregs[X64_CSGSFS]>> 0)&0xffff;
+    R_GS = (u->uc_mcontext.gregs[X64_CSGSFS]>>16)&0xffff;
+    R_FS = (u->uc_mcontext.gregs[X64_CSGSFS]>>32)&0xffff;
+    R_SS = (u->uc_mcontext.gregs[X64_CSGSFS]>>48)&0xffff;
+    // set FloatPoint status
+    fpu_loadenv(emu, (void*)u->uc_mcontext.fpregs, 1);
+    emu->mxcsr.x32 = *(uint32_t*)(ucp + 432);
+    // set signal mask
+    sigprocmask(SIG_SETMASK, (sigset_t*)&u->uc_sigmask, NULL);
+    errno = 0;
+
+    return R_EAX;
+}
+void vFEv(x64emu_t *emu, uintptr_t fnc);
+EXPORT void my_start_context(x64emu_t* emu)
+{
+    // this is call indirectly by swapcontext from a makecontext, and will link context or just exit
+    x64_ucontext_t *u = *(x64_ucontext_t**)R_RBX;
+    if(u)
+        my_setcontext(emu, u);
+    else
+        emu->quit = 1;
+}
+
+EXPORT void my_makecontext(x64emu_t* emu, void* ucp, void* fnc, int32_t argc, int64_t* argv)
+{
+//    printf_log(LOG_NONE, "Warning: call to unimplemented makecontext\n");
+    x64_ucontext_t *u = (x64_ucontext_t*)ucp;
+    // setup stack
+    uintptr_t* rsp = (uintptr_t*)(u->uc_stack.ss_sp + u->uc_stack.ss_size - sizeof(uintptr_t));
+    // setup the function
+    u->uc_mcontext.gregs[X64_RIP] = (intptr_t)fnc;
+    // setup return to private start_context uc_link
+    *rsp = (uintptr_t)u->uc_link;
+    u->uc_mcontext.gregs[X64_RBX] = (uintptr_t)rsp;
+    --rsp;
+    // setup args
+    int n = 3;
+    int j = 0;
+    int regs_abi[] = {_DI, _SI, _DX, _CX, _R8, _R9};
+    for (int i=0; i<argc; ++i) {
+        // get value first
+        uint32_t v;
+        if(n<6)
+            v = emu->regs[regs_abi[n++]].dword[0];
+        else
+            v = argv[j++];
+        // push value
+        switch(i) {
+            case 0: u->uc_mcontext.gregs[X64_RDI] = v; break;
+            case 1: u->uc_mcontext.gregs[X64_RSI] = v; break;
+            case 2: u->uc_mcontext.gregs[X64_RDX] = v; break;
+            case 3: u->uc_mcontext.gregs[X64_RCX] = v; break;
+            case 4: u->uc_mcontext.gregs[X64_R8] = v; break;
+            case 5: u->uc_mcontext.gregs[X64_R9] = v; break;
+            default:
+                --rsp;
+                *rsp = argv[(argc-1)-i];
+        }
+    }
+    // push the return value
+    --rsp;
+    *rsp = AddCheckBridge(my_context->system, vFEv, my_start_context, 0, "my_start_context");//my_context->exit_bridge;
+    u->uc_mcontext.gregs[X64_RSP] = (uintptr_t)rsp;
+}
+
+void box64_abort() {
+    if(BOX64ENV(showbt) && LOG_INFO<=BOX64ENV(log)) {
+            // show native bt
+            #define BT_BUF_SIZE 100
+            int nptrs;
+            void *buffer[BT_BUF_SIZE];
+            char **strings;
+            x64emu_t* emu = thread_get_emu();
+
+#ifndef ANDROID
+            nptrs = backtrace(buffer, BT_BUF_SIZE);
+            strings = backtrace_symbols(buffer, nptrs);
+            if(strings) {
+                for (int j = 0; j < nptrs; j++)
+                    printf_log(LOG_INFO, "NativeBT: %s\n", strings[j]);
+                free(strings);
+            } else
+                printf_log(LOG_INFO, "NativeBT: none (%d/%s)\n", errno, strerror(errno));
+#endif
+            extern int my_backtrace_ip(x64emu_t* emu, void** buffer, int size);   // in wrappedlibc
+            extern char** my_backtrace_symbols(x64emu_t* emu, uintptr_t* buffer, int size);
+            nptrs = my_backtrace_ip(emu, buffer, BT_BUF_SIZE);
+            strings = my_backtrace_symbols(emu, (uintptr_t*)buffer, nptrs);
+            if(strings) {
+                for (int j = 0; j < nptrs; j++)
+                    printf_log(LOG_INFO, "EmulatedBT: %s\n", strings[j]);
+                free(strings);
+            } else
+                printf_log(LOG_INFO, "EmulatedBT: none\n");
+        }
+    abort();
+}
+
+
+EXPORT int my_swapcontext(x64emu_t* emu, void* ucp1, void* ucp2)
+{
+//    printf_log(LOG_NONE, "Warning: call to unimplemented swapcontext\n");
+    // grab current context in ucp1
+    my_getcontext(emu, ucp1);
+    // activate ucp2
+    my_setcontext(emu, ucp2);
+    return 0;
+}
+
+#ifdef USE_SIGNAL_MUTEX
+static void atfork_child_dynarec_prot(void)
+{
+    #ifdef USE_CUSTOM_MUTEX
+    native_lock_store(&mutex_dynarec_prot, 0);
+    #else
+    pthread_mutex_t tmp = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+    memcpy(&mutex_dynarec_prot, &tmp, sizeof(mutex_dynarec_prot));
+    #endif
+}
+#endif
+void init_signal_helper(box64context_t* context)
+{
+    // setup signal handling
+    for(int i=0; i<=MAX_SIGNAL; ++i) {
+        context->signals[i] = 0;    // SIG_DFL
+    }
+    struct sigaction action = {0};
+    action.sa_flags = SA_SIGINFO | SA_RESTART | SA_NODEFER;
+    action.sa_sigaction = my_box64signalhandler;
+    sigaction(SIGSEGV, &action, NULL);
+    action.sa_flags = SA_SIGINFO | SA_RESTART | SA_NODEFER;
+    action.sa_sigaction = my_box64signalhandler;
+    sigaction(SIGBUS, &action, NULL);
+    action.sa_flags = SA_SIGINFO | SA_RESTART | SA_NODEFER;
+    action.sa_sigaction = my_box64signalhandler;
+    sigaction(SIGILL, &action, NULL);
+    action.sa_flags = SA_SIGINFO | SA_RESTART | SA_NODEFER;
+    action.sa_sigaction = my_box64signalhandler;
+    sigaction(SIGABRT, &action, NULL);
+
+    pthread_once(&sigstack_key_once, sigstack_key_alloc);
+#ifdef USE_SIGNAL_MUTEX
+    atfork_child_dynarec_prot();
+    pthread_atfork(NULL, NULL, atfork_child_dynarec_prot);
+#endif
+}
+
+void fini_signal_helper()
+{
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+    signal(SIGILL, SIG_DFL);
+    signal(SIGABRT, SIG_DFL);
+}
+
+#ifdef NEED_SIG_CONV
+int signal_to_x64(int sig)
+{
+    #define GO(A) case A: return X64_##A;
+    switch(sig) {
+        SUPER_SIGNAL
+    }
+    #undef GO
+    return sig;
+}
+int signal_from_x64(int sig)
+{
+    #define GO(A) case X64_##A: return A;
+    switch(sig) {
+        SUPER_SIGNAL
+    }
+    #undef GO
+    return sig;
+}
+#endif

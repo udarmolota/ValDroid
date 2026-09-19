@@ -1,0 +1,12 @@
+# Normalize line endings in the repo; keep Unix scripts LF on every checkout.
+* text=auto
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.so binary
+*.tar.xz binary
+*.pack binary
+*.jar binary
+*.png binary
+*.jpg binary
+*.apk binary

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/launcher_fragment">
+
+    <fragment
+        android:id="@+id/launcher_fragment"
+        android:name="com.rimdroid.fragments.LauncherFragment"
+        android:label="@string/nav_launcher" />
+
+    <fragment
+        android:id="@+id/settings_fragment"
+        android:name="com.rimdroid.fragments.SettingsFragment"
+        android:label="@string/nav_settings" />
+
+    <fragment
+        android:id="@+id/app_settings_fragment"
+        android:name="com.rimdroid.fragments.AppSettingsFragment"
+        android:label="@string/nav_settings" />
+
+    <fragment
+        android:id="@+id/new_instance_fragment"
+        android:name="com.rimdroid.fragments.NewInstanceFragment"
+        android:label="@string/nav_new_instance" />
+
+    <fragment
+        android:id="@+id/download_fragment"
+        android:name="com.rimdroid.fragments.DownloadFragment"
+        android:label="@string/nav_download_game" />
+
+    <fragment
+        android:id="@+id/cloud_saves_fragment"
+        android:name="com.rimdroid.fragments.CloudSavesFragment"
+        android:label="@string/nav_cloud_saves" />
+
+    <fragment
+        android:id="@+id/install_content_fragment"
+        android:name="com.rimdroid.fragments.InstallContentFragment"
+        android:label="@string/nav_install_content" />
+
+    <fragment
+        android:id="@+id/driver_fragment"
+        android:name="com.rimdroid.fragments.DriverImportFragment"
+        android:label="@string/nav_custom_driver" />
+
+    <fragment
+        android:id="@+id/gog_login_fragment"
+        android:name="com.rimdroid.fragments.GogLoginFragment"
+        android:label="@string/nav_gog_login" />
+
+    <fragment
+        android:id="@+id/wiki_fragment"
+        android:name="com.rimdroid.fragments.WikiFragment"
+        android:label="@string/nav_wiki" />
+
+    <action android:id="@+id/action_settings"
+        app:destination="@id/settings_fragment" />
+
+    <action android:id="@+id/action_app_settings"
+        app:destination="@id/app_settings_fragment" />
+
+    <action android:id="@+id/action_install_instance"
+        app:destination="@id/new_instance_fragment" />
+
+    <action android:id="@+id/action_download_game"
+        app:destination="@id/download_fragment" />
+
+    <action android:id="@+id/action_cloud_saves"
+        app:destination="@id/cloud_saves_fragment" />
+
+    <action android:id="@+id/action_open_install"
+        app:destination="@id/install_content_fragment" />
+
+    <action android:id="@+id/action_open_custom_driver"
+        app:destination="@id/driver_fragment" />
+
+    <action android:id="@+id/action_gog_login"
+        app:destination="@id/gog_login_fragment" />
+
+    <action android:id="@+id/action_open_wiki"
+        app:destination="@id/wiki_fragment" />
+
+</navigation>

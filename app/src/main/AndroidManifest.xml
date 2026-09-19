@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- DLC + Workshop mods download into the PUBLIC /Download/RimDroid folder so the user can see,
+         move, share and reuse them across instances with any file manager. DepotDownloader writes
+         raw file paths (staging + many files), which the MediaStore API can't model, so on Android
+         11+ this needs All-files access. RimDroid is sideloaded (no Play Store review), so this broad
+         permission is acceptable; granted once by the user via the system "All files access" screen. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+    <!-- largeHeap: budget phones cap the app heap at 256 MB. JavaSteam's VZipUtil keeps an 8 MB
+         ThreadLocal decompression buffer PER THREAD, and the downloader's coroutine pool grows to
+         dozens of threads, so a long depot download walks straight into OutOfMemoryError and leaves
+         a half-downloaded (unlaunchable) game. largeHeap raises the cap (typically to 512 MB) and is
+         what makes the in-app download survive on those devices. -->
+    <application
+        android:name=".RimDroidApplication"
+        android:appCategory="game"
+        android:largeHeap="true"
+        android:extractNativeLibs="true"
+        android:allowNativeHeapPointerTagging="false"
+        android:allowBackup="true"
+        android:hasFragileUserData="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+
+        <!-- Game Mode (Android 12+): tells platform/vendor game services we support the
+             performance profile and must not be downscaled or FPS-capped — see the config. -->
+        <meta-data
+            android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
+
+        <!-- adjustResize: without it the window doesn't shrink for the soft keyboard, so a ScrollView
+             can't scroll a focused field above it — the Environment variables input at the bottom of
+             Settings was typed blind. Applies to every launcher screen with a text field. -->
+        <activity
+            android:name=".LauncherActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/AppTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".GameActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|touchscreen"
+            android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".ControlsEditorActivity"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".GamepadMapperActivity"
+            android:theme="@style/AppTheme" />
+
+        <service
+            android:name=".InstallerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".DownloadKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- SPIKE: offline FMOD audio decoder runs in its OWN process so it does NOT load
+             librimdroidlinker (whose interposed dlopen would load libfmod into box64's namespace
+             and crash it). In ":fmoddec" dlopen is the real bionic one. See FmodDecodeService. -->
+        <service
+            android:name=".audio.FmodDecodeService"
+            android:exported="false"
+            android:process=":fmoddec" />
+
+        <provider
+            android:name=".AppStorageProvider"
+            android:authorities="${applicationId}.STORAGE_PROVIDER_AUTHORITY"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
+        <!-- Shares the bug-report log zip (from cache) as a content:// URI an email app can attach. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>
