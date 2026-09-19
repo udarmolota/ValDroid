@@ -32,7 +32,7 @@ import com.rimdroid.game.GameDescriptor;
 
 public class InstallerService extends Service {
 
-    private static final String TAG      = "RimDroid/Installer";
+    private static final String TAG      = "ValDroid/Installer";
     private static final int    NOTIF_ID = 1;
     private static final String CHANNEL  = "rimdroid_install";
 
@@ -203,9 +203,9 @@ public class InstallerService extends Service {
             }
         }
 
-        // Game-fix reference assets must exist before configure (steam-lib normalization reads
-        // them from files/gamefix). Idempotent; normally a no-op after first app start.
-        // RimWorld binary patching and renderer markers are not valid for Valheim.
+        // Valheim needs a working Steam: Goldberg shim + steam_settings + PlayFab auto-login off.
+        // A failed shim download does not fail the install; the warning is passed on below.
+        String steamWarning = ValheimInstanceSetup.apply(instanceDir, this::broadcastProgress);
 
         // The install-time save fix (Assembly-CSharp bspatch) used to run here. Removed entirely
         // 2026-08-28: the save-bug root (box64's broken Android qsort mis-building Mono IMT
@@ -228,6 +228,10 @@ public class InstallerService extends Service {
         }
 
         broadcastProgress("Instance installed.");
+        if (steamWarning != null) {
+            broadcastDone(false, "Instance '" + instanceName + "' installed, but: " + steamWarning);
+            return;
+        }
         broadcastDone(true, "Instance '" + instanceName + "' installed — ready to launch");
     }
 
@@ -429,7 +433,7 @@ public class InstallerService extends Service {
 
     private Notification buildNotification(String text) {
         return new NotificationCompat.Builder(this, CHANNEL)
-                .setContentTitle("RimDroid")
+                .setContentTitle("ValDroid")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_popup_sync)
                 .setOngoing(true)
