@@ -26,6 +26,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <alloca.h>
 
 static int vd_vk_flag(const char* name)
 {
@@ -645,8 +647,380 @@ EXPORT int my_vkCreateGraphicsPipelines(x64emu_t* emu, void* device, void* pipel
 // Capture Unity's per-frame OFFSCREEN render targets for the blit-present workaround: full-screen
 // (2340x1080) images with COLOR_ATTACHMENT usage. Unity renders here (acquire=1 init proves it's NOT
 // the swapchain) and never blits→presents. We'll blit the newest one to the swapchain ourselves.
-CREATE(vkCreateImage)
-CREATE(vkCreateImageView)
+// ---- Texture shrink on the Vulkan route (ValDroid) --------------------------------------------
+// Same idea and knobs as the GL shim in wrappedsdl2.c (RIMDROID_TEX_SHRINK = mip shift 0/1/2,
+// RIMDROID_TEX_DEEP_MIN = smallest side that gets shift 2): Valheim renders through Vulkan, where
+// texture uploads never pass through GL, so the launcher's Low / Ultra low tiers did nothing here.
+// vkCreateImage: a sampled, mipped 2D upload target with a side >= 1024 is created `shift` mips
+// smaller (extent >> shift, mipLevels - shift), and the handle -> shift is remembered. Every later
+// call that names a mip of that image (buffer->image copies, views, barriers, blits, image copies,
+// clears) has its mip indices moved down by `shift`; regions that only cover the dropped top mips
+// are skipped, so their texels are never uploaded. Render targets, depth/stencil, storage and
+// un-mipped images are never touched. Struct offsets below are the 64-bit Vulkan ABI.
+#define VD_TS_SLOTS 8192u                 /* open addressing, power of two */
+#define VD_TS_TOMB  ((void*)(uintptr_t)1)
+typedef struct { void* image; uint8_t shift; } vd_ts_entry_t;
+static vd_ts_entry_t   vd_ts_tab[VD_TS_SLOTS];
+static uint32_t        vd_ts_used;        /* live + tombstones, bounds the probe length */
+static uint32_t        vd_ts_live;
+static pthread_mutex_t vd_ts_lock = PTHREAD_MUTEX_INITIALIZER;
+static uint64_t        vd_ts_n[3], vd_ts_saved_kb;
+
+static int vd_ts_shift_max(void) {
+    static int v = -1;
+    if(v < 0) {
+        const char* e = getenv("RIMDROID_TEX_SHRINK");
+        v = (e && e[0]) ? atoi(e) : 0;
+        if(v < 0) v = 0;
+        if(v > 2) v = 2;
+        if(v) printf_log(LOG_NONE, "RIMDROID TEXSHRINK (vulkan) enabled: mip shift=%d deep-min=%d\n", v, (int)({
+            const char* d = getenv("RIMDROID_TEX_DEEP_MIN"); int m = (d && d[0]) ? atoi(d) : 2048; m < 1024 ? 1024 : m; }));
+    }
+    return v;
+}
+static int vd_ts_deep_min(void) {
+    static int v = -1;
+    if(v < 0) {
+        const char* e = getenv("RIMDROID_TEX_DEEP_MIN");
+        v = (e && e[0]) ? atoi(e) : 2048;
+        if(v < 1024) v = 1024;
+    }
+    return v;
+}
+static inline uint32_t vd_ts_hash(void* p) {
+    uint64_t x = (uint64_t)(uintptr_t)p;
+    x ^= x >> 17; x *= 0x9E3779B97F4A7C15ull; x ^= x >> 29;
+    return (uint32_t)x & (VD_TS_SLOTS - 1u);
+}
+static void vd_ts_rebuild_locked(void) {   /* drop the tombstones */
+    static vd_ts_entry_t old[VD_TS_SLOTS];
+    memcpy(old, vd_ts_tab, sizeof(old));
+    memset(vd_ts_tab, 0, sizeof(vd_ts_tab));
+    vd_ts_used = 0;
+    for(uint32_t j = 0; j < VD_TS_SLOTS; ++j) {
+        if(!old[j].image || old[j].image == VD_TS_TOMB) continue;
+        uint32_t i = vd_ts_hash(old[j].image);
+        while(vd_ts_tab[i].image) i = (i + 1) & (VD_TS_SLOTS - 1u);
+        vd_ts_tab[i] = old[j];
+        ++vd_ts_used;
+    }
+}
+static void vd_ts_put(void* image, int shift) {
+    pthread_mutex_lock(&vd_ts_lock);
+    if(vd_ts_used >= VD_TS_SLOTS * 3u / 4u) vd_ts_rebuild_locked();
+    if(vd_ts_live < VD_TS_SLOTS / 2u) {
+        uint32_t i = vd_ts_hash(image), tomb = ~0u;
+        while(vd_ts_tab[i].image) {
+            if(vd_ts_tab[i].image == image) break;
+            if(vd_ts_tab[i].image == VD_TS_TOMB && tomb == ~0u) tomb = i;
+            i = (i + 1) & (VD_TS_SLOTS - 1u);
+        }
+        if(vd_ts_tab[i].image != image) {
+            if(tomb != ~0u) i = tomb; else ++vd_ts_used;
+            ++vd_ts_live;
+        }
+        vd_ts_tab[i].image = image;
+        vd_ts_tab[i].shift = (uint8_t)shift;
+    }
+    pthread_mutex_unlock(&vd_ts_lock);
+}
+static int vd_ts_get(void* image) {   /* 0 = not a shrunk image */
+    if(!vd_ts_live || !image) return 0;
+    int s = 0;
+    pthread_mutex_lock(&vd_ts_lock);
+    uint32_t i = vd_ts_hash(image);
+    while(vd_ts_tab[i].image) {
+        if(vd_ts_tab[i].image == image) { s = vd_ts_tab[i].shift; break; }
+        i = (i + 1) & (VD_TS_SLOTS - 1u);
+    }
+    pthread_mutex_unlock(&vd_ts_lock);
+    return s;
+}
+static void vd_ts_del(void* image) {
+    if(!vd_ts_live || !image) return;
+    pthread_mutex_lock(&vd_ts_lock);
+    uint32_t i = vd_ts_hash(image);
+    while(vd_ts_tab[i].image) {
+        if(vd_ts_tab[i].image == image) { vd_ts_tab[i].image = VD_TS_TOMB; --vd_ts_live; break; }
+        i = (i + 1) & (VD_TS_SLOTS - 1u);
+    }
+    pthread_mutex_unlock(&vd_ts_lock);
+}
+/* Move a (baseMip, levelCount) subresource range down by `s` mips. */
+static inline void vd_ts_range(uint32_t* base, uint32_t* count, int s) {
+    uint32_t b = *base, c = *count;
+    uint32_t nb = b >= (uint32_t)s ? b - s : 0;
+    if(c != 0xffffffffu) {   /* not VK_REMAINING_MIP_LEVELS */
+        uint32_t end = b + c, nend = end > (uint32_t)s ? end - s : 0;
+        c = nend > nb ? nend - nb : 1;
+    }
+    *base = nb; *count = c;
+}
+
+EXPORT int my_vkCreateImage(x64emu_t* emu, void* device, void* pCreateInfo, my_VkAllocationCallbacks_t* pAllocator, void* p)
+{
+    my_VkAllocationCallbacks_t my_alloc;
+    iFpppp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCreateImage;
+    int shift = 0;
+    uint64_t kb = 0;
+    char ci[88];   // VkImageCreateInfo: flags@16 imageType@20 format@24 extent@28 mipLevels@40 arrayLayers@44 samples@48 usage@56
+    if(pCreateInfo && vd_ts_shift_max()) {
+        memcpy(ci, pCreateInfo, sizeof(ci));
+        uint32_t flags = *(uint32_t*)(ci+16), type = *(uint32_t*)(ci+20), fmt = *(uint32_t*)(ci+24);
+        uint32_t w = *(uint32_t*)(ci+28), h = *(uint32_t*)(ci+32), d = *(uint32_t*)(ci+36);
+        uint32_t mips = *(uint32_t*)(ci+40), layers = *(uint32_t*)(ci+44), samples = *(uint32_t*)(ci+48), usage = *(uint32_t*)(ci+56);
+        uint32_t side = w > h ? w : h;
+        int depthfmt = (fmt >= 124 && fmt <= 130);   // VK_FORMAT_D16_UNORM .. D32_SFLOAT_S8_UINT
+        // Upload targets only: SAMPLED(4)|TRANSFER_DST(2) set, none of COLOR_ATTACHMENT(0x10),
+        // DEPTH_STENCIL_ATTACHMENT(0x20), STORAGE(8), INPUT_ATTACHMENT(0x80); no sparse flags (7).
+        if(type == 1 && d == 1 && samples == 1 && mips >= 2 && !depthfmt && !(flags & 7u)
+           && (usage & 4u) && (usage & 2u) && !(usage & (0x10u|0x20u|0x8u|0x80u)) && side >= 1024u) {
+            shift = (side >= (uint32_t)vd_ts_deep_min()) ? vd_ts_shift_max() : 1;
+            if((uint32_t)shift >= mips) shift = (int)mips - 1;
+            if(shift > 0) {
+                *(uint32_t*)(ci+28) = (w >> shift) ? (w >> shift) : 1u;
+                *(uint32_t*)(ci+32) = (h >> shift) ? (h >> shift) : 1u;
+                *(uint32_t*)(ci+40) = mips - shift;
+                pCreateInfo = ci;
+                // dropped texels, RGBA8-equivalent: the top mip is 3/4 of the chain, the top two 15/16
+                kb = ((uint64_t)w * h * layers * 4u * (shift == 1 ? 3u : 15u) / (shift == 1 ? 4u : 16u)) >> 10;
+            }
+        }
+    }
+    int ret = fnc(device, pCreateInfo, find_VkAllocationCallbacks(&my_alloc, pAllocator), p);
+    if(ret == 0 && shift && p && *(void**)p) {
+        vd_ts_put(*(void**)p, shift);
+        uint64_t n = ++vd_ts_n[shift];
+        vd_ts_saved_kb += kb;
+        if(n <= 8 || (n % 256) == 0)
+            printf_log(LOG_NONE, "RIMDROID TEXSHRINK img=%p shift=%d %ux%u fmt=%u mips=%u -> %ux%u/%u (shift1=%llu shift2=%llu saved~%lluMB)\n",
+                       *(void**)p, shift, *(uint32_t*)((char*)ci+28) << shift, *(uint32_t*)((char*)ci+32) << shift,
+                       *(uint32_t*)(ci+24), *(uint32_t*)(ci+40) + shift, *(uint32_t*)(ci+28), *(uint32_t*)(ci+32), *(uint32_t*)(ci+40),
+                       (unsigned long long)vd_ts_n[1], (unsigned long long)vd_ts_n[2], (unsigned long long)(vd_ts_saved_kb >> 10));
+    }
+    return ret;
+}
+EXPORT int my_vkCreateImageView(x64emu_t* emu, void* device, void* pCreateInfo, my_VkAllocationCallbacks_t* pAllocator, void* p)
+{
+    my_VkAllocationCallbacks_t my_alloc;
+    iFpppp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCreateImageView;
+    char ci[80];   // VkImageViewCreateInfo: image@24 subresourceRange{aspect@56 baseMip@60 levelCount@64 ...}
+    int s = pCreateInfo ? vd_ts_get(*(void**)((char*)pCreateInfo + 24)) : 0;
+    if(s) {
+        memcpy(ci, pCreateInfo, sizeof(ci));
+        vd_ts_range((uint32_t*)(ci+60), (uint32_t*)(ci+64), s);
+        pCreateInfo = ci;
+    }
+    return fnc(device, pCreateInfo, find_VkAllocationCallbacks(&my_alloc, pAllocator), p);
+}
+EXPORT void my_vkDestroyImage(x64emu_t* emu, void* device, void* p, my_VkAllocationCallbacks_t* pAllocator)
+{
+    my_VkAllocationCallbacks_t my_alloc;
+    vFppp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkDestroyImage;
+    vd_ts_del(p);
+    fnc(device, p, find_VkAllocationCallbacks(&my_alloc, pAllocator));
+}
+/* VkBufferImageCopy (56 bytes, imageSubresource.mipLevel @20) array -> shifted copy; returns the new count. */
+static uint32_t vd_ts_copy_regions(const char* in, uint32_t count, size_t stride, size_t mipoff, int s, char* out)
+{
+    uint32_t n = 0;
+    for(uint32_t i = 0; i < count; ++i) {
+        const char* r = in + i * stride;
+        uint32_t mip = *(const uint32_t*)(r + mipoff);
+        if(mip < (uint32_t)s) continue;   // a dropped top mip: never uploaded
+        memcpy(out + n * stride, r, stride);
+        *(uint32_t*)(out + n * stride + mipoff) = mip - s;
+        ++n;
+    }
+    return n;
+}
+EXPORT void my_vkCmdCopyBufferToImage(x64emu_t* emu, void* cmd, void* buffer, void* image, uint32_t layout, uint32_t count, void* pRegions)
+{
+    vFpppuup_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyBufferToImage;
+    int s = vd_ts_get(image);
+    if(!s || !count || !pRegions) { fnc(cmd, buffer, image, layout, count, pRegions); return; }
+    char* out = alloca((size_t)count * 56);
+    uint32_t n = vd_ts_copy_regions(pRegions, count, 56, 20, s, out);
+    if(n) fnc(cmd, buffer, image, layout, n, out);
+}
+EXPORT void my_vkCmdCopyImageToBuffer(x64emu_t* emu, void* cmd, void* image, uint32_t layout, void* buffer, uint32_t count, void* pRegions)
+{
+    vFppupup_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyImageToBuffer;
+    int s = vd_ts_get(image);
+    if(!s || !count || !pRegions) { fnc(cmd, image, layout, buffer, count, pRegions); return; }
+    char* out = alloca((size_t)count * 56);
+    uint32_t n = vd_ts_copy_regions(pRegions, count, 56, 20, s, out);
+    if(n) fnc(cmd, image, layout, buffer, n, out);
+}
+/* VkCopyBufferToImageInfo2 (48 bytes: dstImage@24 regionCount@36 pRegions@40), VkBufferImageCopy2 (72 bytes, mipLevel@36). */
+static void vd_ts_copy_buffer_to_image2(vFpp_t fnc, void* cmd, void* pInfo)
+{
+    int s = pInfo ? vd_ts_get(*(void**)((char*)pInfo + 24)) : 0;
+    uint32_t count = pInfo ? *(uint32_t*)((char*)pInfo + 36) : 0;
+    const char* regions = pInfo ? *(const char**)((char*)pInfo + 40) : NULL;
+    if(!s || !count || !regions) { fnc(cmd, pInfo); return; }
+    char info[48];
+    memcpy(info, pInfo, sizeof(info));
+    char* out = alloca((size_t)count * 72);
+    uint32_t n = vd_ts_copy_regions(regions, count, 72, 36, s, out);
+    if(!n) return;
+    *(uint32_t*)(info + 36) = n;
+    *(void**)(info + 40) = out;
+    fnc(cmd, info);
+}
+EXPORT void my_vkCmdCopyBufferToImage2(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyBufferToImage2;
+    vd_ts_copy_buffer_to_image2(fnc, cmd, pInfo);
+}
+EXPORT void my_vkCmdCopyBufferToImage2KHR(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyBufferToImage2KHR;
+    vd_ts_copy_buffer_to_image2(fnc, cmd, pInfo);
+}
+/* Two-image transfers: regions carry a src and a dst mip; a region whose src or dst mip was dropped is skipped. */
+static uint32_t vd_ts_pair_regions(const char* in, uint32_t count, size_t stride, size_t smip, size_t dmip, int ss, int ds, char* out)
+{
+    uint32_t n = 0;
+    for(uint32_t i = 0; i < count; ++i) {
+        const char* r = in + i * stride;
+        uint32_t sm = *(const uint32_t*)(r + smip), dm = *(const uint32_t*)(r + dmip);
+        if(sm < (uint32_t)ss || dm < (uint32_t)ds) continue;
+        memcpy(out + n * stride, r, stride);
+        *(uint32_t*)(out + n * stride + smip) = sm - ss;
+        *(uint32_t*)(out + n * stride + dmip) = dm - ds;
+        ++n;
+    }
+    return n;
+}
+EXPORT void my_vkCmdBlitImage(x64emu_t* emu, void* cmd, void* src, uint32_t srcLayout, void* dst, uint32_t dstLayout, uint32_t count, void* pRegions, uint32_t filter)
+{
+    vFppupuupu_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdBlitImage;
+    int ss = vd_ts_get(src), ds = vd_ts_get(dst);
+    if((!ss && !ds) || !count || !pRegions) { fnc(cmd, src, srcLayout, dst, dstLayout, count, pRegions, filter); return; }
+    char* out = alloca((size_t)count * 80);   // VkImageBlit: srcSubresource.mipLevel@4 dstSubresource.mipLevel@44
+    uint32_t n = vd_ts_pair_regions(pRegions, count, 80, 4, 44, ss, ds, out);
+    if(n) fnc(cmd, src, srcLayout, dst, dstLayout, n, out, filter);
+}
+EXPORT void my_vkCmdCopyImage(x64emu_t* emu, void* cmd, void* src, uint32_t srcLayout, void* dst, uint32_t dstLayout, uint32_t count, void* pRegions)
+{
+    vFppupuup_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyImage;
+    int ss = vd_ts_get(src), ds = vd_ts_get(dst);
+    if((!ss && !ds) || !count || !pRegions) { fnc(cmd, src, srcLayout, dst, dstLayout, count, pRegions); return; }
+    char* out = alloca((size_t)count * 68);   // VkImageCopy: srcSubresource.mipLevel@4 dstSubresource.mipLevel@32
+    uint32_t n = vd_ts_pair_regions(pRegions, count, 68, 4, 32, ss, ds, out);
+    if(n) fnc(cmd, src, srcLayout, dst, dstLayout, n, out);
+}
+/* VkBlitImageInfo2 (72 bytes: src@16 dst@32 regionCount@48 pRegions@56), VkImageBlit2 (96 bytes: src mip@20 dst mip@60).
+ * VkCopyImageInfo2 (64 bytes: src@16 dst@32 regionCount@48 pRegions@56), VkImageCopy2 (88 bytes: src mip@20 dst mip@48). */
+static void vd_ts_pair2(vFpp_t fnc, void* cmd, void* pInfo, size_t infosz, size_t stride, size_t smip, size_t dmip)
+{
+    int ss = pInfo ? vd_ts_get(*(void**)((char*)pInfo + 16)) : 0;
+    int ds = pInfo ? vd_ts_get(*(void**)((char*)pInfo + 32)) : 0;
+    uint32_t count = pInfo ? *(uint32_t*)((char*)pInfo + 48) : 0;
+    const char* regions = pInfo ? *(const char**)((char*)pInfo + 56) : NULL;
+    if((!ss && !ds) || !count || !regions) { fnc(cmd, pInfo); return; }
+    char info[72];
+    memcpy(info, pInfo, infosz);
+    char* out = alloca(count * stride);
+    uint32_t n = vd_ts_pair_regions(regions, count, stride, smip, dmip, ss, ds, out);
+    if(!n) return;
+    *(uint32_t*)(info + 48) = n;
+    *(void**)(info + 56) = out;
+    fnc(cmd, info);
+}
+EXPORT void my_vkCmdBlitImage2(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdBlitImage2;
+    vd_ts_pair2(fnc, cmd, pInfo, 72, 96, 20, 60);
+}
+EXPORT void my_vkCmdBlitImage2KHR(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdBlitImage2KHR;
+    vd_ts_pair2(fnc, cmd, pInfo, 72, 96, 20, 60);
+}
+EXPORT void my_vkCmdCopyImage2(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyImage2;
+    vd_ts_pair2(fnc, cmd, pInfo, 64, 88, 20, 48);
+}
+EXPORT void my_vkCmdCopyImage2KHR(x64emu_t* emu, void* cmd, void* pInfo)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdCopyImage2KHR;
+    vd_ts_pair2(fnc, cmd, pInfo, 64, 88, 20, 48);
+}
+EXPORT void my_vkCmdClearColorImage(x64emu_t* emu, void* cmd, void* image, uint32_t layout, void* pColor, uint32_t count, void* pRanges)
+{
+    vFppupup_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdClearColorImage;
+    int s = vd_ts_get(image);
+    if(!s || !count || !pRanges) { fnc(cmd, image, layout, pColor, count, pRanges); return; }
+    char* out = alloca((size_t)count * 20);   // VkImageSubresourceRange: baseMipLevel@4 levelCount@8
+    memcpy(out, pRanges, (size_t)count * 20);
+    for(uint32_t i = 0; i < count; ++i) vd_ts_range((uint32_t*)(out + i*20 + 4), (uint32_t*)(out + i*20 + 8), s);
+    fnc(cmd, image, layout, pColor, count, out);
+}
+/* Barriers name whole mip ranges (Unity: VK_REMAINING_MIP_LEVELS or the full count), so only the
+ * count moves. Copied only when a shrunk image is in the list; the common case pays one lookup per
+ * image barrier. VkImageMemoryBarrier: 72 bytes, image@40, baseMip@52, levelCount@56.
+ * VkImageMemoryBarrier2: 96 bytes, image@64, baseMip@76, levelCount@80. */
+static char* vd_ts_fix_barriers(const char* in, uint32_t count, size_t stride, size_t imgoff, size_t baseoff)
+{
+    if(!vd_ts_live || !count || !in) return NULL;
+    char* out = NULL;
+    for(uint32_t i = 0; i < count; ++i) {
+        int s = vd_ts_get(*(void* const*)(in + i*stride + imgoff));
+        if(!s) continue;
+        if(!out) { out = alloca(count * stride); memcpy(out, in, count * stride); }
+        vd_ts_range((uint32_t*)(out + i*stride + baseoff), (uint32_t*)(out + i*stride + baseoff + 4), s);
+    }
+    return out;
+}
+EXPORT void my_vkCmdPipelineBarrier(x64emu_t* emu, void* cmd, uint32_t srcStage, uint32_t dstStage, uint32_t dep,
+                                    uint32_t memCount, void* pMem, uint32_t bufCount, void* pBuf, uint32_t imgCount, void* pImg)
+{
+    vFpuuuupupup_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdPipelineBarrier;
+    char* fixed = vd_ts_fix_barriers(pImg, imgCount, 72, 40, 52);
+    fnc(cmd, srcStage, dstStage, dep, memCount, pMem, bufCount, pBuf, imgCount, fixed ? fixed : pImg);
+}
+/* VkDependencyInfo: 64 bytes, imageMemoryBarrierCount@48, pImageMemoryBarriers@56. */
+static void vd_ts_barrier2(vFpp_t fnc, void* cmd, void* pDep)
+{
+    char* fixed = pDep ? vd_ts_fix_barriers(*(const char**)((char*)pDep + 56), *(uint32_t*)((char*)pDep + 48), 96, 64, 76) : NULL;
+    if(!fixed) { fnc(cmd, pDep); return; }
+    char dep[64];
+    memcpy(dep, pDep, sizeof(dep));
+    *(void**)(dep + 56) = fixed;
+    fnc(cmd, dep);
+}
+EXPORT void my_vkCmdPipelineBarrier2(x64emu_t* emu, void* cmd, void* pDep)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdPipelineBarrier2;
+    vd_ts_barrier2(fnc, cmd, pDep);
+}
+EXPORT void my_vkCmdPipelineBarrier2KHR(x64emu_t* emu, void* cmd, void* pDep)
+{
+    vFpp_t fnc = getBridgeFnc2((void*)R_RIP);
+    if(!fnc) fnc=my->vkCmdPipelineBarrier2KHR;
+    vd_ts_barrier2(fnc, cmd, pDep);
+}
+// ---- end texture shrink ------------------------------------------------------------------------
+
 
 #define VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT 1000011000
 #define VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT 1000128004
@@ -1081,7 +1455,6 @@ EXPORT void my_vkDestroyDevice(x64emu_t* emu, void* pDevice, my_VkAllocationCall
 DESTROY(vkDestroyEvent)
 DESTROY(vkDestroyFence)
 DESTROY(vkDestroyFramebuffer)
-DESTROY(vkDestroyImage)
 DESTROY(vkDestroyImageView)
 
 EXPORT void my_vkDestroyInstance(x64emu_t* emu, void* instance, my_VkAllocationCallbacks_t* pAllocator)
