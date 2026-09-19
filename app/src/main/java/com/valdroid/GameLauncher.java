@@ -115,7 +115,8 @@ public class GameLauncher {
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
-                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1 MAXCPU=1" : "1") + "\n"
+                + " (dynarec knobs at box64 defaults" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1" : "")
+                + "; Extra env overrides)\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "active mods   : " + readActiveMods(gi) + "\n"
             + "(GL_RENDERER / GL_VERSION appear below once GL initialises)\n"
@@ -229,15 +230,17 @@ public class GameLauncher {
         Os.setenv("BOX64_LOG", "0", true);
         Os.setenv("BOX64_SHOWBT", "1", true);
         Os.setenv("BOX64_DYNAREC", "1", true);
-        Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 for Unity/Mono JIT
-        Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
-        Os.setenv("BOX64_DYNAREC_STRONGMEM", "4", true);    // QEMU-style strong memory model. Tested on Adreno 830: 4 > 3 > 2 for FPS (more barriers → fewer Mono-GC fault-storms; strictest = also safest for saves). Kept at 4.
-        Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true);  // box64 default; WEAKBARRIER=0 was tested, did NOT fix save corruption
-        // FASTNAN/FASTROUND default to 1 in box64 (imprecise FP). Force OFF: imprecise FP is a known
-        // amplifier of the pawn-save corruption (multiple reports got corruption ONLY after a third-party
-        // AI told them to set these to 1). Precise FP costs a little speed, safety wins.
-        Os.setenv("BOX64_DYNAREC_FASTNAN", "0", true);
-        Os.setenv("BOX64_DYNAREC_FASTROUND", "0", true);
+        // Dynarec knobs are box64's defaults (BIGBLOCK=1, STRONGMEM=0, SAFEFLAGS=1, FASTNAN=1,
+        // FASTROUND=1, WEAKBARRIER=1). RimDroid pinned the strictest values (STRONGMEM=4, BIGBLOCK=0,
+        // precise FP) to keep RimWorld's emulated Mono GC from corrupting saves; Valheim's managed code
+        // runs on native ARM64 Mono and only the engine is emulated, so those barriers were pure cost.
+        // Unset explicitly: setenv persists in this process, so a value from an earlier launch's Extra
+        // env field would otherwise leak into this one. The Extra env field (applied later) overrides.
+        for (String knob : new String[] {
+                "BOX64_DYNAREC_BIGBLOCK", "BOX64_DYNAREC_SAFEFLAGS", "BOX64_DYNAREC_STRONGMEM",
+                "BOX64_DYNAREC_WEAKBARRIER", "BOX64_DYNAREC_FASTNAN", "BOX64_DYNAREC_FASTROUND"}) {
+            Os.unsetenv(knob);
+        }
         // The built-in ValDroid mod reads this on RimWorld's managed loading thread. Extra env
         // vars are applied later, so RIMDROID_CONTROLLER_UI=0/1 remains an explicit A/B override.
         gamepadPresentAtLaunch = com.valdroid.input.GamepadHandler.hasConnectedGamepad();
@@ -787,29 +790,9 @@ public class GameLauncher {
         BuiltinControllerUiMod.setActive(new java.io.File(gameInstance.getGamePath()),
                 "1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")));
 
-        // Safety clamp: several "save corruption" reports trace to cargo-cult env vars (copied from a
-        // third-party AI) that widen the box64 JIT race — BOX64_DYNAREC_BIGBLOCK>1, FASTNAN=1,
-        // FASTROUND=1, STRONGMEM=0. In RELEASE builds we re-pin these to safe values AFTER the user
-        // field, so a pasted dangerous value can't silently eat colonies. DEBUG builds leave them
-        // untouched so we (devs) can still A/B these knobs.
-        if (!BuildConfig.DEBUG && rawEnvVars != null) {
-            String[][] clamp = {
-                {"BOX64_DYNAREC_BIGBLOCK", "0"}, {"BOX64_DYNAREC_FASTNAN", "0"},
-                {"BOX64_DYNAREC_FASTROUND", "0"}, {"BOX64_DYNAREC_STRONGMEM", "4"}
-            };
-            // With native ARM64 Mono the managed code is not emulated, so the emulated-Mono JIT race
-            // these clamps guard against does not apply to STRONGMEM; leave it open to the env field so
-            // its effect on the remaining x86 engine code can be measured on a release build.
-            boolean nativeMonoOn = Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null;
-            for (String[] kv : clamp) {
-                if (nativeMonoOn && "BOX64_DYNAREC_STRONGMEM".equals(kv[0])) continue;
-                String v = Os.getenv(kv[0]);
-                if (v != null && !v.equals(kv[1])) {
-                    Os.setenv(kv[0], kv[1], true);
-                    postLog("Safety: ignored unsafe " + kv[0] + "=" + v + " (forced " + kv[1] + " — protects saves)");
-                }
-            }
-        }
+        // No release-build clamp of the box64 dynarec knobs here (RimDroid re-pinned BIGBLOCK/FASTNAN/
+        // FASTROUND/STRONGMEM after the Extra env field to protect RimWorld saves): the field is the
+        // player's, and with native Mono there is no emulated GC to protect.
 
         // Self-describing launch header: passed to native (RIMDROID_LAUNCH_CONFIG) so it lands at
         // the top of rimdroid.log, AND mirrored to the on-screen launcher log. Makes any pasted log
