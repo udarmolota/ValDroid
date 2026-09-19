@@ -1,0 +1,117 @@
+name: Build Unity Mono ARM64 runtime
+
+# Native ARM64 Mono for Valheim: builds the Unity Mono fork commit that matches the game's Unity
+# version (6000.0.75f1 -> unity-6000.0-mbe 7de96da4) as an Android ARM64 Boehm runtime. The output
+# (libmonobdwgc-2.0.so, libmono-native.so, libMonoPosixHelper.so) is uploaded as an artifact; it is
+# copied into app/src/main/jniLibs/arm64-v8a by hand after stripping. Does not build the APK.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/mono-arm64.yml
+      - tools/mono-arm64/**
+  workflow_dispatch:
+    inputs:
+      mono_commit:
+        description: Unity Mono commit to build
+        required: true
+        default: 7de96da42011430612231f0f41157677ce9ddfa4
+      ndk_version:
+        description: Android NDK package version
+        required: true
+        default: 19.2.5345600
+
+permissions:
+  contents: read
+
+env:
+  MONO_COMMIT: ${{ inputs.mono_commit || '7de96da42011430612231f0f41157677ce9ddfa4' }}
+  NDK_VERSION: ${{ inputs.ndk_version || '19.2.5345600' }}
+
+jobs:
+  build-runtime:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout ValDroid
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/mono-arm64
+
+      - name: Install host build tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake gettext libtool make mono-devel texinfo
+
+      - name: Set up JDK 17 for sdkmanager
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+          sdkmanager "ndk;$NDK_VERSION"
+          echo "MONO_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Checkout matching Unity Mono source
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/Unity-Technologies/mono.git "$RUNNER_TEMP/unity-mono"
+          git -C "$RUNNER_TEMP/unity-mono" checkout --detach "$MONO_COMMIT"
+          git -C "$RUNNER_TEMP/unity-mono" submodule update --init --depth 1 external/bdwgc
+
+      - name: Build Unity Mono for Android ARM64
+        env:
+          ANDROID_API: 21
+        run: |
+          set -euo pipefail
+          chmod +x tools/mono-arm64/build-unity-mono-arm64.sh
+          tools/mono-arm64/build-unity-mono-arm64.sh \
+            "$RUNNER_TEMP/unity-mono" \
+            "$MONO_NDK_ROOT" \
+            "$RUNNER_TEMP/mono-arm64"
+
+      - name: Verify architecture and the API Valheim's UnityPlayer needs
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/mono-arm64/libmonobdwgc-2.0.so"
+          readelf -h "$runtime" | grep -q 'Class:.*ELF64'
+          readelf -h "$runtime" | grep -q 'Machine:.*AArch64'
+          readelf --dyn-syms --wide "$runtime" |
+            awk '$7 != "UND" && $8 ~ /^(mono_|unity_)/ { sub(/@.*/, "", $8); print $8 }' |
+            LC_ALL=C sort -u > "$RUNNER_TEMP/candidate-exports.txt"
+          LC_ALL=C sort -u tools/mono-arm64/valheim-required-exports.txt > "$RUNNER_TEMP/required.txt"
+          comm -23 "$RUNNER_TEMP/required.txt" "$RUNNER_TEMP/candidate-exports.txt" > "$RUNNER_TEMP/missing.txt"
+          if [[ -s "$RUNNER_TEMP/missing.txt" ]]; then
+            echo "Missing Mono exports required by Valheim's UnityPlayer:"
+            cat "$RUNNER_TEMP/missing.txt"
+            exit 1
+          fi
+          echo "required=$(wc -l < "$RUNNER_TEMP/required.txt") all present"
+          readelf -d "$runtime" | grep NEEDED || true
+          cat "$RUNNER_TEMP/mono-arm64/build-manifest.txt"
+          cat "$RUNNER_TEMP/mono-arm64/SHA256SUMS"
+
+      - name: Pack artifact
+        run: |
+          set -euo pipefail
+          tar -C "$RUNNER_TEMP/mono-arm64" -czf unity-mono-arm64.tar.gz .
+
+      - name: Upload runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-mono-arm64-${{ env.MONO_COMMIT }}
+          path: unity-mono-arm64.tar.gz
