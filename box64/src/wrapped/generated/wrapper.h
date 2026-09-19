@@ -4255,10 +4255,6 @@ void iFiiULippp(x64emu_t *emu, uintptr_t fnc);
 void lFpLpdddddd(x64emu_t *emu, uintptr_t fnc);
 #endif
 
-#if !defined(PPC64LE)
-void iFiLN(x64emu_t *emu, uintptr_t fnc);
-#endif
-
 void vFEv(x64emu_t *emu, uintptr_t fnc);
 void iFEv(x64emu_t *emu, uintptr_t fnc);
 void lFEv(x64emu_t *emu, uintptr_t fnc);

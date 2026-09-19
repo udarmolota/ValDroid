@@ -31,6 +31,7 @@ extern int _nl_msg_cat_cntr __attribute__((weak));
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <sched.h>      // RimDroid: sched_getaffinity + cpu_set_t for my_sched_getaffinity CPU cap
@@ -992,6 +993,21 @@ int of_unconvert(int a)
 #undef SUPER
 
 
+// ValDroid virtual gamepad (valdroid_pad.c in libvaldroid.so). SDL_JOYSTICK_DEVICE names the path;
+// open/stat/ioctl on it are answered there. Weak: a box64 built without libvaldroid still links.
+extern __attribute__((weak)) const char* rd_pad_path(void);
+extern __attribute__((weak)) int rd_pad_open(int flags);
+extern __attribute__((weak)) int rd_pad_is_fd(int fd);
+extern __attribute__((weak)) int rd_pad_ioctl(int fd, unsigned long req, void* arg);
+static int vd_is_pad_path(const char* p) { return p && rd_pad_path && !strcmp(p, rd_pad_path()); }
+static int vd_pad_is_fd(int fd) { return rd_pad_is_fd && rd_pad_is_fd(fd); }
+static int vd_pad_fake_stat(void* buf) {   // what SDL expects of /dev/input/eventN: a character device
+    struct stat st; memset(&st, 0, sizeof(st));
+    st.st_mode = S_IFCHR | 0660; st.st_nlink = 1; st.st_ino = 0x56445041; st.st_rdev = makedev(13, 99);
+    if(buf) UnalignStat64(&st, buf);
+    return 0;
+}
+
 #ifdef PPC64LE
 // ioctl number translation: x86_64 -> PPC64LE
 // x86_64 _IOC encoding: dir(2 bits, 30-31) | size(14 bits, 16-29) | type(8 bits, 8-15) | nr(8 bits, 0-7)
@@ -1155,9 +1171,19 @@ unsigned long ioctl_convert(unsigned long x86_req)
 
 EXPORT int my_ioctl(x64emu_t* emu, int fd, unsigned long req, void* arg)
 {
+    if(vd_pad_is_fd(fd)) return rd_pad_ioctl(fd, req, arg);
     (void)emu;
     unsigned long native_req = ioctl_convert(req);
     return ioctl(fd, native_req, arg);
+}
+#endif
+#ifndef PPC64LE
+// ValDroid: ioctl is wrapped here only to serve the virtual gamepad; everything else passes through.
+EXPORT int my_ioctl(x64emu_t* emu, int fd, unsigned long req, void* arg)
+{
+    (void)emu;
+    if(vd_pad_is_fd(fd)) return rd_pad_ioctl(fd, req, arg);
+    return ioctl(fd, req, arg);
 }
 #endif
 
@@ -1876,6 +1902,7 @@ static int isAndroidHiddenPath(const char* path)
 EXPORT int my___xstat(x64emu_t* emu, int v, void* path, void* buf)
 {
     (void)emu; (void)v;
+    if(vd_is_pad_path((const char*)path)) return vd_pad_fake_stat(buf);
     if(isAndroidHiddenPath((const char*)path)) {
         errno = ENOENT;
         return -1;
@@ -1906,6 +1933,7 @@ EXPORT int my___lxstat64(x64emu_t* emu, int v, void* name, void* buf) __attribut
 EXPORT int my___fxstatat(x64emu_t* emu, int v, int d, void* path, void* buf, int flags)
 {
     (void)emu; (void)v;
+    if(vd_is_pad_path((const char*)path)) return vd_pad_fake_stat(buf);
     if(isAndroidHiddenPath((const char*)path)) {   // absolute path ignores dirfd anyway
         errno = ENOENT;
         return -1;
@@ -1921,6 +1949,7 @@ EXPORT int my___fxstatat64(x64emu_t* emu, int v, int d, void* path, void* buf, i
 EXPORT int my_stat(x64emu_t *emu, void* filename, void* buf)
 {
     (void)emu;
+    if(vd_is_pad_path((const char*)filename)) return vd_pad_fake_stat(buf);
     if(isAndroidHiddenPath((const char*)filename)) {
         errno = ENOENT;
         return -1;
@@ -1951,6 +1980,7 @@ EXPORT int my_lstat64(x64emu_t *emu, void* filename, void* buf) __attribute__((a
 EXPORT int my_fstat(x64emu_t *emu, int fd, void* buf)
 {
     (void)emu;
+    if(vd_pad_is_fd(fd)) return vd_pad_fake_stat(buf);
     struct stat st;
     int r = fstat(fd, &st);
     if(!r)
@@ -2509,6 +2539,7 @@ static void CreateAuxvFile(int fd, uintptr_t* auxv)
 
 EXPORT int32_t my_open(x64emu_t* emu, void* pathname, int32_t flags, uint32_t mode)
 {
+    if(vd_is_pad_path((const char*)pathname)) { int r = rd_pad_open ? rd_pad_open(flags) : -1; if(r<0) errno = ENOENT; return r; }
     if(isAndroidHiddenPath((const char*)pathname)) {
         errno = ENOENT;
         return -1;
@@ -2664,6 +2695,7 @@ EXPORT int32_t my___open(x64emu_t* emu, void* pathname, int32_t flags, uint32_t 
 
 EXPORT int32_t my_open64(x64emu_t* emu, void* pathname, int32_t flags, uint32_t mode)
 {
+    if(vd_is_pad_path((const char*)pathname)) { int r = rd_pad_open ? rd_pad_open(flags) : -1; if(r<0) errno = ENOENT; return r; }
     if(isAndroidHiddenPath((const char*)pathname)) {
         errno = ENOENT;
         return -1;

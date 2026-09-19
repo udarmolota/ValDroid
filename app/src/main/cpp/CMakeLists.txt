@@ -18,6 +18,7 @@ add_subdirectory(liblinkernsbypass)
 add_library(valdroid SHARED
     valdroid.c
     valdroid_jni.c
+    valdroid_pad.c
     mg_caps.c
 )
 target_link_libraries(valdroid

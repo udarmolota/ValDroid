@@ -93,9 +93,68 @@ public class GamepadHandler {
     // ============================= input events =============================
 
     /** @return true if this key was a gamepad button we consumed. */
+    // Valheim gets a real controller: the guest's SDL sees the virtual evdev gamepad (VirtualGamepad /
+    // valdroid_pad.c), so the physical pad is passed through 1:1 and the game uses its own gamepad
+    // UI and bindings. The MNK mapping below is kept for games without controller support.
+    private static final boolean PASSTHROUGH = true;
+
+    private static int logicalToButton(int logical) {
+        switch (logical) {
+            case GamepadMapping.L_A:      return VirtualGamepad.BTN_A;
+            case GamepadMapping.L_B:      return VirtualGamepad.BTN_B;
+            case GamepadMapping.L_X:      return VirtualGamepad.BTN_X;
+            case GamepadMapping.L_Y:      return VirtualGamepad.BTN_Y;
+            case GamepadMapping.L_LB:     return VirtualGamepad.BTN_TL;
+            case GamepadMapping.L_RB:     return VirtualGamepad.BTN_TR;
+            case GamepadMapping.L_SELECT: return VirtualGamepad.BTN_SELECT;
+            case GamepadMapping.L_START:  return VirtualGamepad.BTN_START;
+            case GamepadMapping.L_GUIDE:  return VirtualGamepad.BTN_MODE;
+            case GamepadMapping.L_L3:     return VirtualGamepad.BTN_THUMBL;
+            case GamepadMapping.L_R3:     return VirtualGamepad.BTN_THUMBR;
+            default: return -1;
+        }
+    }
+
+    /** Physical button/D-pad -> virtual evdev gamepad. Always consumes gamepad-sourced keys. */
+    private boolean passthroughKey(KeyEvent e) {
+        final boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
+        switch (e.getKeyCode()) {
+            case KeyEvent.KEYCODE_DPAD_UP:    VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, down ? -1 : 0); break;
+            case KeyEvent.KEYCODE_DPAD_DOWN:  VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, down ?  1 : 0); break;
+            case KeyEvent.KEYCODE_DPAD_LEFT:  VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, down ? -1 : 0); break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, down ?  1 : 0); break;
+            case KeyEvent.KEYCODE_DPAD_CENTER: return true;
+            case KeyEvent.KEYCODE_BUTTON_L2:  VirtualGamepad.trigger(VirtualGamepad.ABS_Z,  down ? 1f : 0f); break;
+            case KeyEvent.KEYCODE_BUTTON_R2:  VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, down ? 1f : 0f); break;
+            case KeyEvent.KEYCODE_BACK:       VirtualGamepad.button(VirtualGamepad.BTN_B, down); break;   // some pads' B
+            default: {
+                int btn = logicalToButton(GamepadMapping.toLogical(e.getKeyCode()));
+                if (btn < 0) return true;   // unknown gamepad button: swallow, never let it become Back
+                VirtualGamepad.button(btn, down);
+            }
+        }
+        VirtualGamepad.sync();
+        return true;
+    }
+
+    /** Physical sticks/triggers/hat -> virtual evdev gamepad axes. */
+    private boolean passthroughMotion(MotionEvent e) {
+        VirtualGamepad.stick(VirtualGamepad.ABS_X,  e.getAxisValue(MotionEvent.AXIS_X));
+        VirtualGamepad.stick(VirtualGamepad.ABS_Y,  e.getAxisValue(MotionEvent.AXIS_Y));
+        VirtualGamepad.stick(VirtualGamepad.ABS_RX, e.getAxisValue(MotionEvent.AXIS_Z));
+        VirtualGamepad.stick(VirtualGamepad.ABS_RY, e.getAxisValue(MotionEvent.AXIS_RZ));
+        VirtualGamepad.trigger(VirtualGamepad.ABS_Z,  readTrigger(e, true));
+        VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, readTrigger(e, false));
+        VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_X)));
+        VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_Y)));
+        VirtualGamepad.sync();
+        return true;
+    }
+
     public boolean onKey(KeyEvent e) {
         if (!isFromGamepad(e.getSource())) return false;
         if (e.getRepeatCount() > 0) return true;   // ignore auto-repeat; hold is managed by raw state
+        if (PASSTHROUGH) return passthroughKey(e);
         final boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
         final int kc = e.getKeyCode();
         // D-pad and triggers-as-keys are handled directly (not part of the remappable logical set).
@@ -131,6 +190,7 @@ public class GamepadHandler {
     public boolean onMotion(MotionEvent e) {
         if (!isFromGamepad(e.getSource())) return false;
         if (e.getAction() != MotionEvent.ACTION_MOVE) return false;
+        if (PASSTHROUGH) return passthroughMotion(e);
         rsX  = e.getAxisValue(MotionEvent.AXIS_Z);    // right stick
         rsY  = e.getAxisValue(MotionEvent.AXIS_RZ);
         lsX  = e.getAxisValue(MotionEvent.AXIS_X);    // left stick

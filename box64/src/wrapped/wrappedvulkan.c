@@ -2067,6 +2067,9 @@ EXPORT int my_vkQueuePresentKHR(x64emu_t* emu, void* queue, void* pPresentInfo)
     int ret = fnc(queue, pPresentInfo);
     if(n <= 10 || ret != 0 || (n % 300) == 0)
         printf_log(LOG_NONE, "RIMDROID: vkQueuePresentKHR EXIT #%d ret=%d\n", n, ret);
+    // ValDroid: the launcher's FPS overlay counts presents through rimdroid_frame_tick(); on the
+    // direct-Vulkan route this is the only present call, so tick here (GL/SDL routes tick in their swaps).
+    { extern __attribute__((weak)) void rimdroid_frame_tick(void); if(rimdroid_frame_tick) rimdroid_frame_tick(); }
     // ValDroid: Android WSI answers VK_SUBOPTIMAL_KHR whenever the swapchain's preTransform differs
     // from the panel rotation. The Unity Linux player never pre-rotates, so it recreates the surface
     // and swapchain on every frame and nothing ever shows. The frame WAS presented; report success and

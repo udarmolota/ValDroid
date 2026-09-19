@@ -192,6 +192,29 @@ Java_com_valdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jte
 
 // FPS overlay: total presented frames so far. The Java overlay reads this once a
 // second and shows the delta = true presented FPS.
+// --- Virtual evdev gamepad (valdroid_pad.c): the physical controller / overlay feed it ---
+void rd_pad_button(int code, int down);
+void rd_pad_axis(int code, int value);
+void rd_pad_sync(void);
+
+JNIEXPORT void JNICALL
+Java_com_valdroid_input_VirtualGamepad_nativeButton(JNIEnv* env, jclass clazz, jint code, jboolean down) {
+    (void)env; (void)clazz;
+    rd_pad_button(code, down ? 1 : 0);
+}
+
+JNIEXPORT void JNICALL
+Java_com_valdroid_input_VirtualGamepad_nativeAxis(JNIEnv* env, jclass clazz, jint code, jint value) {
+    (void)env; (void)clazz;
+    rd_pad_axis(code, value);
+}
+
+JNIEXPORT void JNICALL
+Java_com_valdroid_input_VirtualGamepad_nativeSync(JNIEnv* env, jclass clazz) {
+    (void)env; (void)clazz;
+    rd_pad_sync();
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_valdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
     return (jlong)g_rimdroid_frame_count;

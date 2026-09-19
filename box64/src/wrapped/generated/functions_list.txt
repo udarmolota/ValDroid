@@ -4208,7 +4208,6 @@
 #!defined(STATICBUILD) iFEpipppL
 #!defined(STATICBUILD) iFiiULippp
 #!defined(STATICBUILD) lFpLpdddddd
-#!defined(PPC64LE) iFiLN
 #() vFEv -> vFE
 #() iFEv -> iFE
 #() lFEv -> lFE

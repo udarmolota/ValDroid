@@ -903,6 +903,9 @@ public class GameLauncher {
             // uninitialised in 2022 → "Error getting num native displays" → crash on an empty
             // displays array).
             Os.setenv("SDL_VIDEODRIVER", "x11", true);
+            // Virtual evdev gamepad: SDL opens this path (box64 routes it to valdroid_pad.c) and
+            // reports an Xbox 360 pad, so the game runs with its own controller UI and bindings.
+            Os.setenv("SDL_JOYSTICK_DEVICE", com.valdroid.input.VirtualGamepad.DEVICE_PATH, true);
             // Force SDL to use our root visual by id (bypasses XMatchVisualInfo, which was failing to
             // match our depth-32 TrueColor visual → SDL added 0 displays → Unity crashed). See
             // memory rimworld_16_port.
