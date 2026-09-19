@@ -2,8 +2,10 @@
 #error Meh...
 #endif
 
-// Unity 2022.3.35f1 UnityPlayer -> native ARM64 Unity Mono (RimDroid experiment).
-// The 289 functions UnityPlayer resolves from libmonobdwgc-2.0.so (286 mono_* and 3 unity_*). Signatures come from the Unity
+// UnityPlayer -> native ARM64 Unity Mono. Unity 6000.0.75f1 (Valheim) uses the same Mono fork build as Unity 2022.3.35f1
+// (RimWorld 1.6) plus 7 more functions: the mono_event_* family, mono_class_get_events, mono_property_get_set_method
+// and mono_unity_install_memory_callbacks (ignored: Mono keeps its own allocator).
+// 296 functions: the union of what both players resolve from libmonobdwgc-2.0.so (mono_* and unity_*). Signatures come from the Unity
 // Mono sources (tools/mono-arm64); GOM entries are hand-written in wrappedlibmonobdwgc.c.
 
 GOM(mono_add_internal_call, vFEpp)
@@ -30,6 +32,7 @@ GO(mono_class_from_name_case, pFppp)
 GO(mono_class_get, pFpu)
 GO(mono_class_get_byref_type, pFp)
 GO(mono_class_get_element_class, pFp)
+GO(mono_class_get_events, pFpp)
 GO(mono_class_get_field_from_name, pFpp)
 GO(mono_class_get_fields, pFpp)
 GO(mono_class_get_flags, uFp)
@@ -91,6 +94,10 @@ GO(mono_error_get_error_code, WFp)
 GO(mono_error_get_message, pFp)
 GO(mono_error_init, vFp)
 GO(mono_error_ok, iFp)
+GO(mono_event_get_add_method, pFp)
+GO(mono_event_get_name, pFp)
+GO(mono_event_get_raise_method, pFp)
+GO(mono_event_get_remove_method, pFp)
 GO(mono_exception_from_name_msg, pFpppp)
 GO(mono_exception_from_name_two_strings, pFppppp)
 GO(mono_field_from_token, pFpupp)
@@ -185,6 +192,7 @@ GO(mono_profiler_reset_coverage, iFp)
 GOM(mono_profiler_set_coverage_filter_callback, vFEpp)
 GO(mono_profiler_set_events, vFi)
 GO(mono_property_get_get_method, pFp)
+GO(mono_property_get_set_method, pFp)
 GOM(mono_raise_exception, vFEp)
 GO(mono_reflection_get_custom_attrs_by_type, pFppp)
 GO(mono_runtime_cleanup, vFp)
@@ -266,6 +274,7 @@ GO(mono_unity_gc_set_mode, vFi)
 GO(mono_unity_get_method_checked, pFpuppp)
 GO(mono_unity_heap_validation_from_statics, vFp)
 GOM(mono_unity_image_set_mempool_chunk_foreach, vFEpp)
+GOM(mono_unity_install_memory_callbacks, vFEp)
 GOM(mono_unity_install_unitytls_interface, vFEp)
 GOM(mono_unity_jit_cleanup, vFEp)
 GOM(mono_unity_liveness_allocate_struct, pFEpuppp)

@@ -1046,6 +1046,15 @@ EXPORT void* my_mono_unity_liveness_allocate_struct(x64emu_t* emu, void* filter,
 }
 
 // unitytls is a table of x86 function pointers used by Mono's TLS provider; not needed to reach the menu.
+// Unity 6 hands Mono its allocator (malloc/calloc/realloc/free and friends) as x86 function pointers. Calling
+// them from native Mono would run emulated code on every allocation, including with the world stopped, so
+// Mono keeps its own allocator.
+EXPORT void my_mono_unity_install_memory_callbacks(x64emu_t* emu, void* callbacks)
+{
+    (void)emu;
+    printf_log(LOG_NONE, "[RD-MONO] mono_unity_install_memory_callbacks(%p) ignored\n", callbacks);
+}
+
 EXPORT void my_mono_unity_install_unitytls_interface(x64emu_t* emu, void* callbacks)
 {
     (void)emu;
