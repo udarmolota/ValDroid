@@ -43,13 +43,13 @@ import java.util.List;
  * Android's store are the other half of the credentials (see {@link GogAuth}).
  *
  * <p>When a session already exists the WebView is skipped and the screen lists what the account owns
- * that RimDroid can install: one card per installer, a game's expansions indented beneath it. A
+ * that ValDroid can install: one card per installer, a game's expansions indented beneath it. A
  * card's button follows its file — download, queued, percentage, then the next step: create an
  * instance from a game, install an expansion into one. The transfers belong to
  * {@link GogDownloadQueue}, not to this screen, so leaving it and coming back loses nothing.
  */
 public class GogLoginFragment extends Fragment implements GogDownloadQueue.Listener {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     /**
      * How many products one scan will open. Titles are only knowable by opening each product (see
@@ -261,7 +261,7 @@ public class GogLoginFragment extends Fragment implements GogDownloadQueue.Liste
     }
 
     /**
-     * List what the account owns that RimDroid can install.
+     * List what the account owns that ValDroid can install.
      *
      * <p>GOG's owned-games endpoint returns bare ids, so a title is only knowable by opening each
      * product — one request per game, which is why the scan reports its progress and stops at
@@ -411,7 +411,7 @@ public class GogLoginFragment extends Fragment implements GogDownloadQueue.Liste
             else openNewInstance(c.game, done, destDir);
             return;
         }
-        // The public Download/RimDroid folder is the point (the user can see and reuse the file),
+        // The public Download/ValDroid folder is the point (the user can see and reuse the file),
         // and writing raw paths there needs All-files access on Android 11+.
         if (!StorageAccess.hasAllFilesAccess()) {
             status.setText(R.string.gog_needs_all_files);

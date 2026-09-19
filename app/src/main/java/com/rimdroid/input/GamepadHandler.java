@@ -11,7 +11,7 @@ import java.util.EnumSet;
 /**
  * Physical gamepad support. RimWorld is a mouse+keyboard game (Unity, no native controller
  * support), so a gamepad cannot send joystick events the game would understand. Instead we map
- * the controller onto RimDroid's existing MNK injection: the same {@link InputControlsView} cursor
+ * the controller onto ValDroid's existing MNK injection: the same {@link InputControlsView} cursor
  * + {@link Binding} actions used by the on-screen controls.
  *
  * Default LOGICAL→action mapping (the physical→logical remap lives in GamepadMapping / the mapper UI):

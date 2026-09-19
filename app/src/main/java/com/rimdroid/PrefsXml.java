@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  */
 public final class PrefsXml {
 
-    private static final String TAG = "RimDroid/PrefsXml";
+    private static final String TAG = "ValDroid/PrefsXml";
 
     private PrefsXml() {}
 
@@ -70,7 +70,7 @@ public final class PrefsXml {
     }
 
     /**
-     * RimDroid 1.6/X11: pin WINDOWED mode at the exact surface size. Fullscreen=True made Unity's
+     * ValDroid 1.6/X11: pin WINDOWED mode at the exact surface size. Fullscreen=True made Unity's
      * SDL run the fragile legacy-fullscreen unmap→reparent→map dance on our WM-less X server —
      * the window lost its SHOWN state and Unity never presented (rendered offscreen until Vulkan
      * OOM). A windowed 2340x1080 window on a 2340x1080 X screen is fullscreen in practice anyway.

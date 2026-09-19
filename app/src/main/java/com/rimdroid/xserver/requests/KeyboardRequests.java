@@ -18,7 +18,7 @@ public abstract class KeyboardRequests {
         int count = inputStream.readUnsignedByte();
         inputStream.skip(2);
 
-        // RimDroid fix: the reply must contain count * KEYSYMS_PER_KEYCODE keysyms. Winlator wrote
+        // ValDroid fix: the reply must contain count * KEYSYMS_PER_KEYCODE keysyms. Winlator wrote
         // only `count` — a latent bug Wine never hit (it uses XKB), but SDL2's core
         // XGetKeyboardMapping does: libX11 allocates count*KPK CARD32s and reads PAST our short
         // reply → out-of-bounds keysym table → SIGSEGV in _XKeycodeToKeysym. Emit the full grid,
@@ -51,7 +51,7 @@ public abstract class KeyboardRequests {
         }
     }
 
-    /** RimDroid stubs: SDL2's x11 keyboard setup calls these; fixed sane defaults. */
+    /** ValDroid stubs: SDL2's x11 keyboard setup calls these; fixed sane defaults. */
     public static void getKeyboardControl(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException {
         client.skipRequest();
         try (com.rimdroid.xconnector.XStreamLock lock = outputStream.lock()) {

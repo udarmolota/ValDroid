@@ -10,7 +10,7 @@ public class PixmapManager extends XResourceManager {
     private final SparseArray<Pixmap> pixmaps = new SparseArray<>();
 
     public PixmapManager() {
-        // RimDroid: DEFAULT visual is depth-24 TrueColor (bits_per_rgb=8), like every real X server.
+        // ValDroid: DEFAULT visual is depth-24 TrueColor (bits_per_rgb=8), like every real X server.
         // Winlator defaulted to a depth-32 default visual, which SDL2's x11 driver rejects
         // (get_visualinfo → XMatchVisualInfo(DefaultDepth, TrueColor) → SDL gets 0 displays →
         // RimWorld 1.6 crashes writing into the empty display list). Depth-32 (ARGB) stays available

@@ -2,7 +2,7 @@ package com.rimdroid.input;
 
 /**
  * A single bindable action that a control element can inject into the game via
- * RimDroid's SDL event injection (see GameActivity.native*). This is the RimDroid
+ * ValDroid's SDL event injection (see GameActivity.native*). This is the ValDroid
  * equivalent of Zomdroid's GLFWBinding, but targets our SDL layer and is MNK-only
  * (mouse + keyboard); there is no gamepad/joystick injection.
  *

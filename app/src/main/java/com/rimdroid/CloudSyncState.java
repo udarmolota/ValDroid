@@ -26,7 +26,7 @@ import java.util.Set;
  */
 public final class CloudSyncState {
 
-    private static final String TAG = "RimDroid/CloudSync";
+    private static final String TAG = "ValDroid/CloudSync";
     private static final String FILE = "rd_cloud_sync.json";
 
     /** filename -> SHA-1 (hex) of the copy that both sides agreed on at the last sync. */

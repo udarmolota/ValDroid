@@ -40,7 +40,7 @@ import java.util.List;
  * <p>Every method here blocks on network I/O — call from a worker thread.
  */
 public final class GogLibrary {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     // Two different hosts on purpose. The owned-ids call is an API and lives on embed.gog.com,
     // which is where GOG documents it; gameDetails is an account *page* and is served from www.
@@ -64,7 +64,7 @@ public final class GogLibrary {
         String ua = userAgent;
         if (ua != null) return ua;
         try {
-            ua = android.webkit.WebSettings.getDefaultUserAgent(RimDroidApplication.APP);
+            ua = android.webkit.WebSettings.getDefaultUserAgent(ValDroidApplication.APP);
         } catch (Throwable t) {
             Log.w(TAG, "no WebView user agent: " + t);
             ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -118,7 +118,7 @@ public final class GogLibrary {
         /** DLC arrive as nested product records, not as ids. */
         public final List<Product> dlcs = new ArrayList<>();
 
-        /** The Linux installers, which is all RimDroid can actually use. */
+        /** The Linux installers, which is all ValDroid can actually use. */
         public List<File> linuxInstallers() {
             List<File> out = new ArrayList<>();
             for (File f : files) if ("download".equals(f.kind) && f.isLinux()) out.add(f);

@@ -11,9 +11,9 @@ typedef enum {
     RD_ZINK_ZFA,
     RD_ZINK_OSMESA,
     RD_SOFTPIPE      // CPU software renderer: OSMesa + Mesa softpipe, no GPU/Vulkan
-} RimDroidRenderer;
+} ValDroidRenderer;
 
-extern RimDroidRenderer g_rimdroid_renderer;
+extern ValDroidRenderer g_rimdroid_renderer;
 extern const char*      g_rimdroid_vulkan_driver_name;
 
 typedef struct {
@@ -24,9 +24,9 @@ typedef struct {
     bool is_used;
     pthread_mutex_t mutex;
     pthread_cond_t ready_for_destroy_cond;
-} RimDroidSurface;
+} ValDroidSurface;
 
-extern RimDroidSurface g_rimdroid_surface;
+extern ValDroidSurface g_rimdroid_surface;
 
 // Namespace used to load x86_64 libs via linkernsbypass
 struct android_namespace_t;

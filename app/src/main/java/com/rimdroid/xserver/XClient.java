@@ -50,7 +50,7 @@ public class XClient extends ConnectedClient implements XResourceManager.OnResou
         window.addEventListener(eventListener);
     }
 
-    // RimDroid 1.6 OnGUI-spin hunt: is Unity's endless OnGUI fed by an X-event flood from US?
+    // ValDroid 1.6 OnGUI-spin hunt: is Unity's endless OnGUI fed by an X-event flood from US?
     // Count every event we push to the client and log the running total + type periodically. If
     // this climbs into the millions during the hang, our X server is the flood source (our bug);
     // if it stays near zero, the spin is internal to Unity/RimWorld.
@@ -58,7 +58,7 @@ public class XClient extends ConnectedClient implements XResourceManager.OnResou
     private static final java.util.HashMap<String, Long> rd_eventCounts = new java.util.HashMap<>();
 
     public void sendEvent(Event event) {
-        // RimDroid: MUST write under the stream lock — closing it flushes the buffer to the
+        // ValDroid: MUST write under the stream lock — closing it flushes the buffer to the
         // socket. Without it events (MapNotify etc.) sat in the native buffer forever and
         // SDL's blocking XIfEvent(MapNotify) after XMapRaised hung the game (see rimworld_16_port).
         // Capture once + null-guard: destroy() nulls outputStream on disconnect, and an async
@@ -72,7 +72,7 @@ public class XClient extends ConnectedClient implements XResourceManager.OnResou
             synchronized (rd_eventCounts) {
                 rd_eventCounts.merge(type, 1L, Long::sum);
                 if (n <= 20 || n % 5000 == 0)
-                    android.util.Log.i("RimDroid-XEvt", "sent #" + n + " last=" + type + " byType=" + rd_eventCounts);
+                    android.util.Log.i("ValDroid-XEvt", "sent #" + n + " last=" + type + " byType=" + rd_eventCounts);
             }
         }
         catch (IOException e) {

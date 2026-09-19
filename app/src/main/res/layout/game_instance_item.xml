@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-    <!-- Faint RimDroid logo piece, flush to the card's top-left corner.
+    <!-- Faint ValDroid logo piece, flush to the card's top-left corner.
          FIXED size (no match_parent — that inflated the card height). -->
     <ImageView
         android:layout_width="56dp"

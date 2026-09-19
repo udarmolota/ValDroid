@@ -159,9 +159,9 @@ public class XClientRequestHandler implements RequestHandler {
         client.setRequestData(requestData);
         client.setRequestLength(requestLength);
 
-        // RimDroid: full request trace (RIMDROID_XTRACE) — names the request SDL/Unity 1.6 sends
+        // ValDroid: full request trace (RIMDROID_XTRACE) — names the request SDL/Unity 1.6 sends
         // right before it gives up, to find the 0-displays root cause. Off unless the property is set.
-        if (TRACE) android.util.Log.i("RimDroid/XServer", "req seq=" + client.getSequenceNumber()
+        if (TRACE) android.util.Log.i("ValDroid/XServer", "req seq=" + client.getSequenceNumber()
                 + " opcode=" + opcode + (opcode < 0 ? (" minor=" + (requestData & 0xff)) : "")
                 + " len=" + requestLength);
 
@@ -455,10 +455,10 @@ public class XClientRequestHandler implements RequestHandler {
                         client.skipRequest();
                         break;
                     default:
-                        // RimDroid: never hang the client on an unimplemented request — skip it,
+                        // ValDroid: never hang the client on an unimplemented request — skip it,
                         // reply BadImplementation, and LOG the opcode. The logged opcodes are the
                         // work list for what the 1.6 Unity player actually needs (spike loop).
-                        android.util.Log.w("RimDroid/XServer", "Unsupported X opcode " + opcode
+                        android.util.Log.w("ValDroid/XServer", "Unsupported X opcode " + opcode
                                 + " (seq " + client.getSequenceNumber() + ") — replying BadImplementation");
                         client.skipRequest();
                         new com.rimdroid.xserver.errors.XRequestError(17, 0).sendError(client, opcode);

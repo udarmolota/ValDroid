@@ -1,10 +1,10 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * libpulse-simple shim → AAudio  (original mechanism by udarmolota for RimDroid).
+ * libpulse-simple shim → AAudio  (original mechanism by udarmolota for ValDroid).
  * Copyright (c) 2026 udarmolota
  *
- * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of RimDroid), so it can be reused
+ * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of ValDroid), so it can be reused
  * across the author's projects (e.g. Zomdroid) and by others, provided this notice is preserved.
  *
  * WHAT THIS IS
@@ -27,7 +27,7 @@
 #include <android/log.h>
 #include <aaudio/AAudio.h>
 
-#define TAG "RimDroid/pa-shim"
+#define TAG "ValDroid/pa-shim"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)

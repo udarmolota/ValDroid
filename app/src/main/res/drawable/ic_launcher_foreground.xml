@@ -4,5 +4,5 @@
      circle no longer touches the launcher mask edge (was clipped right at the rim);
      ~4 more units of padding on the 108 canvas. Bigger = smaller logo, more padding. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/rimdroid_logo"
+    android:drawable="@drawable/valdroid_logo"
     android:inset="16%"/>

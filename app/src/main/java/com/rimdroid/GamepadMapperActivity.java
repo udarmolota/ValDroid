@@ -17,7 +17,7 @@ import com.rimdroid.input.GamepadMapping;
 
 /**
  * Step-by-step gamepad button remapper (ported from Zomdroid's GamepadMapperFragment, adapted to
- * RimDroid's Activity-based editors). The user presses the physical button they want to act as each
+ * ValDroid's Activity-based editors). The user presses the physical button they want to act as each
  * LOGICAL button (A/B/X/Y/…); {@link GamepadMapping} stores physical→logical so a controller with
  * swapped/“inverted” buttons works. The logical→action layer (A=left click, …) lives in
  * GamepadHandler and is unchanged. Triggers/sticks are not remapped here (analog, handled directly).

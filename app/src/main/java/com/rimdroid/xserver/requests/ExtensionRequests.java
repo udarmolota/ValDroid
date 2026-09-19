@@ -37,7 +37,7 @@ public abstract class ExtensionRequests {
         }
     }
 
-    /** RimDroid addition: core ListExtensions (opcode 99) — xdpyinfo and toolkits call it;
+    /** ValDroid addition: core ListExtensions (opcode 99) — xdpyinfo and toolkits call it;
      *  without a reply the client blocks forever. Returns the names of our extensions. */
     public static void listExtensions(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException {
         Extension[] extensions = client.xServer.getExtensions();

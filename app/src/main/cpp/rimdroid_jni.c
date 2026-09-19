@@ -13,7 +13,7 @@
 
 extern char** environ;
 
-#define LOG_TAG "rimdroid-jni"
+#define LOG_TAG "valdroid-jni"
 
 // Launch the standalone box64+RimWorld binary (librimdroid_exec.so) as a FRESH
 // process via fork()+execve().  execve wipes the ART heap → clean address space
@@ -112,12 +112,12 @@ Java_com_rimdroid_GameLauncher_startGame(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_rimdroid_GameLauncher_initRimDroidWindow(JNIEnv* env, jobject clazz) {
+Java_com_rimdroid_GameLauncher_initValDroidWindow(JNIEnv* env, jobject clazz) {
     return rimdroid_init();
 }
 
 JNIEXPORT void JNICALL
-Java_com_rimdroid_GameLauncher_destroyRimDroidWindow(JNIEnv* env, jobject clazz) {
+Java_com_rimdroid_GameLauncher_destroyValDroidWindow(JNIEnv* env, jobject clazz) {
     rimdroid_deinit();
 }
 

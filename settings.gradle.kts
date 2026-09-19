@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "RimDroid"
+rootProject.name = "ValDroid"
 include(":app")
  

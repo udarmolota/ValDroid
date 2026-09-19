@@ -32,7 +32,7 @@ public class ConfigureNotify extends Event {
 
     @Override
     public void send(short sequenceNumber, XOutputStream outputStream) throws IOException {
-        android.util.Log.i("RimDroid/XServer", "ConfigureNotify win=0x" + Integer.toHexString(window.id)
+        android.util.Log.i("ValDroid/XServer", "ConfigureNotify win=0x" + Integer.toHexString(window.id)
                 + " " + width + "x" + height + "+" + x + "+" + y);
         try (XStreamLock lock = outputStream.lock()) {
             outputStream.writeByte(code);

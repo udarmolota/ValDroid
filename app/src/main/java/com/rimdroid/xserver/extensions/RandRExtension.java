@@ -12,7 +12,7 @@ import java.io.IOException;
 import static com.rimdroid.xserver.XClientRequestHandler.RESPONSE_CODE_SUCCESS;
 
 /**
- * RimDroid addition (not from Winlator): MINIMAL RandR 1.3 — just enough for SDL2's
+ * ValDroid addition (not from Winlator): MINIMAL RandR 1.3 — just enough for SDL2's
  * x11modes.c to enumerate one display. Unity 2022's static SDL requires XRandR for its
  * x11 video driver; without it SDL video init fails, Unity sees 0 displays and crashes
  * (see memory rimworld_16_port). We expose exactly one screen / output / crtc / mode:
@@ -83,15 +83,15 @@ public class RandRExtension extends Extension {
                     // Resolve the target at send time: the scheduling client may be the dead probe.
                     XClient target = lastRandrClient;
                     if (target == null || target.getOutputStream() == null) {
-                        android.util.Log.w("RimDroid/XServer", "RANDR notify #" + (i + 1) + ": no live client, skipping");
+                        android.util.Log.w("ValDroid/XServer", "RANDR notify #" + (i + 1) + ": no live client, skipping");
                         continue;
                     }
                     try {
-                        android.util.Log.i("RimDroid/XServer", "RANDR -> RRScreenChangeNotify " + w + "x" + h + " (#" + (i + 1) + ")");
+                        android.util.Log.i("ValDroid/XServer", "RANDR -> RRScreenChangeNotify " + w + "x" + h + " (#" + (i + 1) + ")");
                         target.sendEvent(new com.rimdroid.xserver.events.RRScreenChangeNotify(
                                 FIRST_EVENT, rootId, rootId, w, h, mw, mh, TIMESTAMP));
                     } catch (Exception e) {
-                        android.util.Log.w("RimDroid/XServer", "RRScreenChange send err: " + e);
+                        android.util.Log.w("ValDroid/XServer", "RRScreenChange send err: " + e);
                     }
                 }
             }
@@ -104,7 +104,7 @@ public class RandRExtension extends Extension {
     public void handleRequest(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException, XRequestError {
         lastRandrClient = client;
         int opcode = client.getRequestData();
-        android.util.Log.i("RimDroid/XServer", "RANDR req minor=" + opcode
+        android.util.Log.i("ValDroid/XServer", "RANDR req minor=" + opcode
                 + " screenInfo=" + xServer.screenInfo.width + "x" + xServer.screenInfo.height);
         switch (opcode) {
             case ClientOpcodes.QUERY_VERSION:
@@ -149,7 +149,7 @@ public class RandRExtension extends Extension {
                 listOutputProperties(client, inputStream, outputStream);
                 break;
             default:
-                android.util.Log.w("RimDroid/XServer", "RANDR: unsupported minor opcode " + opcode);
+                android.util.Log.w("ValDroid/XServer", "RANDR: unsupported minor opcode " + opcode);
                 client.skipRequest();
                 new XRequestError(17, 0).sendError(client, getMajorOpcode());   // BadImplementation
                 break;

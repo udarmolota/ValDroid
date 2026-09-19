@@ -104,7 +104,7 @@ public class SettingsFragment extends Fragment {
         // Compatibility mode: box64 FP/barrier tuning (WEAKBARRIER=2 + X87DOUBLE=1) that lets the game launch
         // on devices hit by the deep "won't start / black screen" bug (Adreno 610/725, weak-Vulkan Mali).
         swCompat.setChecked(inst.isCompatibilityMode());
-        // No warning dialog on enabling it any more: it sent players to the RimDroidSaveFix mod, and
+        // No warning dialog on enabling it any more: it sent players to the ValDroidSaveFix mod, and
         // the save bug that mod worked around is fixed at the root (box64 qsort). The switch's own
         // hint already says it is slower and only helps some devices.
         swCompat.setOnCheckedChangeListener((btn, checked) -> inst.setCompatibilityMode(checked));
@@ -208,7 +208,7 @@ public class SettingsFragment extends Fragment {
             etPass.setHint("Steam password");
             etPass.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                     | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-            // Manifest = game version. RimDroid currently supports RimWorld 1.5 only (Steam "public"
+            // Manifest = game version. ValDroid currently supports RimWorld 1.5 only (Steam "public"
             // is already 1.6). Blank → recommended 1.5 build; a number → pin a specific build.
             final android.widget.EditText etManifest = new android.widget.EditText(act);
             etManifest.setHint("Manifest ID — blank = recommended 1.5");
@@ -221,7 +221,7 @@ public class SettingsFragment extends Fragment {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
                     .setTitle("Steam download spike")
                     .setMessage((manifestOnly ? "MANIFEST-ONLY test. " : "")
-                            + "RimDroid currently works with RimWorld 1.5 (Steam 'latest' is already 1.6). "
+                            + "ValDroid currently works with RimWorld 1.5 (Steam 'latest' is already 1.6). "
                             + "Logs in (approve in Steam Mobile / enter code), then downloads the RimWorld 1.5 "
                             + "Linux build into the named instance.")
                     .setView(box)

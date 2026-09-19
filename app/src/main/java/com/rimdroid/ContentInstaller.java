@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  * Installs a picked file (mod or DLC) into a chosen instance. One unified flow: the user picks the
- * file from anywhere on the phone (SAF — no storage permission needed, works for the /Download/RimDroid
+ * file from anywhere on the phone (SAF — no storage permission needed, works for the /Download/ValDroid
  * zips too), then picks the target instance and Mod/DLC.
  *   • Mod zip → instance/Mods/&lt;folder&gt;
  *   • DLC zip → instance/Data/&lt;folder&gt;   (where RimWorld expects official expansions)
@@ -39,7 +39,7 @@ import java.util.List;
  *     the ModImporter path can't handle it. (We only accept zips — see {@link C.mime#GAME_ARCHIVE}.)
  */
 public final class ContentInstaller {
-    private static final String TAG = "RimDroid/Content";
+    private static final String TAG = "ValDroid/Content";
 
     private ContentInstaller() {}
 

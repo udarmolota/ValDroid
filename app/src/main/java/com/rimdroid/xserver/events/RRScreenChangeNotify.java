@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /**
  * RandR RRScreenChangeNotify event (RandR event #0, so its X event code = RandR firstEvent base).
- * RimDroid 1.6 fix attempt: Unity's EARLY display probe fails ("SDL video subsystem not initialized")
+ * ValDroid 1.6 fix attempt: Unity's EARLY display probe fails ("SDL video subsystem not initialized")
  * and caches Display.main = 0×0; the LATER correct enumeration doesn't refresh managed Display.main.
  * SDL2 subscribes to RandR change events (XRRSelectInput). Delivering this event AFTER the real
  * enumeration is available should make SDL/Unity re-read the display via its own refresh path and

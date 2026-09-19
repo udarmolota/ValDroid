@@ -9,10 +9,10 @@ import android.provider.Settings;
 /**
  * All-files access (MANAGE_EXTERNAL_STORAGE) helper.
  *
- * DLC and Workshop mods download into the PUBLIC /Download/RimDroid folder (see
+ * DLC and Workshop mods download into the PUBLIC /Download/ValDroid folder (see
  * {@link AppStorage#getDownloadsDir()}) so the user can see, move, share and reuse them across
  * instances with any file manager. Writing raw file paths there on Android 11+ requires All-files
- * access, which the user grants once on a system settings screen. RimDroid is sideloaded (no Play
+ * access, which the user grants once on a system settings screen. ValDroid is sideloaded (no Play
  * Store review), so the broad permission is acceptable.
  *
  * minSdk is 30, so {@link Environment#isExternalStorageManager()} and the settings action are always

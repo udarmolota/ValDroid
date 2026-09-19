@@ -11,7 +11,7 @@ import java.io.File;
 
 public class GameLauncher {
 
-    private static final String TAG = "RimDroid/GameLauncher";
+    private static final String TAG = "ValDroid/GameLauncher";
 
     // Callback for passing log lines to the UI
     public interface LogCallback {
@@ -81,7 +81,7 @@ public class GameLauncher {
             decisionReason += "; overridden by Extra env vars";
         }
         boolean interp = s.isInterpreter();
-        return "=== RimDroid launch config ===\n"
+        return "=== ValDroid launch config ===\n"
             + "instance      : " + gi.getName() + "\n"
             + "app version   : " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
             + "device        : " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
@@ -179,7 +179,7 @@ public class GameLauncher {
 
         // Reconcile immediately before every launch too: this covers a freshly downloaded 1.5
         // instance and repairs a controller mod/config removed after Application startup.
-        BuiltinControllerUiMod.install(RimDroidApplication.APP,
+        BuiltinControllerUiMod.install(ValDroidApplication.APP,
                 new java.io.File(gameInstance.getGamePath()));
 
         // Rotate box64's per-fault SIGSEGV log. box64 opens it O_APPEND and never truncates, and a
@@ -199,7 +199,7 @@ public class GameLauncher {
         // Load the libasound→AAudio output shim on every launch. Its DT_SONAME is "libasound.so.2", so
         // loading it here registers it under that soname before the guest FMOD's dlopen("libasound.so.2")
         // runs → FMOD output reaches AAudio. Best-effort: if it fails to load, the game just runs silent.
-        // HISTORY: this used to be GATED behind a global toggle + the RimDroidSound PCM pack, because
+        // HISTORY: this used to be GATED behind a global toggle + the ValDroidSound PCM pack, because
         // box64 mis-decoded Vorbis (screech) so raw stock audio was unusable. The box64 qsort_r fix
         // (wrappedlibc.c) repaired FMOD's Vorbis codebook build, so RAW Vorbis now decodes clean —
         // verified 2026-07-14 (DLC mech SFX + the full instrumental soundtrack). Sound just works now,
@@ -221,7 +221,7 @@ public class GameLauncher {
         // On devices where the game's fixed load address is already taken (see the reservation in
         // rimdroid.c), run RimWorld 1.6 through our relocatable stand-in launcher instead. No-op
         // everywhere else, and it puts the game's own binary back if the address becomes available.
-        UnityShimInstaller.applyTo(RimDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
+        UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
 
         // --- Box64 tuning ---
         // BOX64_LOG: 0 normally (verbose tracing = gigabyte logs). Raise to 1-2
@@ -238,7 +238,7 @@ public class GameLauncher {
         // AI told them to set these to 1). Precise FP costs a little speed, safety wins.
         Os.setenv("BOX64_DYNAREC_FASTNAN", "0", true);
         Os.setenv("BOX64_DYNAREC_FASTROUND", "0", true);
-        // The built-in RimDroid mod reads this on RimWorld's managed loading thread. Extra env
+        // The built-in ValDroid mod reads this on RimWorld's managed loading thread. Extra env
         // vars are applied later, so RIMDROID_CONTROLLER_UI=0/1 remains an explicit A/B override.
         gamepadPresentAtLaunch = com.rimdroid.input.GamepadHandler.hasConnectedGamepad();
         Os.setenv("RIMDROID_CONTROLLER_UI", gamepadPresentAtLaunch ? "1" : "0", true);
@@ -295,7 +295,7 @@ public class GameLauncher {
             PrefsXml.pinTextureCompression(new java.io.File(gameInstance.getGamePath(),
                     "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Config"), testCompress);
             if (testCompress)
-                android.util.Log.i("RimDroid", "GameLauncher: rd_texcompress -> textureCompression=True (loop-cap shim test)");
+                android.util.Log.i("ValDroid", "GameLauncher: rd_texcompress -> textureCompression=True (loop-cap shim test)");
         }
         // Native box64 save-fix scanner OFF for EVERY launch (2026-07-14). The save-bug ROOT was
         // PROVEN to be box64's broken Android qsort mis-sorting Mono's IMT collision entries
@@ -332,7 +332,7 @@ public class GameLauncher {
         // falls back to the GfxDeviceGLES backend, which presents via native EGL and bypasses the
         // stuck Vulkan display/present gate. Make-or-break test: does Unity fall back to GLES?
         if (new java.io.File(gameInstance.getGamePath(), "rd_force_gles").exists()) {
-            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> RIMDROID_FORCE_GLES=1 (deny Vulkan, force GLES fallback)");
+            android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> RIMDROID_FORCE_GLES=1 (deny Vulkan, force GLES fallback)");
             Os.setenv("RIMDROID_FORCE_GLES", "1", true);
         }
         if (gameInstance.settings().isCompatibilityMode()) {
@@ -368,7 +368,7 @@ public class GameLauncher {
         // Unity writes Player.log here
         Os.setenv("HOME", gameInstance.getGamePath(), true);
         Os.setenv("XDG_CONFIG_HOME", gameInstance.getGamePath(), true);
-        // (CJK text is handled by the standalone "RimDroid CJK Font" mod — a runtime font swap that keeps
+        // (CJK text is handled by the standalone "ValDroid CJK Font" mod — a runtime font swap that keeps
         // resources.assets untouched — not by the launcher. The old /usr/share/fonts OS-font redirect was
         // a dead end: Unity never reads OS fonts under box64.)
 
@@ -388,10 +388,10 @@ public class GameLauncher {
         // GL4ES/EGL context running MobileGlues instead of ZFA. Every other renderer
         // still pins to ZFA on 1.6.
         if (forceGlesZfa && renderer == LauncherPreferences.Renderer.MOBILEGLUES) {
-            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles + MOBILEGLUES -> GLX->EGL-translator bridge (experimental)");
+            android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles + MOBILEGLUES -> GLX->EGL-translator bridge (experimental)");
         } else if (forceGlesZfa) {
             renderer = LauncherPreferences.Renderer.ZINK_ZFA;
-            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> renderer=ZINK_ZFA (GLX->ZFA pivot for 1.6)");
+            android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> renderer=ZINK_ZFA (GLX->ZFA pivot for 1.6)");
             // (2026-07-10 cleanup: the earlier CALLRET=0/FORWARD=0/NODYNAREC/DYNACACHE=0 dynarec
             // suspicion was DISPROVEN — the real bug was our bridge writing through shifted args.
             // Removed: FORWARD=0 fragments dynablocks (slower + more RAM), and RAM is now the
@@ -402,7 +402,7 @@ public class GameLauncher {
             // glXQueryExtension call. Surgical fix: interpret ONLY that loader (runs once at GL
             // init, zero steady-state cost); dynarec stays on everywhere else. Range covers the
             // loader + its visual-picking helper (0x3f019460fb).
-            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> dynarec fully on (diag knobs removed)");
+            android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> dynarec fully on (diag knobs removed)");
         }
         // Experimental GL-translator harness (2026-08-09): RIMDROID_GLT=<soname> in the extra-env
         // field routes the GL4ES plumbing at an alternative GL->GLES translator dropped into the
@@ -424,7 +424,7 @@ public class GameLauncher {
             // An explicit RIMDROID_GLT still wins for A/B.
             if (glTranslator == null && renderer == LauncherPreferences.Renderer.MOBILEGLUES) {
                 glTranslator = "libmobileglues.so";
-                android.util.Log.i("RimDroid", "GameLauncher: renderer=MOBILEGLUES -> translator libmobileglues.so");
+                android.util.Log.i("ValDroid", "GameLauncher: renderer=MOBILEGLUES -> translator libmobileglues.so");
             }
             if (glTranslator != null) {
                 renderer = LauncherPreferences.Renderer.GL4ES;   // reuse the whole GL4ES/EGL plumbing
@@ -433,7 +433,7 @@ public class GameLauncher {
                 // (EGL contexts don't migrate to Unity's render thread — the 1.5 threaded A/B
                 // black-screened), and the native side logs it with the launch config.
                 Os.setenv("RIMDROID_GLT", glTranslator, true);
-                android.util.Log.i("RimDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
+                android.util.Log.i("ValDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
                 // DXT -> ETC2 transcode ON BY DEFAULT for every MobileGlues launch (her call,
                 // 2026-08-13). Two reasons, one per GPU family: non-Adreno (Mali/PowerVR/Xclipse)
                 // has no S3TC at all — without the decode the world renders black (Infinix field
@@ -463,8 +463,8 @@ public class GameLauncher {
                     Os.setenv("RIMDROID_GLT_FONTFIX", "1", true);
                 else
                     Os.unsetenv("RIMDROID_GLT_FONTFIX");
-                android.util.Log.i("RimDroid", "GameLauncher: threaded render ON by default (+mip clamp; override via extra env)");
-                android.util.Log.i("RimDroid", "GameLauncher: translator -> DXT->ETC2 transcode ON (default; override via extra env)");
+                android.util.Log.i("ValDroid", "GameLauncher: threaded render ON by default (+mip clamp; override via extra env)");
+                android.util.Log.i("ValDroid", "GameLauncher: translator -> DXT->ETC2 transcode ON (default; override via extra env)");
             } else {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
@@ -543,11 +543,11 @@ public class GameLauncher {
                             + "  \"hideMGEnvLevel\": 0,\n"
                             + "  \"fsr1Setting\": " + fsr + "\n"
                             + "}\n");
-                        android.util.Log.i("RimDroid", "GameLauncher: MobileGlues config.json written (fsr1Setting=" + fsr
+                        android.util.Log.i("ValDroid", "GameLauncher: MobileGlues config.json written (fsr1Setting=" + fsr
                             + ", glslCache=64MB, customGLVersion=" + glVersion
                             + ", storage-extension test; confirm MG CAPS/TEXSHRINK in native log)");
                     } catch (java.io.IOException e) {
-                        android.util.Log.w("RimDroid", "GameLauncher: MobileGlues config.json write failed: " + e);
+                        android.util.Log.w("ValDroid", "GameLauncher: MobileGlues config.json write failed: " + e);
                     }
                 } else {
                     Os.setenv("LIBGL_ES", "3", true);   // GL4ES: use GLES3 backend → reports OpenGL 3.2
@@ -729,9 +729,9 @@ public class GameLauncher {
             boolean forceFlushsync = new java.io.File(gameInstance.getGamePath(), "rd_flushsync").exists();
             if (forceFlushsync) {
                 Os.setenv("ZINK_DEBUG", "flushsync", true);
-                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> ZINK_DEBUG=flushsync (rd_flushsync marker present)");
+                android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> ZINK_DEBUG=flushsync (rd_flushsync marker present)");
             } else {
-                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> flushsync OFF (FPS lever; kopper race guarded in libzfa)");
+                android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> flushsync OFF (FPS lever; kopper race guarded in libzfa)");
             }
             // GPU-hang hunt CLOSED (2026-07-11): the killer was Unity's runtime BC-compression
             // shader (Hidden/CompressBC: fragment shader + writeonly uimage2D imageStore) that
@@ -874,7 +874,7 @@ public class GameLauncher {
                 Os.setenv("VALDROID_VK_IGNORE_SUBOPTIMAL", "1", true);
             } else {
                 Os.unsetenv("RIMDROID_DIRECT_VULKAN");
-                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
+                android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
             }
             // Match the X screen to the actual Android buffer size (fallback 1280x720 if the
             // surface isn't up yet) — Unity requests fullscreen at "desktop" size, and any
@@ -947,7 +947,7 @@ public class GameLauncher {
         startLogcatReader();
 
         // Initialize the native window surface
-        initRimDroidWindow();
+        initValDroidWindow();
         // Passing libraries x86_64 path before start
         Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);
 
@@ -1050,9 +1050,9 @@ public class GameLauncher {
     // Native methods
     // -------------------------------------------------------------------------
 
-    public static native int initRimDroidWindow();
-    public static native void destroyRimDroidWindow();
-    // RimDroid 1.6/X11: remember the buffer size so the X server screen matches the surface —
+    public static native int initValDroidWindow();
+    public static native void destroyValDroidWindow();
+    // ValDroid 1.6/X11: remember the buffer size so the X server screen matches the surface —
     // a mismatched screen (hardcoded 1280x720) made Unity loop resize→fullscreen→swapchain
     // forever until lmkd killed the process (PSS grew to 8 GB). See memory rimworld_16_port.
     public static volatile int lastSurfaceWidth = 0;

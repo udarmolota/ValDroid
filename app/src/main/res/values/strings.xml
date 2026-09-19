@@ -14,7 +14,7 @@
     <string name="delete_instance_confirm">Delete instance \"%1$s\" and all its files? This cannot be undone.</string>
     <string name="log">Log</string>
     <string name="renderer">Renderer</string>
-    <string name="renderer_info">RimDroid currently renders only through Zink ZFA.</string>
+    <string name="renderer_info">ValDroid currently renders only through Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan driver</string>
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU — non-Snapdragon devices should choose the System driver. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
@@ -136,9 +136,9 @@ In the cloud: %2$s
     <string name="bug_report_no_mail">No email app found on this device.</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
     <string name="donate_title">Support development</string>
-    <string name="donate_message">Enjoying RimDroid and want to support it?\n\nMade and maintained by: ko-fi.com/udarmolota\n\nEvery bit helps keep the work going. Thank you! ❤</string>
+    <string name="donate_message">Enjoying ValDroid and want to support it?\n\nMade and maintained by: ko-fi.com/udarmolota\n\nEvery bit helps keep the work going. Thank you! ❤</string>
     <!-- External links. url_x carries what url_reddit used to. -->
-    <string name="url_github_releases" translatable="false">https://github.com/udarmolota/rimdroid/releases</string>
+    <string name="url_github_releases" translatable="false">https://github.com/udarmolota/ValDroid/releases</string>
     <string name="url_x" translatable="false">https://x.com/rimdroid</string>
     <string name="url_reddit_sub" translatable="false">https://www.reddit.com/r/rimdroid/</string>
     <string name="on_screen_controls">On-screen controls</string>
@@ -197,7 +197,7 @@ In the cloud: %2$s
     <string name="nav_gog_login">Sign in to GOG</string>
     <string name="gog_login_note">Sign in with your GOG e-mail and password. Signing in through a linked account does not complete inside an app — if that is how you normally log in, set a GOG password first: gog.com → Sign in → Password reset.</string>
     <string name="gog_disclaimer_title">Disclaimer</string>
-    <string name="gog_disclaimer_text">RimDroid never sees your password — you type it on GOG\'s own page. The access token is kept in memory only and is gone when the app closes; the sign-in cookies stay in this app\'s private storage so you are not asked every time, and signing out clears both.</string>
+    <string name="gog_disclaimer_text">ValDroid never sees your password — you type it on GOG\'s own page. The access token is kept in memory only and is gone when the app closes; the sign-in cookies stay in this app\'s private storage so you are not asked every time, and signing out clears both.</string>
     <string name="gog_login_finishing">Completing sign-in…</string>
     <string name="gog_login_ok">Signed in to GOG</string>
     <string name="gog_login_failed">Sign-in failed: %1$s</string>
@@ -209,8 +209,8 @@ In the cloud: %2$s
     <string name="gog_probe_owned">%1$d products owned</string>
     <string name="gog_probe_failed">Library check failed: %1$s</string>
     <string name="gog_download">Download</string>
-    <string name="gog_needs_all_files">Downloads go to the public Download/RimDroid folder, which needs All-files access. Grant it, then try again.</string>
-    <string name="gog_saved_to">Saved to Download/RimDroid/%1$s\n\nYou can create an instance from it now — the file stays there, so you can reinstall later without downloading again.</string>
+    <string name="gog_needs_all_files">Downloads go to the public Download/ValDroid folder, which needs All-files access. Grant it, then try again.</string>
+    <string name="gog_saved_to">Saved to Download/ValDroid/%1$s\n\nYou can create an instance from it now — the file stays there, so you can reinstall later without downloading again.</string>
     <string name="gog_create_instance">Create an instance</string>
     <string name="gog_scanning">Checking your library — %1$d of %2$d</string>
     <string name="gog_no_rimworld">No RimWorld in this account — showing every game that has a Linux installer.</string>
@@ -230,10 +230,10 @@ In the cloud: %2$s
     <string name="download_tab_game">Game</string>
     <string name="download_tab_dlc">DLC</string>
     <string name="download_tab_mods">Mods</string>
-    <string name="download_dlc_note">Pick the DLC your account owns. Each downloads as a portable .zip into /Download/RimDroid — import it into any instance from the menu. (Unowned DLC are skipped.)</string>
+    <string name="download_dlc_note">Pick the DLC your account owns. Each downloads as a portable .zip into /Download/ValDroid — import it into any instance from the menu. (Unowned DLC are skipped.)</string>
     <string name="download_dlc_start">Download selected DLC</string>
     <string name="download_install_content">Install a mod / DLC into an instance</string>
-    <string name="download_mods_note">Download Workshop mods by ID (the number in the workshop URL: …/sharedfiles/filedetails/?id=NUMBER). No Steam login needed. Several IDs can be space-separated. Each is saved as a .zip in /Download/RimDroid.</string>
+    <string name="download_mods_note">Download Workshop mods by ID (the number in the workshop URL: …/sharedfiles/filedetails/?id=NUMBER). No Steam login needed. Several IDs can be space-separated. Each is saved as a .zip in /Download/ValDroid.</string>
     <string name="download_mods_hint">Workshop ID(s) — space-separated</string>
     <string name="download_mods_hint_single">Workshop ID</string>
     <string name="download_mods_start">Download mods</string>

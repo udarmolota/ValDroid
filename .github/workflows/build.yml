@@ -1,4 +1,4 @@
-name: Build RimDroid APK
+name: Build ValDroid APK
 
 on:
   push:

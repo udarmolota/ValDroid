@@ -26,7 +26,7 @@ import java.util.Map;
  * for the whole batch, not one per file.
  */
 public final class GogDownloadQueue {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     private static final GogDownloadQueue INSTANCE = new GogDownloadQueue();
     public static GogDownloadQueue get() { return INSTANCE; }

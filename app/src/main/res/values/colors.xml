@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- RimDroid brand accent: GREEN (the logo's star/robot). Silver = the neutral surfaces below. -->
+    <!-- ValDroid brand accent: GREEN (the logo's star/robot). Silver = the neutral surfaces below. -->
     <color name="rd_primary">#2E7D32</color>
     <color name="rd_primary_dark">#1B5E20</color>
     <color name="rd_primary_container">#B4F0B6</color>

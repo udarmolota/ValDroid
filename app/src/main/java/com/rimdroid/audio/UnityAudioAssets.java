@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
  * RimWorld ships a different Unity version, this needs revisiting (logs and returns empty).
  */
 public final class UnityAudioAssets {
-    private static final String TAG = "RimDroid/SoundPack";
+    private static final String TAG = "ValDroid/SoundPack";
 
     public static final class Clip {
         public long pathId;

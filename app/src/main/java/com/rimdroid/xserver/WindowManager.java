@@ -128,7 +128,7 @@ public class WindowManager extends XResourceManager {
                         try { Thread.sleep(i == 0 ? 5000 : 12000); } catch (InterruptedException e) { return; }
                         Window w = getWindow(window.id);
                         if (w == null || !w.attributes.isMapped()) return;
-                        android.util.Log.i("RimDroid/XServer", "ConfigureNotify KICK #" + (i + 1)
+                        android.util.Log.i("ValDroid/XServer", "ConfigureNotify KICK #" + (i + 1)
                                 + " win=0x" + Integer.toHexString(w.id)
                                 + " " + w.getWidth() + "x" + w.getHeight());
                         w.sendEvent(Event.STRUCTURE_NOTIFY, new ConfigureNotify(w, w, w.previousSibling(),
@@ -140,7 +140,7 @@ public class WindowManager extends XResourceManager {
                     // from iterating a window's listeners) so this best-effort kick can't reach the
                     // default handler and kill the app. NOT Throwable: an Error (OOM etc.) means the
                     // whole process is in trouble and must not be hidden.
-                    android.util.Log.w("RimDroid/XServer", "configure-kick failed (non-fatal)", e);
+                    android.util.Log.w("ValDroid/XServer", "configure-kick failed (non-fatal)", e);
                 }
             }
         }, "rd-configure-kick");
@@ -149,7 +149,7 @@ public class WindowManager extends XResourceManager {
     }
 
     public void mapWindow(Window window) {
-        android.util.Log.i("RimDroid/XServer", "MAPWIN win=0x" + Integer.toHexString(window.id)
+        android.util.Log.i("ValDroid/XServer", "MAPWIN win=0x" + Integer.toHexString(window.id)
                 + " wasMapped=" + window.attributes.isMapped()
                 + " hasStructNotify=" + window.hasEventListenerFor(Event.STRUCTURE_NOTIFY));
         if (!window.attributes.isMapped()) {
@@ -159,7 +159,7 @@ public class WindowManager extends XResourceManager {
                 updateWmState(window, WM_STATE_NORMAL);
                 window.sendEvent(Event.STRUCTURE_NOTIFY, new MapNotify(window, window));
                 parent.sendEvent(Event.SUBSTRUCTURE_NOTIFY, new MapNotify(parent, window));
-                // RimDroid: a real X server also reports visibility after mapping — SDL2 tracks it.
+                // ValDroid: a real X server also reports visibility after mapping — SDL2 tracks it.
                 window.sendEvent(Event.VISIBILITY_CHANGE, new com.rimdroid.xserver.events.VisibilityNotify(window));
                 window.sendEvent(Event.EXPOSURE, new Expose(window));
                 scheduleConfigureKick(window);
@@ -170,7 +170,7 @@ public class WindowManager extends XResourceManager {
     }
 
     public void unmapWindow(Window window) {
-        android.util.Log.i("RimDroid/XServer", "UNMAPWIN win=0x" + Integer.toHexString(window.id)
+        android.util.Log.i("ValDroid/XServer", "UNMAPWIN win=0x" + Integer.toHexString(window.id)
                 + " wasMapped=" + window.attributes.isMapped() + " (caller=Unity XUnmapWindow request)");
         if (rootWindow.id != window.id && window.attributes.isMapped()) {
             window.attributes.setMapped(false);
@@ -208,7 +208,7 @@ public class WindowManager extends XResourceManager {
     }
 
     public void setFocus(Window focusedWindow, FocusRevertTo focusRevertTo) {
-        // RimDroid: deliver focus events — SDL2 waits for FocusIn after XSetInputFocus to mark
+        // ValDroid: deliver focus events — SDL2 waits for FocusIn after XSetInputFocus to mark
         // its window SDL_WINDOW_INPUT_FOCUS (the Winlator port had no focus events at all).
         Window old = this.focusedWindow;
         this.focusedWindow = focusedWindow;
@@ -349,7 +349,7 @@ public class WindowManager extends XResourceManager {
         Window parent = window.getParent();
         boolean overrideRedirect = window.attributes.isOverrideRedirect();
         if (!parent.hasEventListenerFor(Event.SUBSTRUCTURE_REDIRECT) || overrideRedirect) {
-            // RimDroid (RimWorld 1.6 / brief v12): suppress NO-OP ConfigureNotify. Unity's startup
+            // ValDroid (RimWorld 1.6 / brief v12): suppress NO-OP ConfigureNotify. Unity's startup
             // resolution-apply sends a same-geometry ConfigureWindow; even a same-size notify can
             // push SDL/GL down a drawable-invalidation path (Zink/kopper swapchain churn is a
             // device-lost suspect at the splash-unload frame). X11 semantics allow coalescing.
@@ -361,7 +361,7 @@ public class WindowManager extends XResourceManager {
             if (stackMode != null) changeWindowZOrder(stackMode, window, sibling);
 
             if (unchanged) {
-                android.util.Log.i("RimDroid/XServer", "ConfigureWindow no-op (same geometry) win=0x"
+                android.util.Log.i("ValDroid/XServer", "ConfigureWindow no-op (same geometry) win=0x"
                         + Integer.toHexString(window.id) + " " + width + "x" + height + " — notify suppressed");
             } else {
                 Window previousSibling = window.previousSibling();
@@ -373,14 +373,14 @@ public class WindowManager extends XResourceManager {
     }
 
     public void reparentWindow(Window window, Window newParent) {
-        // RimDroid: full XReparentWindow semantics — a MAPPED window is unmapped, reparented, then
+        // ValDroid: full XReparentWindow semantics — a MAPPED window is unmapped, reparented, then
         // re-mapped, with Unmap/Reparent/MapNotify in that order. SDL 2.0.22's legacy-fullscreen
         // path (X11_BeginWindowFullscreenLegacy) reparents its mapped main window into an
         // override-redirect fswindow and then BLOCKS in XIfEvent for the fresh MapNotify — without
         // the re-map notify the Unity 1.6 player hangs forever right here. (Credit: Codex analysis.)
         Window oldParent = window.getParent();
         boolean wasMapped = window.attributes.isMapped();
-        android.util.Log.i("RimDroid/XServer", "reparent win=0x" + Integer.toHexString(window.id)
+        android.util.Log.i("ValDroid/XServer", "reparent win=0x" + Integer.toHexString(window.id)
                 + " -> parent=0x" + Integer.toHexString(newParent.id) + " mapped=" + wasMapped);
         if (wasMapped) {
             // NOTE: deliberately NOT setting WithdrawnState — SDL reads WM_STATE on
@@ -485,7 +485,7 @@ public class WindowManager extends XResourceManager {
                 wmState, wmState, Property.Format.INT_ARRAY, Property.Mode.REPLACE, data);
         if (property != null) {
             triggerOnModifyWindowProperty(window, property);
-            Log.i("RimDroid/XServer", "WM_STATE win=0x" + Integer.toHexString(window.id)
+            Log.i("ValDroid/XServer", "WM_STATE win=0x" + Integer.toHexString(window.id)
                     + " -> " + (state == WM_STATE_NORMAL ? "NormalState" : "WithdrawnState"));
         }
     }

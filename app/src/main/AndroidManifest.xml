@@ -10,10 +10,10 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <!-- DLC + Workshop mods download into the PUBLIC /Download/RimDroid folder so the user can see,
+    <!-- DLC + Workshop mods download into the PUBLIC /Download/ValDroid folder so the user can see,
          move, share and reuse them across instances with any file manager. DepotDownloader writes
          raw file paths (staging + many files), which the MediaStore API can't model, so on Android
-         11+ this needs All-files access. RimDroid is sideloaded (no Play Store review), so this broad
+         11+ this needs All-files access. ValDroid is sideloaded (no Play Store review), so this broad
          permission is acceptable; granted once by the user via the system "All files access" screen. -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
@@ -23,7 +23,7 @@
          a half-downloaded (unlaunchable) game. largeHeap raises the cap (typically to 512 MB) and is
          what makes the in-app download survive on those devices. -->
     <application
-        android:name=".RimDroidApplication"
+        android:name=".ValDroidApplication"
         android:appCategory="game"
         android:largeHeap="true"
         android:extractNativeLibs="true"

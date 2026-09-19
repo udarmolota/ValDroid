@@ -49,7 +49,7 @@ public final class LogExporter {
         // Global (not instance-scoped) uncaught-crash log — e.g. an in-app Steam download that
         // hard-crashed the app. Lives in the app's private files dir.
         File crashLog = new File(AppStorage.requireSingleton().getHomePath(),
-                RimDroidApplication.CRASH_LOG);
+                ValDroidApplication.CRASH_LOG);
 
         File[] candidates = {
                 new File(userDir, "Player.log"),
@@ -212,7 +212,7 @@ public final class LogExporter {
 
     /**
      * Adds recent logcat lines visible to this app UID. Android normally hides other apps' logs,
-     * but Java, native and box64 output from RimDroid remains available. A capture failure is
+     * but Java, native and box64 output from ValDroid remains available. A capture failure is
      * recorded inside the entry instead of preventing the regular log files from being exported.
      */
     private static void addLogcat(ZipOutputStream zos, byte[] buf, Result r)

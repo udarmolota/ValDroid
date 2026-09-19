@@ -258,7 +258,7 @@ public class LauncherActivity extends AppCompatActivity {
                 + ".zip";
         final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + "\nAndroid: " + android.os.Build.VERSION.RELEASE
-                + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"
+                + "\nValDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"
                 + (instance != null ? "\nInstance: " + instance.getName() : "");
         if (instance == null) { startBugReportEmail(date, device, null); return; }
 

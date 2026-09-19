@@ -44,7 +44,7 @@ import java.util.List;
 
 public class LauncherFragment extends Fragment {
 
-    private static final String TAG = "RimDroid/LauncherFrag";
+    private static final String TAG = "ValDroid/LauncherFrag";
     private static final int MAX_LOG_LINES = 500;
 
     private RecyclerView rvInstances;

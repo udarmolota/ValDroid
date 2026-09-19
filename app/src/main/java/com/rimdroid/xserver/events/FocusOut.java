@@ -6,7 +6,7 @@ import com.rimdroid.xserver.Window;
 
 import java.io.IOException;
 
-/** RimDroid: FocusOut (code 10) — counterpart of {@link FocusIn}, same wire format. */
+/** ValDroid: FocusOut (code 10) — counterpart of {@link FocusIn}, same wire format. */
 public class FocusOut extends Event {
     private final Window window;
 

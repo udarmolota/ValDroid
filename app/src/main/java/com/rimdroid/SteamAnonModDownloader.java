@@ -1,11 +1,11 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Anonymous Steam Workshop mod downloader — original mechanism by udarmolota for RimDroid.
+ * Anonymous Steam Workshop mod downloader — original mechanism by udarmolota for ValDroid.
  * Copyright (c) 2026 udarmolota
  *
  * NOTE: This single file is licensed under the MIT License, NOT under the GPL-3.0 that covers the
- * rest of RimDroid. This is intentional: the author reuses this mechanism across her own projects
+ * rest of ValDroid. This is intentional: the author reuses this mechanism across her own projects
  * (e.g. Zomdroid), and others are welcome to reuse it too — the only condition is that this
  * copyright and permission notice is preserved. MIT is GPL-compatible, so keeping this file MIT
  * does not affect the GPL-3.0 licensing of the rest of the project.
@@ -93,12 +93,12 @@ import kotlinx.coroutines.GlobalScope;
  * download + decrypt + decompress each chunk) — all reusing JavaSteam's CDN {@link Client} and crypto,
  * just skipping the buggy file-type gate.
  *
- * Output: each item packed into /Download/RimDroid/workshop_&lt;id&gt;.zip (the smart ModImporter unwraps
+ * Output: each item packed into /Download/ValDroid/workshop_&lt;id&gt;.zip (the smart ModImporter unwraps
  * it into an instance later). Run on a background thread (blocks in the callback loop + awaits).
  */
 public class SteamAnonModDownloader implements Runnable, Cancellable {
 
-    private static final String TAG = "RimDroid/AnonMod";
+    private static final String TAG = "ValDroid/AnonMod";
 
     public interface Listener {
         void onProgress(String message);

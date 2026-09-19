@@ -70,12 +70,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancellable {
 
-    private static final String TAG = "RimDroid/SteamDL";
+    private static final String TAG = "ValDroid/SteamDL";
 
     /** RimWorld on Steam, mirroring `DepotDownloader -app 294100 -depot 294103 -manifest …`. */
     public static final int RIMWORLD_APP_ID = 294100;
     private static final int RIMWORLD_LINUX_DEPOT = 294103;
-    // RimDroid currently targets RimWorld 1.5 ONLY. The Steam "public" branch is now 1.6, so we do
+    // ValDroid currently targets RimWorld 1.5 ONLY. The Steam "public" branch is now 1.6, so we do
     // NOT auto-resolve "latest" (that would pull 1.6). Default = the LAST stable (non-unstable) 1.5
     // manifest for depot 294103 (newest 1.5 build, all bugfixes). 1.5 is frozen now that 1.6 shipped,
     // so this stays "latest stable 1.5". Advanced users can override with a specific manifest id
@@ -142,7 +142,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private final boolean manifestOnly;
     private final long manifestId;        // 0 = default to the recommended 1.5 build; >0 = pin this build
     private final Version version;        // which RimWorld version to fetch (base game + DLC pinning)
-    private final List<Dlc> dlcs;         // DLC mode (non-null) → download these into /Download/RimDroid as zips
+    private final List<Dlc> dlcs;         // DLC mode (non-null) → download these into /Download/ValDroid as zips
     private final List<Long> workshopIds; // MODS mode (non-null) → download these Workshop items (logged-in)
     private final Listener listener;
 
@@ -199,7 +199,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         this.version = version != null ? version : Version.V1_5;
     }
 
-    /** DLC mode: download each owned DLC and pack it into a zip under /Download/RimDroid. */
+    /** DLC mode: download each owned DLC and pack it into a zip under /Download/ValDroid. */
     public static SteamDownloadSpike forDlc(String username, String password, List<Dlc> dlcs,
                                             Version version, Listener listener) {
         return new SteamDownloadSpike(username, password, dlcs, null, version, listener);
@@ -296,7 +296,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             details.username = username;
             details.password = password;
             details.persistentSession = false;          // do NOT persist — ephemeral token, no storage
-            details.deviceFriendlyName = "RimDroid";
+            details.deviceFriendlyName = "ValDroid";
             details.authenticator = new PushAuthenticator();
 
             CredentialsAuthSession session =
@@ -391,7 +391,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     /**
      * DLC mode: resolve ownership + the DLC's base-app (294100) Linux depots from PICS, then for each
      * OWNED selected DLC download its depot(s) (via the base app) into a temp work dir and pack it into
-     * /Download/RimDroid/&lt;name&gt;.zip — a portable archive the smart importer later unwraps into an
+     * /Download/ValDroid/&lt;name&gt;.zip — a portable archive the smart importer later unwraps into an
      * instance. Unowned DLC are skipped WITHOUT attempting a download (so they can't hang the flow).
      */
     private void downloadDlcs() {
@@ -576,7 +576,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
 
     /**
      * MODS mode: ANONYMOUS download of public Workshop items (by published-file id) into temp work
-     * dirs, each packed into /Download/RimDroid/workshop_&lt;id&gt;.zip. No login, no licenses.
+     * dirs, each packed into /Download/ValDroid/workshop_&lt;id&gt;.zip. No login, no licenses.
      */
     private void downloadMods() {
         downloadInProgress = true;
@@ -802,7 +802,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             File bin = new File(installDir, C.files.RIMWORLD_BIN);
             if (bin.exists()) bin.setExecutable(true, false);
             if (version == Version.V1_6) {
-                // The Unity 2022 build must use RimDroid's proven X11 -> GLX -> ZFA/Zink path.
+                // The Unity 2022 build must use ValDroid's proven X11 -> GLX -> ZFA/Zink path.
                 // Without these markers a freshly downloaded instance selects direct Vulkan and
                 // crashes in UnityPlayer while beginning its first command buffer, before Mono or
                 // any mods load. Texture compression is safe with the CompressBC low-quality shim
@@ -822,7 +822,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     }
 
     /**
-     * Copy the freshly-installed instance into a version-tagged zip under /Download/RimDroid,
+     * Copy the freshly-installed instance into a version-tagged zip under /Download/ValDroid,
      * same folder DLC/mod archives already land in. Purely a safety net for a botched or
      * corrupted app-private install (uninstall/reinstall wipes files/instances/, but the public
      * Downloads copy survives) — never fatal if it fails, and never blocks re-download: a fresh

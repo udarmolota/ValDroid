@@ -10,7 +10,7 @@
 #include "mg_caps.h"
 #include "liblinkernsbypass/android_linker_ns.h"
 
-#define LOG_TAG "rimdroid-linker"
+#define LOG_TAG "valdroid-linker"
 
 static void* (*loader_dlopen)(const char* filename, int flags, const void* caller);
 static void* (*loader_dlsym)(void* handle, const char* symbol, const void* caller);

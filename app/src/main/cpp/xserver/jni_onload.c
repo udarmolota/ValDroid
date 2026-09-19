@@ -1,7 +1,7 @@
 #include <android/log.h>
 #include <jni.h>
 
-#define LOG_TAG "RimDroid/XServerJNI"
+#define LOG_TAG "ValDroid/XServerJNI"
 #define ARRAY_SIZE(a) ((jint)(sizeof(a) / sizeof((a)[0])))
 
 /* @CriticalNative implementations use the critical ABI: no JNIEnv or jclass. */

@@ -1,10 +1,10 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * libpulse shim (async client API, enumeration-only) — by udarmolota for RimDroid.
+ * libpulse shim (async client API, enumeration-only) — by udarmolota for ValDroid.
  * Copyright (c) 2026 udarmolota
  *
- * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of RimDroid).
+ * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of ValDroid).
  *
  * WHY: RimWorld's FMOD PulseAudio output needs TWO libs — libpulse-simple.so.0 (pa_simple, the actual
  * PLAYBACK path, handled by pulse_simple_shim.c → AAudio) AND libpulse.so.0 (the async pa_context /
@@ -19,7 +19,7 @@
  * wrapper marshals the x86_64↔native calls and wraps FMOD's emulated callbacks into native-callable
  * thunks, so here we just call the callback pointers normally.
  *
- * Built with soname "libpulse.so.0" and preloaded by name (RimDroidApplication) so box64's
+ * Built with soname "libpulse.so.0" and preloaded by name (ValDroidApplication) so box64's
  * dlopen("libpulse.so.0") resolves to it. Heavily logged for the first bring-up iterations.
  */
 #include <stdint.h>
@@ -27,7 +27,7 @@
 #include <string.h>
 #include <android/log.h>
 
-#define TAG "RimDroid/pa-ctx"
+#define TAG "ValDroid/pa-ctx"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 
 /* ---- PulseAudio enums (stable ABI values) ---- */
@@ -124,7 +124,7 @@ static void fill_default_devices(void) {
     g_server.user_name = "android";
     g_server.host_name = "android";
     g_server.server_version = "15.0.0";
-    g_server.server_name = "rimdroid-aaudio";
+    g_server.server_name = "valdroid-aaudio";
     g_server.sample_spec.format = PA_SAMPLE_S16LE;
     g_server.sample_spec.rate = 48000;
     g_server.sample_spec.channels = 2;

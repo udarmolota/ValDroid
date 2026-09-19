@@ -13,7 +13,7 @@
     <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
     <string name="log">Лог</string>
     <string name="renderer">Рендерер</string>
-    <string name="renderer_info">Сейчас RimDroid работает только через Zink ZFA.</string>
+    <string name="renderer_info">Сейчас ValDroid работает только через Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan-драйвер</string>
     <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU — на устройствах не с Snapdragon выбирайте системный. Если не сработало — попробуйте другой.</string>
     <string name="upload_custom_driver">Загрузить свой драйвер</string>
@@ -119,7 +119,7 @@
     <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
     <string name="bug_report_no_mail">На устройстве нет почтового приложения.</string>
     <string name="donate_title">Поддержать разработку</string>
-    <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
+    <string name="donate_message">Нравится ValDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
     <string name="on_screen_controls">Экранное управление</string>
     <string name="edit_controls">Редактировать экранные кнопки</string>
     <string name="editor_bg_set">Фон</string>
@@ -174,7 +174,7 @@
     <string name="nav_gog_login">Вход в GOG</string>
     <string name="gog_login_note">Входите по почте и паролю GOG. Вход через привязанный аккаунт внутри приложения не доходит до конца — если вы обычно заходите так, сначала задайте пароль GOG: gog.com → Sign in → Password reset.</string>
     <string name="gog_disclaimer_title">Дисклеймер</string>
-    <string name="gog_disclaimer_text">Пароль RimDroid не видит — вы вводите его на странице самого GOG. Токен доступа хранится только в памяти и исчезает при закрытии приложения; куки входа остаются в личном хранилище приложения, чтобы не спрашивать каждый раз, а выход из аккаунта удаляет и то, и другое.</string>
+    <string name="gog_disclaimer_text">Пароль ValDroid не видит — вы вводите его на странице самого GOG. Токен доступа хранится только в памяти и исчезает при закрытии приложения; куки входа остаются в личном хранилище приложения, чтобы не спрашивать каждый раз, а выход из аккаунта удаляет и то, и другое.</string>
     <string name="gog_login_finishing">Завершаем вход…</string>
     <string name="gog_login_ok">Вход в GOG выполнен</string>
     <string name="gog_login_failed">Не удалось войти: %1$s</string>
@@ -185,8 +185,8 @@
     <string name="gog_probe_owned">Игр в аккаунте: %1$d</string>
     <string name="gog_probe_failed">Не удалось прочитать библиотеку: %1$s</string>
     <string name="gog_download">Скачать</string>
-    <string name="gog_needs_all_files">Загрузки складываются в общую папку Download/RimDroid, а для записи туда нужен доступ ко всем файлам. Выдайте его и попробуйте снова.</string>
-    <string name="gog_saved_to">Сохранено в Download/RimDroid/%1$s\n\nТеперь из него можно создать инстанс. Файл остаётся на месте — переустановить получится без повторной загрузки.</string>
+    <string name="gog_needs_all_files">Загрузки складываются в общую папку Download/ValDroid, а для записи туда нужен доступ ко всем файлам. Выдайте его и попробуйте снова.</string>
+    <string name="gog_saved_to">Сохранено в Download/ValDroid/%1$s\n\nТеперь из него можно создать инстанс. Файл остаётся на месте — переустановить получится без повторной загрузки.</string>
     <string name="gog_create_instance">Создать инстанс</string>
     <string name="gog_scanning">Проверяем библиотеку — %1$d из %2$d</string>
     <string name="gog_no_rimworld">RimWorld в этом аккаунте нет — показаны все игры с Linux-установщиком.</string>
@@ -206,10 +206,10 @@
     <string name="download_tab_game">Игра</string>
     <string name="download_tab_dlc">DLC</string>
     <string name="download_tab_mods">Моды</string>
-    <string name="download_dlc_note">Выберите DLC, которыми владеет ваш аккаунт. Каждое скачивается портативным .zip в /Download/RimDroid — затем импортируйте его в любой инстанс из меню. (Чужие DLC пропускаются.)</string>
+    <string name="download_dlc_note">Выберите DLC, которыми владеет ваш аккаунт. Каждое скачивается портативным .zip в /Download/ValDroid — затем импортируйте его в любой инстанс из меню. (Чужие DLC пропускаются.)</string>
     <string name="download_dlc_start">Скачать выбранные DLC</string>
     <string name="download_install_content">Установить мод / DLC в инстанс</string>
-    <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Логин Steam не нужен. Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/RimDroid.</string>
+    <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Логин Steam не нужен. Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/ValDroid.</string>
     <string name="download_mods_hint">ID Мастерской — через пробел</string>
     <string name="download_mods_hint_single">ID Мастерской</string>
     <string name="download_mods_start">Скачать моды</string>

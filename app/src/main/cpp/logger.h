@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #ifndef LOG_TAG
-#define LOG_TAG "rimdroid"
+#define LOG_TAG "valdroid"
 #endif
 
 extern FILE* g_rimdroid_log_file;  // defined in rimdroid.c

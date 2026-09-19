@@ -142,7 +142,7 @@ public class InputDeviceManager implements Pointer.OnPointerMotionListener, Keyb
 
     @Override
     public void onPointerButtonPress(Pointer.Button button) {
-        // RimDroid: relative-mouse mode forwarded events to Wine's WinHandler in Winlator;
+        // ValDroid: relative-mouse mode forwarded events to Wine's WinHandler in Winlator;
         // we have no Wine side — X clients get events only through the normal X path below.
         if (!xServer.isRelativeMouseMovement()) {
             Window grabWindow = xServer.grabManager.getWindow();
@@ -170,7 +170,7 @@ public class InputDeviceManager implements Pointer.OnPointerMotionListener, Keyb
                 // Scroll diagnostics: zoom (buttons 4/5) reportedly does nothing in RimWorld 1.6
                 // while left/right clicks work — log whether the wheel events even hit the wire.
                 if (button.code() >= 4) {
-                    android.util.Log.i("RimDroid/XServer",
+                    android.util.Log.i("ValDroid/XServer",
                             "wheel ButtonPress code=" + button.code() + " @" + x + "," + y);
                 }
                 grabWindow.sendEvent(Event.BUTTON_PRESS, new ButtonPress(button.code(), xServer.windowManager.rootWindow, grabWindow, child, x, y, localPoint[0], localPoint[1], eventMask));
@@ -180,7 +180,7 @@ public class InputDeviceManager implements Pointer.OnPointerMotionListener, Keyb
 
     @Override
     public void onPointerButtonRelease(Pointer.Button button) {
-        // RimDroid: no Wine WinHandler — see onPointerButtonPress.
+        // ValDroid: no Wine WinHandler — see onPointerButtonPress.
         if (!xServer.isRelativeMouseMovement()) {
             Bitmask eventMask = createPointerEventMask();
             Window grabWindow = xServer.grabManager.getWindow();

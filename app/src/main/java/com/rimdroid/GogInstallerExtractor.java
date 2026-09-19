@@ -33,7 +33,7 @@ import java.util.zip.ZipInputStream;
  * normal configure / save-fix tail runs unchanged.
  */
 public final class GogInstallerExtractor {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     /** GOG installers put the game under this prefix; detected dynamically but this is the norm. */
     private static final String GAME_MARKER = "/game/";

@@ -76,7 +76,7 @@ public class DownloadKeepAliveService extends Service {
                 ? intent.getStringExtra(EXTRA_TEXT) : DEFAULT_TEXT;
         Notification n = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle("RimDroid")
+                .setContentTitle("ValDroid")
                 .setContentText(text)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)

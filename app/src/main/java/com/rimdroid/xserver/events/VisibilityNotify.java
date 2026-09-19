@@ -7,7 +7,7 @@ import com.rimdroid.xserver.Window;
 import java.io.IOException;
 
 /**
- * RimDroid: VisibilityNotify (code 12) was missing from the Winlator port. A real X server sends
+ * ValDroid: VisibilityNotify (code 12) was missing from the Winlator port. A real X server sends
  * it right after MapNotify; SDL2 uses it to mark the window visible. state=0 (Unobscured).
  */
 public class VisibilityNotify extends Event {

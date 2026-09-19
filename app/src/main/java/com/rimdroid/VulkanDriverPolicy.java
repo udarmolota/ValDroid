@@ -45,7 +45,7 @@ public final class VulkanDriverPolicy {
             prefix = "configured driver is no longer bundled; ";
         }
 
-        // Every bundled non-custom ICD currently shipped by RimDroid is Turnip/Freedreno and
+        // Every bundled non-custom ICD currently shipped by ValDroid is Turnip/Freedreno and
         // therefore Adreno-only. A positively identified non-Adreno device must use its system
         // Vulkan driver. Preserve an explicit choice if probing failed, and preserve the imported
         // custom slot because it may contain a vendor-appropriate ICD.

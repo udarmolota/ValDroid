@@ -28,7 +28,7 @@ import java.util.List;
  */
 public class InputControlsView extends View {
 
-    private static final String TAG = "RimDroid/Controls";
+    private static final String TAG = "ValDroid/Controls";
     public static final String DEFAULT_ASSET = "default_controls.json";
 
     private final List<ControlElement> elements = new ArrayList<>();

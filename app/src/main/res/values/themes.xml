@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Accent = RimDroid brand (brick + gold) -->
+        <!-- Accent = ValDroid brand (brick + gold) -->
         <item name="colorPrimary">@color/rd_primary</item>
         <item name="colorOnPrimary">@android:color/white</item>
         <item name="colorPrimaryContainer">@color/rd_primary_container</item>
@@ -55,6 +55,6 @@
         <item name="materialButtonStyle">@style/AppTheme.Button</item>
         <item name="navigationViewStyle">@style/AppTheme.NavigationView</item>
         <!-- Rounded, brand-title dialogs (instance picker, confirmations) for every Material dialog. -->
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RimDroid.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.ValDroid.Dialog</item>
     </style>
 </resources>

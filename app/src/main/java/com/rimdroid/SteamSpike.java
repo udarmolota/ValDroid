@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class SteamSpike implements Runnable {
 
-    private static final String TAG = "RimDroid/SteamSpike";
+    private static final String TAG = "ValDroid/SteamSpike";
 
     public interface Listener {
         /** Steam needs a Steam Guard code (only if the account isn't approved via the Steam Mobile

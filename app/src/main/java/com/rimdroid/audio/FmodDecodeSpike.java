@@ -21,7 +21,7 @@ import java.util.Map;
  * libfmod loads in the normal app namespace (not box64's).
  */
 public final class FmodDecodeSpike {
-    private static final String TAG = "RimDroid/FmodSpike";
+    private static final String TAG = "ValDroid/FmodSpike";
 
     // libfmoddecode.so is standalone (no linkernsbypass) and is loaded in the ":fmoddec" process,
     // where dlopen is the real bionic one so it can load the bundled libfmod.so cleanly.
@@ -86,7 +86,7 @@ public final class FmodDecodeSpike {
     /**
      * Generate the on-device sound pack for an instance: decode every SoundDef clip from the user's
      * own game files, write a RimWorld mod (WAVs + clipPath patch + About.xml) into the instance, and
-     * enable it. All local, no redistribution. Returns a summary; logs progress to RimDroid/SoundPack.
+     * enable it. All local, no redistribution. Returns a summary; logs progress to ValDroid/SoundPack.
      */
     public static String generatePack(Context ctx, File instanceDir) {
         StringBuilder sb = new StringBuilder();
@@ -122,7 +122,7 @@ public final class FmodDecodeSpike {
                         w.clip.freq, SFX_RATE, 1);   // mono SFX
             } catch (Throwable t) { r = -999; }
             if (r == 0) { ok++; bytes += out.length(); } else { fail++; }
-            if ((i % 200) == 0) Log.i("RimDroid/SoundPack", "decoded " + i + "/" + work.size() + " (ok=" + ok + " fail=" + fail + ")");
+            if ((i % 200) == 0) Log.i("ValDroid/SoundPack", "decoded " + i + "/" + work.size() + " (ok=" + ok + " fail=" + fail + ")");
         }
         long dt = SystemClock.elapsedRealtime() - t0;
 
@@ -155,8 +155,8 @@ public final class FmodDecodeSpike {
         writeFile(new File(about, "About.xml"),
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<ModMetaData>\n" +
                 "  <packageId>" + PACK_ID + "</packageId>\n" +
-                "  <name>RimDroid Sound (generated)</name>\n" +
-                "  <author>RimDroid</author>\n" +
+                "  <name>ValDroid Sound (generated)</name>\n" +
+                "  <author>ValDroid</author>\n" +
                 "  <supportedVersions><li>1.5</li><li>1.6</li></supportedVersions>\n" +
                 "  <description>Game sound decoded on-device from your own RimWorld copy.</description>\n" +
                 "</ModMetaData>\n");
@@ -178,7 +178,7 @@ public final class FmodDecodeSpike {
           .append(plan.singlePatches.size()).append(" single\n")
           .append("music: raw Vorbis (soundtrack no longer silenced — qsort fix)\n")
           .append("mod built — enable via the \"Game sound\" toggle\n");
-        Log.i("RimDroid/SoundPack", sb.toString());
+        Log.i("ValDroid/SoundPack", sb.toString());
         return sb.toString();
     }
 
@@ -199,7 +199,7 @@ public final class FmodDecodeSpike {
 
     private static void writeFile(File f, String content) {
         try (FileWriter w = new FileWriter(f)) { w.write(content); }
-        catch (Throwable t) { Log.e("RimDroid/SoundPack", "write failed: " + f, t); }
+        catch (Throwable t) { Log.e("ValDroid/SoundPack", "write failed: " + f, t); }
     }
 
     /** Write a silent mono 16-bit PCM WAV (for muted SongDefs). */
@@ -215,7 +215,7 @@ public final class FmodDecodeSpike {
             writeLE32(o, rate); writeLE32(o, byteRate); writeLE16(o, 2); writeLE16(o, 16);
             o.writeBytes("data"); writeLE32(o, dataLen);
             for (int i = 0; i < dataLen; i++) o.writeByte(0);
-        } catch (Throwable t) { Log.e("RimDroid/SoundPack", "silence write failed: " + f, t); }
+        } catch (Throwable t) { Log.e("ValDroid/SoundPack", "silence write failed: " + f, t); }
     }
     private static void writeLE16(java.io.DataOutputStream o, int v) throws java.io.IOException {
         o.writeByte(v & 0xff); o.writeByte((v >> 8) & 0xff);

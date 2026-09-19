@@ -7,7 +7,7 @@ import com.rimdroid.xserver.Window;
 import java.io.IOException;
 
 /**
- * RimDroid: ReparentNotify (code 21) was missing from the Winlator port. A real X server reports
+ * ValDroid: ReparentNotify (code 21) was missing from the Winlator port. A real X server reports
  * every reparent to StructureNotify subscribers; a client that reparents its own window (the Unity
  * 1.6 player does at startup) may block waiting for it.
  */

@@ -21,7 +21,7 @@ import java.io.FileWriter;
  *   /sdcard/Download/rd_spike_entry.wav, rd_spike_toggle.wav, _fmod_spike_result.txt
  */
 public class FmodDecodeService extends Service {
-    private static final String TAG = "RimDroid/FmodSpike";
+    private static final String TAG = "ValDroid/FmodSpike";
     private static final String EXTRA_INSTANCE = "instance";
 
     /** Generate the sound pack for a SPECIFIC instance (the one the user opened Settings for). */

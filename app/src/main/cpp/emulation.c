@@ -14,7 +14,7 @@ extern char **environ;
 #include "debug.h"
 #include "env.h"
 
-#define LOG_TAG "rimdroid-emu"
+#define LOG_TAG "valdroid-emu"
 
 // box64 core entry points (defined in box64/src/core.c)
 typedef struct elfheader_s elfheader_t;

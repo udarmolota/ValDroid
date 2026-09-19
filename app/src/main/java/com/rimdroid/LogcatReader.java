@@ -7,11 +7,11 @@ import java.io.InputStreamReader;
 
 /**
  * Reads logcat output filtered by com.rimdroid tag and forwards lines to callback.
- * Shows only rimdroid-main, rimdroid-emu, RimDroid/* tags — i.e. box64 and our own code.
+ * Shows only valdroid-main, valdroid-emu, ValDroid/* tags — i.e. box64 and our own code.
  */
 public class LogcatReader {
 
-    private static final String TAG = "RimDroid/LogcatReader";
+    private static final String TAG = "ValDroid/LogcatReader";
 
     public interface LineCallback {
         void onLine(String line);
@@ -36,9 +36,9 @@ public class LogcatReader {
                         "logcat",
                         "-v", "tag",          // Format: TAG: message
                         "-T", "1",            // only from this point on
-                        "rimdroid-main:I",    // box64 output via our pipe
-                        "rimdroid-emu:I",     // emulation init
-                        "RimDroid/*:I",       // our Java tags
+                        "valdroid-main:I",    // box64 output via our pipe
+                        "valdroid-emu:I",     // emulation init
+                        "ValDroid/*:I",       // our Java tags
                         "*:S"                 // everything else — silence
                 ).start();
 

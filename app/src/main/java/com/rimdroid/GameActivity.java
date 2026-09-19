@@ -13,7 +13,7 @@ import android.util.Log;
 
 public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
-    private static final String TAG = "RimDroid/GameActivity";
+    private static final String TAG = "ValDroid/GameActivity";
 
     private SurfaceView surfaceView;
 
@@ -267,7 +267,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                         }
                         GameLauncher.launch(gi);
                     }
-                    catch (Throwable t) { android.util.Log.e("RimDroid", "autolaunch failed", t); }
+                    catch (Throwable t) { android.util.Log.e("ValDroid", "autolaunch failed", t); }
                 }, "rd-autolaunch").start();
             }
         }
@@ -725,7 +725,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        GameLauncher.destroyRimDroidWindow();
+        GameLauncher.destroyValDroidWindow();
     }
 
     // === SurfaceHolder.Callback ==================================================

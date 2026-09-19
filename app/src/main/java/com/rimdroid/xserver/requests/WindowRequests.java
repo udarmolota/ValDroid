@@ -125,7 +125,7 @@ public abstract class WindowRequests {
     public static void reparentWindow(XClient client, XInputStream inputStream, XOutputStream outputStream) throws XRequestError {
         int windowId = inputStream.readInt();
         int parentId = inputStream.readInt();
-        short x = inputStream.readShort();   // RimDroid: position inside the new parent (was skipped)
+        short x = inputStream.readShort();   // ValDroid: position inside the new parent (was skipped)
         short y = inputStream.readShort();
 
         Window window = client.xServer.windowManager.getWindow(windowId);
@@ -208,7 +208,7 @@ public abstract class WindowRequests {
         String atomName = Atom.getName(atom);
 
         if ("WM_STATE".equals(atomName)) {
-            Log.i("RimDroid/XServer", "GetProperty WM_STATE win=0x" + Integer.toHexString(window.id)
+            Log.i("ValDroid/XServer", "GetProperty WM_STATE win=0x" + Integer.toHexString(window.id)
                     + " type=" + Atom.getName(type) + " delete=" + delete
                     + " present=" + (property != null)
                     + " value=" + (property != null ? property.toString() : "<none>"));
@@ -348,7 +348,7 @@ public abstract class WindowRequests {
             if (!isContained) return;
         }
 
-        // RimDroid: use setPosition (NOT raw setX/setY) so the move triggers MotionNotify like a
+        // ValDroid: use setPosition (NOT raw setX/setY) so the move triggers MotionNotify like a
         // real X server — SDL's warp handling waits to observe the pointer actually moving.
         if (dstWindow == null) {
             client.xServer.pointer.setPosition(
@@ -366,7 +366,7 @@ public abstract class WindowRequests {
         int windowId = inputStream.readInt();
         inputStream.skip(4);
 
-        // RimDroid: the FOCUS WINDOW comes from the request body; revert-to is only the policy
+        // ValDroid: the FOCUS WINDOW comes from the request body; revert-to is only the policy
         // for when that window later dies. The old port switched on revert-to to pick the focus
         // target, so SDL's XSetInputFocus(win, RevertToNone) focused NOTHING and no FocusIn was
         // ever delivered — the Unity 1.6 player waited for focus forever.
@@ -411,7 +411,7 @@ public abstract class WindowRequests {
         short x = window != null ? window.getX() : 0;
         short y = window != null ? window.getY() : 0;
         short borderWidth = window != null ? window.getBorderWidth() : 0;
-        android.util.Log.i("RimDroid/XServer", "GetGeometry win=0x" + Integer.toHexString(drawableId)
+        android.util.Log.i("ValDroid/XServer", "GetGeometry win=0x" + Integer.toHexString(drawableId)
                 + " -> " + drawable.width + "x" + drawable.height + "+" + x + "+" + y);
 
         try (XStreamLock lock = outputStream.lock()) {

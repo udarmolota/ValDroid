@@ -12,7 +12,7 @@ import java.util.zip.ZipOutputStream;
 
 /**
  * Minimal directory→zip packer. Used to turn a freshly-downloaded DLC/mod folder into a single
- * portable archive in the public /Download/RimDroid folder, which the existing {@link ModImporter}
+ * portable archive in the public /Download/ValDroid folder, which the existing {@link ModImporter}
  * then unwraps into an instance (it finds the About/About.xml root and strips wrappers like Data/).
  */
 public final class ZipUtil {

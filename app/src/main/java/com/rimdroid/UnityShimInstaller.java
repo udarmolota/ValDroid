@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class UnityShimInstaller {
 
-    private static final String TAG    = "RimDroid/UnityShim";
+    private static final String TAG    = "ValDroid/UnityShim";
     private static final String BIN    = C.files.RIMWORLD_BIN;      // "RimWorldLinux"
     private static final String ORIG   = BIN + ".rdorig";
     private static final String MARKER = ".rd_unity_shim";
@@ -93,7 +93,7 @@ public final class UnityShimInstaller {
             bin.setExecutable(true, false);
             marker.createNewFile();
             GameLauncher.postLog("This device cannot give the game its fixed load address, "
-                    + "so RimWorld 1.6 is started through RimDroid's relocatable launcher.");
+                    + "so RimWorld 1.6 is started through ValDroid's relocatable launcher.");
             Log.i(TAG, "stand-in installed in " + instanceDir.getName());
         } catch (Throwable t) {
             Log.w(TAG, "stand-in setup failed", t);

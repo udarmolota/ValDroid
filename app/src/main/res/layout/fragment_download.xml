@@ -364,7 +364,7 @@
                 android:text="@string/download_mods_browser_start" />
         </LinearLayout>
 
-        <!-- Install a downloaded DLC/mod (from /Download/RimDroid) into an instance. -->
+        <!-- Install a downloaded DLC/mod (from /Download/ValDroid) into an instance. -->
         <Button
             android:id="@+id/btn_install_content"
             style="@style/Widget.Material3.Button.OutlinedButton"

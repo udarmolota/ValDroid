@@ -1,17 +1,17 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * libasound (ALSA) shim → AAudio — by udarmolota for RimDroid.
+ * libasound (ALSA) shim → AAudio — by udarmolota for ValDroid.
  * Copyright (c) 2026 udarmolota
  *
- * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of RimDroid).
+ * This single file is MIT-licensed (NOT the GPL-3.0 of the rest of ValDroid).
  *
  * WHY: RimWorld's FMOD probes PulseAudio first, then ALSA. With no pulse libs present, FMOD falls back
  * to its ALSA output. This is a minimal native ARM64 libasound.so.2 implementing the synchronous
  * snd_pcm_* subset FMOD's ALSA output uses, backed by AAudio. No async callbacks / no mainloop (unlike
  * the pulse async API). snd_pcm_writei maps 1:1 to a blocking AAudio write.
  *
- * Built with soname "libasound.so.2" and preloaded by name (RimDroidApplication) so box64's
+ * Built with soname "libasound.so.2" and preloaded by name (ValDroidApplication) so box64's
  * wrappedlibasound dlopen("libasound.so.2") resolves to it. Heavily logged for bring-up.
  *
  * hw_params/sw_params are treated as OPAQUE blobs — we never parse them; the setters that matter store
@@ -29,7 +29,7 @@
 
 #define RD_TWO_PI 6.28318530717958647692
 
-#define TAG "RimDroid/alsa"
+#define TAG "ValDroid/alsa"
 /* Log to BOTH logcat AND stderr — box64's stderr folds into Unity's Player.log, so these lines show up
  * in "Export logs (ZIP)" too (no separate logcat capture needed). All call sites pass a literal format. */
 #define LOGI(...) do { __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__); \
@@ -489,7 +489,7 @@ EXPORT int snd_pcm_recover(snd_pcm_t *pcm, int err, int silent) {
 
 /* ============================ enumeration / misc ============================ */
 EXPORT int snd_pcm_hw_free(snd_pcm_t *pcm) { (void)pcm; LOGI("snd_pcm_hw_free"); return 0; }
-EXPORT const char *snd_strerror(int e) { (void)e; return "rimdroid-alsa"; }
+EXPORT const char *snd_strerror(int e) { (void)e; return "valdroid-alsa"; }
 EXPORT int snd_card_next(int *card) { if (card) *card = -1; return 0; }   /* no hw cards → FMOD uses "default" */
 EXPORT int snd_lib_error_set_handler(void *h) { (void)h; return 0; }
 EXPORT int snd_config_update_free_global(void) { return 0; }

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     int          gargc   = argc - 3;
     const char** gargv   = (const char**)(argv + 3);
 
-    // In the JNI app, RimDroidApplication calls System.loadLibrary("rimdroidlinker"),
+    // In the JNI app, ValDroidApplication calls System.loadLibrary("rimdroidlinker"),
     // which puts librimdroidlinker.so in the DEFAULT linker namespace so that
     // launch_rimworld_elf()'s dlopen(RTLD_NOLOAD) can find it (load_linker_hook
     // separately loads it into the isolated rimdroid_ns).  This exec'd process has

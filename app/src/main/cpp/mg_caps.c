@@ -5,7 +5,7 @@
 #include <string.h>
 
 #ifndef RD_MG_CAPS_TEST
-#define LOG_TAG "rimdroid-mg-caps"
+#define LOG_TAG "valdroid-mg-caps"
 #include "logger.h"
 #else
 #include <stdio.h>

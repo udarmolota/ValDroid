@@ -239,7 +239,7 @@ public class LauncherPreferences {
     }
 
     // --- Theme mode (System / Light / Dark) ---
-    // Stores an AppCompatDelegate.MODE_NIGHT_* constant; applied in RimDroidApplication.onCreate.
+    // Stores an AppCompatDelegate.MODE_NIGHT_* constant; applied in ValDroidApplication.onCreate.
 
     public int getThemeMode() {
         return prefs.getInt("theme_mode",

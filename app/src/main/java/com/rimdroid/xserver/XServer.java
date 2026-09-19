@@ -83,7 +83,7 @@ public class XServer {
 
         extensions = setupExtensions();
 
-        inputThread = new Thread(this::runInputDispatcher, "RimDroid-XInput");
+        inputThread = new Thread(this::runInputDispatcher, "ValDroid-XInput");
         inputThread.setDaemon(true);
         inputThread.start();
     }
@@ -284,7 +284,7 @@ public class XServer {
             try {
                 dispatchInput(input);
             } catch (RuntimeException e) {
-                android.util.Log.e("RimDroid/XServer", "Failed to dispatch input", e);
+                android.util.Log.e("ValDroid/XServer", "Failed to dispatch input", e);
             }
         }
     }
@@ -389,6 +389,6 @@ public class XServer {
     }
 
     public void debugPrint(String line) {
-        android.util.Log.d("RimDroid/XServer", line);
+        android.util.Log.d("ValDroid/XServer", line);
     }
 }

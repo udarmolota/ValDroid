@@ -23,7 +23,7 @@ public class EventListener {
     }
 
     public void sendEvent(Event event) {
-        // RimDroid: write under the stream lock — closing it flushes to the socket. Without it
+        // ValDroid: write under the stream lock — closing it flushes to the socket. Without it
         // events never left the native buffer and SDL's blocking waits (MapNotify) hung. See
         // memory rimworld_16_port.
         // Capture the stream ONCE: a disconnecting client nulls its outputStream in destroy(), and
@@ -35,7 +35,7 @@ public class EventListener {
         if (out == null) return;
         try (com.rimdroid.xconnector.XStreamLock lock = out.lock()) {
             event.send(client.getSequenceNumber(), out);
-            android.util.Log.i("RimDroid/XServer", "event -> " + event.getClass().getSimpleName());
+            android.util.Log.i("ValDroid/XServer", "event -> " + event.getClass().getSimpleName());
         }
         catch (IOException e) {
             e.printStackTrace();

@@ -26,14 +26,14 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-/** Installs and activates RimDroid's own controller-UI bridge mod.
+/** Installs and activates ValDroid's own controller-UI bridge mod.
  *
- * The bundled files are entirely RimDroid-authored. The mod runs on RimWorld's managed loading
+ * The bundled files are entirely ValDroid-authored. The mod runs on RimWorld's managed loading
  * thread and merely enables an existing controller-oriented UI when the launcher exports
  * RIMDROID_CONTROLLER_UI=1. No game assembly is bundled or modified, and Harmony is not required.
  */
 public final class BuiltinControllerUiMod {
-    private static final String TAG = "RimDroid/ControllerUI";
+    private static final String TAG = "ValDroid/ControllerUI";
     private static final String ASSET_ROOT = "builtinmods/RimDroidControllerUI";
     private static final String MOD_DIR = "RimDroidControllerUI";
     private static final String PACKAGE_ID = "rimdroid.controllerui";
@@ -60,7 +60,7 @@ public final class BuiltinControllerUiMod {
     }
 
     /** Match ModsConfig to this launch. The DLL stays installed, but keyboard/touch-only saves do
-     *  not carry an unnecessary RimDroid mod entry in their active mod list. */
+     *  not carry an unnecessary ValDroid mod entry in their active mod list. */
     public static synchronized void setActive(File instanceDir, boolean enabled) {
         if (instanceDir == null || !instanceDir.isDirectory()) return;
         try {

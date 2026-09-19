@@ -1,4 +1,4 @@
-// RimDroid — a relocatable stand-in for RimWorld's Unity launcher binary.
+// ValDroid — a relocatable stand-in for RimWorld's Unity launcher binary.
 //
 // The shipped RimWorldLinux is a non-PIE (ET_EXEC) executable: it can only run from one fixed low
 // address (0x200000 on RimWorld 1.6). On some phones that address is not ours to take — on a Huawei

@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SteamCloudSpike implements Runnable, Cancellable {
 
-    private static final String TAG = "RimDroid/SteamCloud";
+    private static final String TAG = "ValDroid/SteamCloud";
 
     private static final int MAX_AUTH_ATTEMPTS = 3;
 
@@ -206,7 +206,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             details.username = username;
             details.password = password;
             details.persistentSession = false;
-            details.deviceFriendlyName = "RimDroid";
+            details.deviceFriendlyName = "ValDroid";
             details.authenticator = new PushAuthenticator();
 
             CredentialsAuthSession session =
@@ -490,7 +490,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             for (File f : picked) names.add(cloudPrefix + f.getName());
             progress("Opening upload batch for " + picked.size() + " file(s)…");
             batchId = cloud.beginAppUploadBatch(
-                            appId, "RimDroid", names, toDelete,
+                            appId, "ValDroid", names, toDelete,
                             steamClient.getSteamID().convertToUInt64(),   // clientId (undocumented; SteamID works as an id)
                             0L,                                           // appBuildId — we don't track the game's build
                             ioScope())

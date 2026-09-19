@@ -3,7 +3,7 @@ package com.rimdroid.input;
 /**
  * Serializable snapshot of one on-screen control element (Gson <-> JSON). A saved
  * layout is just a JSON array of these. Mirrors Zomdroid's ControlElementDescription,
- * trimmed to RimDroid's needs (MNK only, three element types).
+ * trimmed to ValDroid's needs (MNK only, three element types).
  *
  * Coordinates are RELATIVE to the overlay (0..1) so a layout survives resolution /
  * orientation changes. Sizes are a multiplier (scale) on each element's base size.

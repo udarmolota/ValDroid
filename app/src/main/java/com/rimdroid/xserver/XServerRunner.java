@@ -16,7 +16,7 @@ import java.io.File;
  * box64's connect() redirect maps to this host path (env RIMDROID_X11_SOCKET_DIR).
  */
 public final class XServerRunner {
-    private static final String TAG = "RimDroid/XServer";
+    private static final String TAG = "ValDroid/XServer";
 
     private static XServer xServer;
     private static XConnectorEpoll connector;

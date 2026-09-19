@@ -26,7 +26,7 @@ import java.net.URL;
  * <p>Blocks on network I/O — call from a worker thread.
  */
 public final class GogDownloader implements Cancellable {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     /** Report no more often than this; a UI update per 8 KB chunk is pure jank. */
     private static final long PROGRESS_INTERVAL_MS = 500;

@@ -117,7 +117,7 @@ public class GameInstance {
         if (!burstOff) return args;
         String[] withBurstOff = java.util.Arrays.copyOf(args, args.length + 1);
         withBurstOff[args.length] = "--burst-disable-compilation";
-        android.util.Log.i("RimDroid", "getArgs: Burst off (--burst-disable-compilation)");
+        android.util.Log.i("ValDroid", "getArgs: Burst off (--burst-disable-compilation)");
         return withBurstOff;
     }
 
@@ -168,11 +168,11 @@ public class GameInstance {
                     || new File(getGamePath(), "rd_gfxdirect").exists()
                     || (gltActive && !gltThreaded);
             if (gfxDirect) {
-                android.util.Log.i("RimDroid", "getArgs: rd_x11 -> single-threaded (-force-gfx-direct, compat/marker)");
+                android.util.Log.i("ValDroid", "getArgs: rd_x11 -> single-threaded (-force-gfx-direct, compat/marker)");
                 return new String[]{ "-force-gfx-direct" };
             }
-            if (gltActive) android.util.Log.i("RimDroid", "getArgs: rd_x11 -> RIMDROID_GLT_THREADED=1, MobileGlues goes TWO-threaded (experiment)");
-            android.util.Log.i("RimDroid", "getArgs: rd_x11 -> threaded rendering (default 2-thread)");
+            if (gltActive) android.util.Log.i("ValDroid", "getArgs: rd_x11 -> RIMDROID_GLT_THREADED=1, MobileGlues goes TWO-threaded (experiment)");
+            android.util.Log.i("ValDroid", "getArgs: rd_x11 -> threaded rendering (default 2-thread)");
             return new String[]{};
         }
         // 1.5 (SDL/GL path). RIMDROID_NO_GFX_DIRECT=1 in extra env drops the flag here so threaded
@@ -188,10 +188,10 @@ public class GameInstance {
             // set by the launcher) it must stay inert: the single EGL context cannot follow Unity's
             // render thread — threaded MG was a black screen at FPS 0 on the S25, and the Infinix
             // tester ran exactly this combination by accident (stale lever in the extra-env field).
-            android.util.Log.i("RimDroid", "getArgs: RIMDROID_NO_GFX_DIRECT=1 -> threaded rendering (no -force-gfx-direct)");
+            android.util.Log.i("ValDroid", "getArgs: RIMDROID_NO_GFX_DIRECT=1 -> threaded rendering (no -force-gfx-direct)");
             return new String[]{};
         }
-        android.util.Log.i("RimDroid", "getArgs: default -force-gfx-direct (gamePath=" + getGamePath() + ")");
+        android.util.Log.i("ValDroid", "getArgs: default -force-gfx-direct (gamePath=" + getGamePath() + ")");
         // -force-gfx-direct: disable Unity's threaded render device (threaded=1).
         // Our single ZFA/Zink GL context is made current on one thread only;
         // a separate render thread would have no current GL context. Forcing the

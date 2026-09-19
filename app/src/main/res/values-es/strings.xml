@@ -16,7 +16,7 @@
     <string name="delete_instance_confirm">¿Eliminar la instancia \"%1$s\" y todos sus archivos? Esto no se puede deshacer.</string>
     <string name="log">Registro</string>
     <string name="renderer">Renderizador</string>
-    <string name="renderer_info">Por ahora RimDroid solo renderiza mediante Zink ZFA.</string>
+    <string name="renderer_info">Por ahora ValDroid solo renderiza mediante Zink ZFA.</string>
     <string name="vulkan_driver">Controlador Vulkan</string>
     <string name="vulkan_driver_hint">Elige el controlador que corresponda a tu GPU: los dispositivos que no son Snapdragon deben usar el controlador del sistema. Si no funciona, prueba otro.</string>
     <string name="driver_recommend">Controlador recomendado (detectar GPU)</string>
@@ -122,7 +122,7 @@ En la nube: %2$s
     <string name="bug_report_no_mail">No se encontró una app de correo en este dispositivo.</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
     <string name="donate_title">Apoyar el desarrollo</string>
-    <string name="donate_message">¿Te gusta RimDroid y quieres apoyarlo?\n\nCreado y mantenido por: ko-fi.com/udarmolota\n\nCada aporte ayuda a que el trabajo siga adelante. ¡Gracias! ❤</string>
+    <string name="donate_message">¿Te gusta ValDroid y quieres apoyarlo?\n\nCreado y mantenido por: ko-fi.com/udarmolota\n\nCada aporte ayuda a que el trabajo siga adelante. ¡Gracias! ❤</string>
     <string name="on_screen_controls">Controles en pantalla</string>
     <string name="edit_controls">Editar controles en pantalla</string>
     <string name="editor_bg_set">Fondo</string>
@@ -177,7 +177,7 @@ En la nube: %2$s
     <string name="nav_gog_login">Iniciar sesión en GOG</string>
     <string name="gog_login_note">Inicia sesión con tu correo y contraseña de GOG. El inicio de sesión mediante una cuenta vinculada no se completa dentro de una app: si sueles entrar así, primero establece una contraseña de GOG en gog.com → Sign in → Password reset.</string>
     <string name="gog_disclaimer_title">Aviso</string>
-    <string name="gog_disclaimer_text">RimDroid nunca ve tu contraseña: la escribes en la página de GOG. El token de acceso se guarda solo en memoria y desaparece al cerrar la app; las cookies de la sesión se quedan en el almacenamiento privado de esta app para no preguntarte cada vez, y cerrar sesión borra ambos.</string>
+    <string name="gog_disclaimer_text">ValDroid nunca ve tu contraseña: la escribes en la página de GOG. El token de acceso se guarda solo en memoria y desaparece al cerrar la app; las cookies de la sesión se quedan en el almacenamiento privado de esta app para no preguntarte cada vez, y cerrar sesión borra ambos.</string>
     <string name="gog_login_finishing">Completando el inicio de sesión…</string>
     <string name="gog_login_ok">Sesión iniciada en GOG</string>
     <string name="gog_login_failed">No se pudo iniciar sesión: %1$s</string>
@@ -188,8 +188,8 @@ En la nube: %2$s
     <string name="gog_probe_owned">%1$d productos en la cuenta</string>
     <string name="gog_probe_failed">No se pudo leer la biblioteca: %1$s</string>
     <string name="gog_download">Descargar</string>
-    <string name="gog_needs_all_files">Las descargas van a la carpeta pública Download/RimDroid, que requiere acceso a todos los archivos. Concédelo y vuelve a intentarlo.</string>
-    <string name="gog_saved_to">Guardado en Download/RimDroid/%1$s\n\nYa puedes crear una instancia con él. El archivo se queda ahí, así que podrás reinstalar sin volver a descargarlo.</string>
+    <string name="gog_needs_all_files">Las descargas van a la carpeta pública Download/ValDroid, que requiere acceso a todos los archivos. Concédelo y vuelve a intentarlo.</string>
+    <string name="gog_saved_to">Guardado en Download/ValDroid/%1$s\n\nYa puedes crear una instancia con él. El archivo se queda ahí, así que podrás reinstalar sin volver a descargarlo.</string>
     <string name="gog_create_instance">Crear una instancia</string>
     <string name="gog_scanning">Comprobando tu biblioteca: %1$d de %2$d</string>
     <string name="gog_no_rimworld">No hay RimWorld en esta cuenta: se muestran todos los juegos con instalador para Linux.</string>
@@ -212,10 +212,10 @@ En la nube: %2$s
     <string name="download_tab_game">Juego</string>
     <string name="download_tab_dlc">DLC</string>
     <string name="download_tab_mods">Mods</string>
-    <string name="download_dlc_note">Elige los DLC que tenga tu cuenta. Cada uno se descarga como un .zip portable en /Download/RimDroid; impórtalo en cualquier instancia desde el menú. (Los DLC que no tengas se omiten.)</string>
+    <string name="download_dlc_note">Elige los DLC que tenga tu cuenta. Cada uno se descarga como un .zip portable en /Download/ValDroid; impórtalo en cualquier instancia desde el menú. (Los DLC que no tengas se omiten.)</string>
     <string name="download_dlc_start">Descargar los DLC seleccionados</string>
     <string name="download_install_content">Instalar un mod / DLC en una instancia</string>
-    <string name="download_mods_note">Descarga mods del Workshop por ID (el número de la URL del workshop: …/sharedfiles/filedetails/?id=NÚMERO). No hace falta iniciar sesión en Steam. Puedes poner varios ID separados por espacios. Cada uno se guarda como .zip en /Download/RimDroid.</string>
+    <string name="download_mods_note">Descarga mods del Workshop por ID (el número de la URL del workshop: …/sharedfiles/filedetails/?id=NÚMERO). No hace falta iniciar sesión en Steam. Puedes poner varios ID separados por espacios. Cada uno se guarda como .zip en /Download/ValDroid.</string>
     <string name="download_mods_hint">ID del Workshop — separados por espacios</string>
     <string name="download_mods_hint_single">ID del Workshop</string>
     <string name="download_mods_start">Descargar mods</string>

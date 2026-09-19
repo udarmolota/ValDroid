@@ -5,7 +5,7 @@ import android.util.Log;
 
 import java.security.Security;
 
-public class RimDroidApplication extends Application {
+public class ValDroidApplication extends Application {
 
     /** Name of the file the crash logger appends uncaught stack traces to (in getFilesDir()). */
     public static final String CRASH_LOG = "crash_uncaught.log";
@@ -26,8 +26,11 @@ public class RimDroidApplication extends Application {
         // hashes a ~33MB file per instance. Game-fix reference assets (e.g. the known-good
         // libsteam_api.so) are extracted FIRST on the same thread so the reconcile can use them.
         new Thread(() -> {
-            RimWorldInstanceSetup.ensureGameFixAssets(RimDroidApplication.this);
+            RimWorldInstanceSetup.ensureGameFixAssets(ValDroidApplication.this);
             RimWorldInstanceSetup.reconcileExistingInstances(
+                    AppStorage.requireSingleton().getInstancesDir());
+            // Valheim: Steam shim, steam_settings and PlayFab auto-login off for every instance.
+            ValheimInstanceSetup.reconcileExistingInstances(
                     AppStorage.requireSingleton().getInstancesDir());
         }, "rd-player-reconcile").start();
         // Apply the user's theme choice (System / Light / Dark) before any activity is shown.
@@ -44,7 +47,7 @@ public class RimDroidApplication extends Application {
             System.loadLibrary("rimdroid");
             System.loadLibrary("rimdroidlinker");
         } else {
-            Log.i("RimDroid", "Secondary process '" + proc + "' — skipping box64 native load");
+            Log.i("ValDroid", "Secondary process '" + proc + "' — skipping box64 native load");
         }
         // Audio: preload the PulseAudio "simple" shim. Its DT_SONAME is "libpulse-simple.so.0", so once
         // loaded here the dynamic linker registers it under that soname — box64's wrappedpulsesimple
@@ -94,7 +97,7 @@ public class RimDroidApplication extends Application {
                 ex.printStackTrace(w);
                 w.println();
             } catch (Throwable ignored) { /* never make crash-logging itself crash */ }
-            Log.e("RimDroid", "Uncaught exception on thread '" + thread.getName() + "'", ex);
+            Log.e("ValDroid", "Uncaught exception on thread '" + thread.getName() + "'", ex);
             if (prev != null) prev.uncaughtException(thread, ex);   // keep default crash behaviour
         });
     }
@@ -103,9 +106,9 @@ public class RimDroidApplication extends Application {
         try {
             Security.removeProvider("BC");
             Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-            Log.i("RimDroid", "Installed full BouncyCastle as provider BC");
+            Log.i("ValDroid", "Installed full BouncyCastle as provider BC");
         } catch (Throwable t) {
-            Log.e("RimDroid", "Failed to install full BouncyCastle provider", t);
+            Log.e("ValDroid", "Failed to install full BouncyCastle provider", t);
         }
     }
 }

@@ -8,7 +8,7 @@ import com.rimdroid.GameActivity;
 
 /**
  * Physical keyboard + mouse support. RimWorld is a native mouse+keyboard (SDL) game, so hardware
- * kb/mouse map 1:1 onto RimDroid's existing SDL injection (the same {@link GameActivity}.native*
+ * kb/mouse map 1:1 onto ValDroid's existing SDL injection (the same {@link GameActivity}.native*
  * calls and {@link InputControlsView} cursor used by the on-screen controls and the gamepad).
  *
  *   - Mouse move/hover  -> set the on-screen cursor (absolute), which injects SDL motion.

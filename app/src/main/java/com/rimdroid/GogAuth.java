@@ -42,7 +42,7 @@ import java.net.URLEncoder;
  * it. The user-facing note says exactly that; do not copy Steam's "nothing is stored" wording.
  */
 public final class GogAuth {
-    private static final String TAG = "RimDroid/GOG";
+    private static final String TAG = "ValDroid/GOG";
 
     // GOG Galaxy's own client credentials. They are fixed, public knowledge (every third-party GOG
     // client uses them) rather than a granted API key — GOG can rotate them, which would show up as

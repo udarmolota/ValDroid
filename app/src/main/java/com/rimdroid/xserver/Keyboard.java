@@ -94,7 +94,7 @@ public class Keyboard {
     }
 
     public boolean onKeyEvent(KeyEvent event) {
-        // RimDroid: inline gamepad check (Winlator used its ExternalController helper);
+        // ValDroid: inline gamepad check (Winlator used its ExternalController helper);
         // gamepads are handled by our own GamepadHandler, not the X keyboard.
         android.view.InputDevice device = event.getDevice();
         if (device != null && (device.getSources() & android.view.InputDevice.SOURCE_GAMEPAD)

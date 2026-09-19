@@ -58,11 +58,11 @@
 
     <!-- App dialogs (instance picker, confirmations, etc.): M3 rounded corners (default) + brand-coloured
          title. Wired into AppTheme via materialAlertDialogTheme, so every MaterialAlertDialogBuilder uses it. -->
-    <style name="ThemeOverlay.RimDroid.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="materialAlertDialogTitleTextStyle">@style/RimDroid.Dialog.Title</item>
+    <style name="ThemeOverlay.ValDroid.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="materialAlertDialogTitleTextStyle">@style/ValDroid.Dialog.Title</item>
     </style>
 
-    <style name="RimDroid.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
+    <style name="ValDroid.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
         <item name="android:textColor">?attr/colorPrimary</item>
     </style>
 </resources>

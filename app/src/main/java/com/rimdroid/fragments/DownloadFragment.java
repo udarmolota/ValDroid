@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
  * "Download game (Steam)" screen — front-end for the in-app Steam downloader (SteamDownloadSpike).
  * One page, three tabs sharing the Steam login + console log:
  *   • Game — downloads RimWorld 1.5 into instances/&lt;name&gt; (launchable).
- *   • DLC  — downloads each owned DLC as a portable .zip into /Download/RimDroid (needs All-files access).
+ *   • DLC  — downloads each owned DLC as a portable .zip into /Download/ValDroid (needs All-files access).
  *   • Mods — Workshop (anonymous) — coming soon.
  * Login is sent to Steam (like DepotDownloader) and never stored; the token lives only in memory.
  */
@@ -197,7 +197,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle("Storage access needed")
                     .setMessage("DLC are saved as zips into the public Download folder so you can see, "
-                            + "share and reuse them. Please grant \"All files access\" to RimDroid, "
+                            + "share and reuse them. Please grant \"All files access\" to ValDroid, "
                             + "then tap Download again.")
                     .setPositiveButton("Grant", (d, w) -> StorageAccess.requestAllFilesAccess(requireActivity()))
                     .setNegativeButton("Cancel", null)
@@ -236,7 +236,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle("Storage access needed")
                     .setMessage("Mods are saved as zips into the public Download folder so you can see, "
-                            + "share and reuse them. Please grant \"All files access\" to RimDroid, "
+                            + "share and reuse them. Please grant \"All files access\" to ValDroid, "
                             + "then tap Download again.")
                     .setPositiveButton("Grant", (d, w) -> StorageAccess.requestAllFilesAccess(requireActivity()))
                     .setNegativeButton("Cancel", null)

@@ -1,10 +1,10 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Anonymous Steam Workshop depot-key spike — original work by udarmolota for RimDroid.
+ * Anonymous Steam Workshop depot-key spike — original work by udarmolota for ValDroid.
  * Copyright (c) 2026 udarmolota
  *
- * This single file is licensed under the MIT License (not the GPL-3.0 of the rest of RimDroid),
+ * This single file is licensed under the MIT License (not the GPL-3.0 of the rest of ValDroid),
  * matching SteamAnonModDownloader.java, so the author can reuse it across her own projects
  * (e.g. Zomdroid) and others may reuse it too, as long as this notice is preserved. MIT is
  * GPL-compatible, so this does not affect the GPL-3.0 licensing of the rest of the project.
@@ -70,7 +70,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SteamAnonModSpike implements Runnable {
 
-    private static final String TAG = "RimDroid/SteamAnon";
+    private static final String TAG = "ValDroid/SteamAnon";
     public static final int RIMWORLD_APP_ID = 294100;
 
     public interface Listener {

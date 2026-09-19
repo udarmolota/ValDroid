@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 
 /** Shared post-install setup for RimWorld instances, regardless of their installation source. */
 public final class RimWorldInstanceSetup {
-    private static final String TAG = "RimDroid/InstanceSetup";
+    private static final String TAG = "ValDroid/InstanceSetup";
     private static final String UNITY_PLAYER = "UnityPlayer.so";
 
     // RimWorld 1.6's UnityPlayer.so black-screens on our in-process X server (Screen stuck 0x0):
@@ -35,7 +35,7 @@ public final class RimWorldInstanceSetup {
     }
 
     public static boolean configure(File instanceDir, boolean rimWorld16) throws IOException {
-        BuiltinControllerUiMod.install(RimDroidApplication.APP, instanceDir);
+        BuiltinControllerUiMod.install(ValDroidApplication.APP, instanceDir);
         if (!rimWorld16) return false;
         createMarker(instanceDir, "rd_x11");
         createMarker(instanceDir, "rd_force_gles");
@@ -68,7 +68,7 @@ public final class RimWorldInstanceSetup {
         if (dirs == null) return;
         for (File dir : dirs) {
             try {
-                BuiltinControllerUiMod.install(RimDroidApplication.APP, dir);
+                BuiltinControllerUiMod.install(ValDroidApplication.APP, dir);
                 if (isVersion16(dir)) {
                     fixupUnityPlayer(dir);
                     fixupSteamApi(dir);

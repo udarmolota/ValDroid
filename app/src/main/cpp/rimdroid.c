@@ -70,12 +70,12 @@ static void rd_reserve_elf_range(void)
 }
 // --------------------------------------------------------------------------------------------------
 
-#define LOG_TAG "rimdroid-main"
+#define LOG_TAG "valdroid-main"
 
 // ---- Globals ----------------------------------------------------------------
 
 struct android_namespace_t* rimdroid_ns;
-RimDroidRenderer g_rimdroid_renderer;
+ValDroidRenderer g_rimdroid_renderer;
 const char*      g_rimdroid_vulkan_driver_name;
 
 // EGL state for GL4ES — initialized in child process before launch_rimworld_elf().
@@ -110,7 +110,7 @@ static PFN_zfaFlushFront     p_zfaFlushFront     = NULL;
 static PFN_zfaDestroyContext p_zfaDestroyContext = NULL;
 static PFN_zfaReleaseCurrent p_zfaReleaseCurrent = NULL;
 
-RimDroidSurface g_rimdroid_surface = {
+ValDroidSurface g_rimdroid_surface = {
     .mutex = PTHREAD_MUTEX_INITIALIZER,
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
 };
@@ -808,7 +808,7 @@ void rimdroid_eglt_destroy_ctx(void* ctx) {
     LOGI("EGLT: destroyed shared context %p", ctx);
 }
 
-// ===================== RimDroid injected input (Phase A) =====================
+// ===================== ValDroid injected input (Phase A) =====================
 // Lock-protected ring of pre-built x86_64 SDL_Event records. The Android touch
 // handler (JNI, UI thread) pushes events here; box64's my2_SDL_PollEvent drains
 // them via the weak rd_input_poll() below (box64 is a separate .so, so the ring
@@ -1484,7 +1484,7 @@ static int init_rimdroid_namespace(const char* ld_library_path) {
     // SHARED inherits the parent's accessibility (incl. apex bionic), matching
     // the proven zomdroid setup, and still works for GL4ES.
     rimdroid_ns = android_create_namespace(
-        "rimdroid-ns",
+        "valdroid-ns",
         ld_library_path,
         ld_library_path,
         ANDROID_NAMESPACE_TYPE_SHARED,
@@ -1640,7 +1640,7 @@ void rimdroid_start_game(const char* game_dir_path,
     g_rimdroid_log_file = fopen(g_log_file_path, "w");
     if (g_rimdroid_log_file) {
         setvbuf(g_rimdroid_log_file, NULL, _IOLBF, 0);
-        fprintf(g_rimdroid_log_file, "=== RimDroid log started ===\n");
+        fprintf(g_rimdroid_log_file, "=== ValDroid log started ===\n");
         // Self-describing header: the launcher settings this run was started with (renderer,
         // Vulkan driver, debug, render scale, box64 knobs). Composed in Java (GameLauncher), passed
         // verbatim via RIMDROID_LAUNCH_CONFIG, so a pasted rimdroid.log says how it was launched.
@@ -1871,7 +1871,7 @@ void rimdroid_start_game(const char* game_dir_path,
         g_rimdroid_log_file = fopen(g_log_file_path, "w");
         if (g_rimdroid_log_file) {
             setvbuf(g_rimdroid_log_file, NULL, _IOLBF, 0);
-            fprintf(g_rimdroid_log_file, "=== RimDroid game log (child pid=%d) ===\n",
+            fprintf(g_rimdroid_log_file, "=== ValDroid game log (child pid=%d) ===\n",
                     (int)getpid());
             // Redirect stdout/stderr to the game log file so box64 printf output
             // goes there instead of the parent's pipe (which nobody reads in child).
@@ -2035,7 +2035,7 @@ int rimdroid_run_standalone(const char* game_dir_path,
     g_rimdroid_log_file = fopen(g_log_file_path, "w");
     if (g_rimdroid_log_file) {
         setvbuf(g_rimdroid_log_file, NULL, _IONBF, 0);
-        fprintf(g_rimdroid_log_file, "=== RimDroid STANDALONE (pid=%d, no-fork) ===\n", (int)getpid());
+        fprintf(g_rimdroid_log_file, "=== ValDroid STANDALONE (pid=%d, no-fork) ===\n", (int)getpid());
         // Redirect stdout/stderr → log file so box64 printf output is captured
         // (unbuffered so the true last line survives a crash).
         int log_fd = fileno(g_rimdroid_log_file);
@@ -2076,7 +2076,7 @@ int rimdroid_run_standalone(const char* game_dir_path,
     }
 
     // Reads RIMDROID_RENDERER + RIMDROID_VULKAN_DRIVER_NAME into globals (the JNI
-    // path does this via initRimDroidWindow before startGame; the exec'd process
+    // path does this via initValDroidWindow before startGame; the exec'd process
     // must do it itself, and BEFORE load_linker_hook which uses the driver name).
     rimdroid_init();
 

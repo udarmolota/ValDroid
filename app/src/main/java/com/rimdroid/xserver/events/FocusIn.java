@@ -7,7 +7,7 @@ import com.rimdroid.xserver.Window;
 import java.io.IOException;
 
 /**
- * RimDroid: FocusIn (code 9) was missing from the Winlator port. SDL2 relies on it to mark
+ * ValDroid: FocusIn (code 9) was missing from the Winlator port. SDL2 relies on it to mark
  * SDL_WINDOW_INPUT_FOCUS after XSetInputFocus; without it the Unity 1.6 player never sees its
  * window focused. detail=Nonlinear(3), mode=Normal(0).
  */
