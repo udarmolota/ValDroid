@@ -112,8 +112,10 @@ static int rd_x11_trace_enabled(void)
 {
     static int v = -1;
     if(v < 0) {
+        // ValDroid: opt-in only (RIMDROID_XPOLL_TRACE=1). It used to be on whenever the X11 socket was
+        // redirected, which put an fd scan and counters on every poll/read/recv of the game.
         const char* e = getenv("RIMDROID_XPOLL_TRACE");
-        v = (!e || e[0] != '0') && getenv("RIMDROID_X11_SOCKET_DIR") ? 1 : 0;
+        v = (e && e[0] && e[0] != '0') && getenv("RIMDROID_X11_SOCKET_DIR") ? 1 : 0;
     }
     return v;
 }
