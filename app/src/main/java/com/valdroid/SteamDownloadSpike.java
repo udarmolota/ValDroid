@@ -9,20 +9,29 @@ import in.dragonbra.javasteam.depotdownloader.IDownloadListener;
 import in.dragonbra.javasteam.depotdownloader.data.AppItem;
 import in.dragonbra.javasteam.depotdownloader.data.DownloadItem;
 import in.dragonbra.javasteam.depotdownloader.data.PubFileItem;
+import in.dragonbra.javasteam.enums.EDepotFileFlag;
 import in.dragonbra.javasteam.enums.EResult;
 import in.dragonbra.javasteam.steam.authentication.AuthPollResult;
 import in.dragonbra.javasteam.steam.authentication.AuthSessionDetails;
 import in.dragonbra.javasteam.steam.authentication.CredentialsAuthSession;
 import in.dragonbra.javasteam.steam.authentication.IAuthenticator;
 import in.dragonbra.javasteam.steam.authentication.SteamAuthentication;
+import in.dragonbra.javasteam.steam.cdn.Client;
+import in.dragonbra.javasteam.steam.cdn.Server;
 import in.dragonbra.javasteam.steam.handlers.steamapps.License;
 import in.dragonbra.javasteam.steam.handlers.steamapps.PICSProductInfo;
 import in.dragonbra.javasteam.steam.handlers.steamapps.PICSRequest;
 import in.dragonbra.javasteam.steam.handlers.steamapps.SteamApps;
 import in.dragonbra.javasteam.steam.handlers.steamapps.callback.LicenseListCallback;
 import in.dragonbra.javasteam.steam.handlers.steamapps.callback.PICSProductInfoCallback;
+import in.dragonbra.javasteam.steam.handlers.steamapps.callback.DepotKeyCallback;
 import in.dragonbra.javasteam.steam.handlers.steamapps.callback.PICSTokensCallback;
+import in.dragonbra.javasteam.steam.handlers.steamcontent.CDNAuthToken;
+import in.dragonbra.javasteam.steam.handlers.steamcontent.SteamContent;
 import in.dragonbra.javasteam.types.AsyncJobMultiple;
+import in.dragonbra.javasteam.types.ChunkData;
+import in.dragonbra.javasteam.types.DepotManifest;
+import in.dragonbra.javasteam.types.FileData;
 import in.dragonbra.javasteam.types.KeyValue;
 import in.dragonbra.javasteam.steam.handlers.steamuser.LogOnDetails;
 import in.dragonbra.javasteam.steam.handlers.steamuser.SteamUser;
@@ -38,7 +47,11 @@ import com.valdroid.game.GameDescriptor;
 import com.valdroid.game.GameInstance;
 import com.valdroid.game.GameInstanceManager;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,6 +61,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+import kotlinx.coroutines.Deferred;
+import kotlinx.coroutines.GlobalScope;
 
 /**
  * SPIKE — Milestone 1 of the in-app Steam downloader (memory in_app_game_downloader.md).
@@ -94,14 +114,14 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         void onDone(String message);
     }
 
-    // Concurrency caps for DepotDownloader (library defaults are 8/8). JavaSteam's VZipUtil keeps an
-    // 8 MB decompression buffer in a ThreadLocal, which lives as long as the pooled thread does — so
-    // every additional worker thread permanently costs 8 MB of Java heap. On budget phones (256 MB
-    // heap cap) the defaults walk into OutOfMemoryError partway through a depot download and leave an
-    // unlaunchable half-copy of the game (reported twice, 2026-07-25). Fewer workers = fewer live
-    // buffers; costs some download speed, which is a good trade for finishing at all.
-    private static final int DL_MAX_DOWNLOADS  = 4;   // concurrent chunk downloads
-    private static final int DL_MAX_DECOMPRESS = 2;   // concurrent chunk decompressions
+    // Files in flight. The wall clock of a depot download is CDN round-trips, not disk or CPU, so a
+    // handful of files at once multiplies throughput; memory stays at one chunk buffer per worker
+    // (about 1 MB), which is the whole reason this pipeline replaced JavaSteam's DepotDownloader —
+    // that one pre-allocates every file and buffers chunks in parallel, and on a 256 MB app heap a
+    // multi-GB game walked into OutOfMemoryError partway through (reported twice, 2026-07-25).
+    private static final int MAX_FILE_WORKERS = 6;
+    /** Steam's CDN edge nodes 503 under load; retry patiently on another server rather than fail. */
+    private static final int MAX_CHUNK_TRIES = 30;
 
     private final String username, password;
     private final String instanceName;   // GAME mode: download lands in instances/<name>
@@ -341,7 +361,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     }
 
     /**
-     * MODS mode: ANONYMOUS download of public Workshop items (by published-file id) into temp work
+     * MODS mode (Workshop items are small, so this one still uses JavaSteam's own downloader).
+     * ANONYMOUS download of public Workshop items (by published-file id) into temp work
      * dirs, each packed into /Download/ValDroid/workshop_&lt;id&gt;.zip. No login, no licenses.
      */
     private void downloadMods() {
@@ -367,7 +388,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 lastError = null;
                 boolean got = false;
                 try (DepotDownloader dd = new DepotDownloader(steamClient, licenses, /* debug */ true,
-                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
+                        /* useLanCache */ false, /* maxDownloads */ 4, /* maxDecompress */ 2)) {
                     dd.addListener(this);
                     PubFileItem item = new PubFileItem(
                             /* appId */ APP_ID,
@@ -475,84 +496,325 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         String verLabel = (manifestId > 0) ? ("manifest " + manifestId) : "newest public build";
         progress((manifestOnly ? "[manifest-only] " : "")
                 + "[attempt " + downloadAttempts + "] " + verLabel + " → " + installDir);
-        try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true,
-                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
-            dd.addListener(this);
-
-            AppItem game = new AppItem(
-                    /* appId */ APP_ID,
-                    /* installToGameNameDirectory */ false,    // land directly in installDir
-                    /* installDirectory */ installDir,          // ABSOLUTE — required on Android
-                    /* branch */ "public",
-                    /* branchPassword */ "",
-                    /* downloadAllPlatforms */ false,
-                    /* os */ "linux",
-                    /* downloadAllArchs */ false,
-                    /* osArch */ "64",
-                    /* downloadAllLanguages */ false,
-                    /* language */ "english",
-                    /* lowViolence */ false,
-                    /* depot */ List.of(LINUX_DEPOT),           // explicit → no depot iteration
-                    /* manifest */ manifests,                   // empty = latest; pinned = a specific version
-                    /* verify */ false,
-                    /* downloadManifestOnly */ manifestOnly);
-
-            dd.add(game);
-            dd.finishAdding();
-            dd.awaitCompletion();           // blocks until the queue drains (or fails)
-            dd.removeListener(this);
-
-            if (lastError == null) {
-                downloadCompleted = true;
-                if (!manifestOnly) finalizeInstance();
-                done(manifestOnly ? "Manifest fetched OK (no content downloaded)."
-                        : "Instance '" + instanceName + "' downloaded — ready to launch.");
-                running = false;
-                try { steamUser.logOff(); } catch (Throwable ignored) {}
+        try {
+            runPipeline();
+        } catch (Throwable t) {
+            if (!running) {
+                done("Download cancelled.");
             } else {
-                // Failed — most likely the CM dropped. onDisconnected will reconnect + retry (until
-                // MAX_DOWNLOAD_ATTEMPTS). If we're still connected (a non-disconnect error) and out
-                // of attempts, give up cleanly.
-                progress("attempt " + downloadAttempts + " failed: " + describe(lastError));
+                Log.e(TAG, "download crashed", t);
+                lastError = t;
+                progress("attempt " + downloadAttempts + " failed: " + describe(t));
                 if (downloadAttempts >= MAX_DOWNLOAD_ATTEMPTS) {
-                    done("download FAILED after " + downloadAttempts + " attempts: " + describe(lastError));
+                    done("download FAILED after " + downloadAttempts + " attempts: " + describe(t));
                     running = false;
                     try { steamUser.logOff(); } catch (Throwable ignored) {}
                 }
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "Download attempt crashed", t);
-            lastError = t;
-            if (downloadAttempts >= MAX_DOWNLOAD_ATTEMPTS) {
-                done("download error: " + describe(t));
-                running = false;
-                try { steamUser.logOff(); } catch (Throwable ignored) {}
             }
         } finally {
             downloadInProgress = false;
         }
     }
 
-    // ---- IDownloadListener ----
-    @Override public void onItemAdded(@NonNull DownloadItem item) { Log.i(TAG, "queued app " + item.getAppId()); }
-    @Override public void onDownloadStarted(@NonNull DownloadItem item) { progress("Download started (app " + item.getAppId() + ")"); }
-    @Override public void onDownloadCompleted(@NonNull DownloadItem item) { progress("Download completed (app " + item.getAppId() + ")"); }
-    @Override public void onDownloadFailed(@NonNull DownloadItem item, @NonNull Throwable error) {
-        Log.e(TAG, "download failed app " + item.getAppId(), error);
-        lastError = error;
-        progress("FAILED: " + describe(error));
+    /**
+     * Manifest, then every file through a small worker pool.
+     *
+     * One worker takes one FILE (not one chunk): the game is tens of thousands of files and most are
+     * a single chunk, so splitting inside a file would leave the small ones serial anyway, and
+     * per-file keeps resume honest — a name is recorded as done only once the whole file is written.
+     * Chunk requests round-robin over Steam's CDN servers on every attempt, so the workers spread
+     * over the edge nodes instead of hammering one (which is what makes a node start refusing).
+     */
+    private void runPipeline() throws Exception {
+        SteamApps apps = steamClient.getHandler(SteamApps.class);
+        SteamContent content = steamClient.getHandler(SteamContent.class);
+
+        long gid = (manifestId > 0) ? manifestId : resolveManifestGid();
+        if (gid == 0L) { done("Could not resolve a build to download."); running = false; return; }
+        progress("Depot " + LINUX_DEPOT + ", manifest " + Long.toUnsignedString(gid));
+
+        byte[] depotKey = getDepotKey(apps, LINUX_DEPOT, APP_ID);
+        if (depotKey == null) { done("No depot key — is Valheim owned on this account?"); running = false; return; }
+
+        File outDir = new File(installDir);
+        if (!outDir.isDirectory() && !outDir.mkdirs()) {
+            done("Cannot create the instance folder: " + outDir);
+            running = false; return;
+        }
+
+        Client cdn = new Client(steamClient);
+        List<Server> servers = awaitDeferred(
+                content.getServersForSteamPipe(null, null, GlobalScope.INSTANCE), 30000);
+        if (servers == null || servers.isEmpty()) { done("No CDN servers available."); running = false; return; }
+
+        long requestCode = awaitDeferred(
+                content.getManifestRequestCode(LINUX_DEPOT, APP_ID, gid, "public", null, GlobalScope.INSTANCE), 30000);
+
+        Map<String, String> tokenCache = new HashMap<>();
+        DepotManifest manifest = null;
+        Exception lastErr = null;
+        int serverIdx = 0;
+        for (int i = 0; i < servers.size(); i++) {
+            Server srv = servers.get(i);
+            try {
+                manifest = cdn.downloadManifestFuture(LINUX_DEPOT, gid, requestCode, srv, depotKey, null,
+                        cdnTokenFor(content, LINUX_DEPOT, srv, tokenCache)).get(120, TimeUnit.SECONDS);
+                serverIdx = i;
+                break;
+            } catch (Exception e) {
+                lastErr = e;
+                Log.w(TAG, "manifest via " + srv.getHost() + " failed: " + describe(e));
+            }
+        }
+        if (manifest == null) { done("Manifest download failed: " + describe(lastErr)); running = false; return; }
+
+        List<FileData> files = manifest.getFiles();
+        long totalBytes = 0;
+        for (FileData f : files)
+            if (!f.getFlags().contains(EDepotFileFlag.Directory)) totalBytes += f.getTotalSize();
+        progress("Manifest OK: " + files.size() + " files, " + (totalBytes / (1024 * 1024)) + " MB.");
+        if (manifestOnly) {
+            downloadCompleted = true;
+            done("Manifest fetched OK (no content downloaded).");
+            running = false;
+            try { steamUser.logOff(); } catch (Throwable ignored) {}
+            return;
+        }
+
+        // Resume: names already written in full during an earlier run of this same build.
+        File doneListFile = new File(outDir, ".valdroid_complete_" + LINUX_DEPOT + "_" + Long.toUnsignedString(gid));
+        Set<String> doneSet = loadDoneSet(doneListFile);
+
+        final AtomicLong doneBytes = new AtomicLong(0);
+        final AtomicInteger serverCursor = new AtomicInteger(serverIdx);
+        final AtomicInteger lastPct = new AtomicInteger(-1);
+        final AtomicLong lastEmit = new AtomicLong(0);
+        final AtomicReference<Throwable> firstError = new AtomicReference<>();
+
+        final List<FileData> pending = new ArrayList<>();
+        for (FileData f : files) {
+            String rel = sanitizeRel(f.getFileName());
+            if (rel == null) continue;
+            File outFile = new File(outDir, rel);
+            if (f.getFlags().contains(EDepotFileFlag.Directory)) { outFile.mkdirs(); continue; }
+            if (doneSet.contains(rel) && outFile.isFile() && outFile.length() == f.getTotalSize()) {
+                doneBytes.addAndGet(f.getTotalSize());
+                continue;
+            }
+            pending.add(f);
+        }
+        if (!doneSet.isEmpty())
+            progress("Resuming — " + (files.size() - pending.size()) + " files already downloaded.");
+        progress("Downloading " + pending.size() + " files with " + MAX_FILE_WORKERS + " workers…");
+
+        final long fTotal = totalBytes;
+        final byte[] fKey = depotKey;
+        final List<Server> fServers = servers;
+        final Client fCdn = cdn;
+        final SteamContent fContent = content;
+        final Map<String, String> fTokens = tokenCache;
+        final File fOutDir = outDir, fDoneList = doneListFile;
+
+        final java.util.concurrent.ConcurrentLinkedQueue<FileData> queue =
+                new java.util.concurrent.ConcurrentLinkedQueue<>(pending);
+        final java.util.concurrent.CountDownLatch latch =
+                new java.util.concurrent.CountDownLatch(MAX_FILE_WORKERS);
+        final List<Thread> pool = new ArrayList<>(MAX_FILE_WORKERS);
+        for (int w = 0; w < MAX_FILE_WORKERS; w++) {
+            Thread t = new Thread(() -> {
+                try {
+                    FileData f;
+                    while (running && firstError.get() == null && (f = queue.poll()) != null) {
+                        try {
+                            downloadOneFile(f, fOutDir, fDoneList, fCdn, fContent, fServers, fKey,
+                                    fTokens, serverCursor, doneBytes, fTotal, lastPct, lastEmit);
+                        } catch (Throwable e) {
+                            firstError.compareAndSet(null, e);
+                            return;
+                        }
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            }, "vd-depot-dl-" + w);
+            t.setDaemon(true);
+            pool.add(t);
+            t.start();
+        }
+        try {
+            latch.await();
+        } catch (InterruptedException cancelled) {
+            running = false;
+            for (Thread t : pool) t.interrupt();
+            boolean drained = false;
+            while (!drained) {
+                try { latch.await(); drained = true; } catch (InterruptedException ignored) { }
+            }
+        }
+        if (firstError.get() != null) throw new Exception(describe(firstError.get()), firstError.get());
+        if (!running) { done("Download cancelled."); return; }
+
+        downloadCompleted = true;
+        finalizeInstance();
+        done("Instance '" + instanceName + "' downloaded — ready to launch.");
+        running = false;
+        try { steamUser.logOff(); } catch (Throwable ignored) {}
     }
-    @Override public void onStatusUpdate(@NonNull String message) { progress(message); }
-    @Override public void onFileCompleted(int depotId, @NonNull String fileName, float depotPercentComplete) {
-        progress(String.format("depot %d: %.1f%%  (%s)", depotId, depotPercentComplete * 100f, fileName));
+
+    /** The public branch's manifest for our Linux depot, from PICS. */
+    private long resolveManifestGid() {
+        try {
+            SteamApps apps = steamClient.getHandler(SteamApps.class);
+            long token = 0L;
+            try {
+                PICSTokensCallback tk = apps.picsGetAccessTokens(List.of(APP_ID), Collections.emptyList())
+                        .toFuture().get(20, TimeUnit.SECONDS);
+                Long t = tk.getAppTokens().get(APP_ID);
+                if (t != null) token = t;
+            } catch (Throwable ignored) { }
+            AsyncJobMultiple.ResultSet<PICSProductInfoCallback> rs =
+                    apps.picsGetProductInfo(List.of(new PICSRequest(APP_ID, token)), Collections.emptyList())
+                            .toFuture().get(40, TimeUnit.SECONDS);
+            for (PICSProductInfoCallback cb : rs.getResults()) {
+                PICSProductInfo info = cb.getApps().get(APP_ID);
+                if (info == null) continue;
+                KeyValue depots = info.getKeyValues().get("depots");
+                KeyValue depot = depots.get(String.valueOf(LINUX_DEPOT));
+                String gid = depot.get("manifests").get("public").get("gid").asString();
+                if (gid != null && !gid.isEmpty()) return Long.parseUnsignedLong(gid);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "resolveManifestGid failed", t);
+        }
+        return 0L;
     }
-    @Override public void onChunkCompleted(int depotId, float depotPercentComplete, long compressedBytes, long uncompressedBytes) {
-        progress(String.format("depot %d: %.1f%%  (%d MB)", depotId, depotPercentComplete * 100f,
-                uncompressedBytes / (1024 * 1024)));
-        if (listener != null) listener.onPercent(Math.round(depotPercentComplete * 100f));
+
+    private byte[] getDepotKey(SteamApps apps, int depot, int appId) {
+        try {
+            DepotKeyCallback dk = apps.getDepotDecryptionKey(depot, appId).toFuture().get(30, TimeUnit.SECONDS);
+            if (dk.getResult() == EResult.OK && dk.getDepotKey() != null && dk.getDepotKey().length == 32)
+                return dk.getDepotKey();
+            Log.w(TAG, "depot key result=" + dk.getResult());
+        } catch (Throwable t) {
+            Log.e(TAG, "getDepotKey failed", t);
+        }
+        return null;
     }
-    @Override public void onDepotCompleted(int depotId, long compressedBytes, long uncompressedBytes) {
-        progress("depot " + depotId + " done: " + uncompressedBytes + " bytes (" + compressedBytes + " compressed)");
+
+    /** One file's chunks, written at their offsets. Runs on a pool thread. */
+    private void downloadOneFile(FileData f, File outDir, File doneListFile, Client cdn,
+                                 SteamContent content, List<Server> servers, byte[] depotKey,
+                                 Map<String, String> tokenCache, AtomicInteger serverCursor,
+                                 AtomicLong doneBytes, long totalBytes,
+                                 AtomicInteger lastPct, AtomicLong lastEmit) throws Exception {
+        String rel = sanitizeRel(f.getFileName());
+        if (rel == null) return;
+        File outFile = new File(outDir, rel);
+        File parent = outFile.getParentFile();
+        if (parent != null) parent.mkdirs();
+
+        try (RandomAccessFile raf = new RandomAccessFile(outFile, "rw")) {
+            raf.setLength(f.getTotalSize());
+            for (ChunkData chunk : f.getChunks()) {
+                if (!running) return;
+                byte[] dest = new byte[Math.max(chunk.getCompressedLength(), chunk.getUncompressedLength())];
+                int written = -1;
+                Exception chunkErr = null;
+                for (int t = 0; t < MAX_CHUNK_TRIES && written < 0; t++) {
+                    if (!running) return;
+                    // Round-robin per attempt: sticky servers would point every worker at one edge
+                    // node, and a retry would land on the node that just failed.
+                    Server srv = servers.get(Math.floorMod(serverCursor.getAndIncrement(), servers.size()));
+                    try {
+                        written = cdn.downloadDepotChunkFuture(LINUX_DEPOT, chunk, srv, dest, depotKey, null,
+                                cdnTokenFor(content, LINUX_DEPOT, srv, tokenCache)).get(120, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        chunkErr = e;
+                        Log.w(TAG, "chunk via " + srv.getHost() + " failed (try " + (t + 1) + "/"
+                                + MAX_CHUNK_TRIES + "): " + describe(e));
+                        long now = System.currentTimeMillis();
+                        long prev = lastEmit.get();
+                        if (now - prev > 1500 && lastEmit.compareAndSet(prev, now))
+                            progress("Steam CDN busy — retrying… (" + (doneBytes.get() / (1024 * 1024))
+                                    + " / " + (totalBytes / (1024 * 1024)) + " MB)");
+                        long backoff = Math.min(10000L, 500L * (1L << Math.min(t, 4)));
+                        try { Thread.sleep(backoff); } catch (InterruptedException ignored) { return; }
+                    }
+                }
+                if (written < 0) throw chunkErr != null ? chunkErr : new java.io.IOException("chunk download failed");
+                raf.seek(chunk.getOffset());
+                raf.write(dest, 0, written);
+                long total = doneBytes.addAndGet(written);
+
+                long now = System.currentTimeMillis();
+                int pct = totalBytes > 0 ? (int) (total * 100 / totalBytes) : 0;
+                long prev = lastEmit.get();
+                if (pct != lastPct.get() && now - prev > 500 && lastEmit.compareAndSet(prev, now)) {
+                    lastPct.set(pct);
+                    progress(pct + "%  (" + (total / (1024 * 1024)) + " / " + (totalBytes / (1024 * 1024)) + " MB)");
+                    if (listener != null) listener.onPercent(pct);
+                }
+            }
+        }
+        if (running) appendDone(doneListFile, rel);
+    }
+
+    private String cdnTokenFor(SteamContent content, int depot, Server s, Map<String, String> cache) {
+        String host = s.getHost() != null ? s.getHost() : s.getVHost();
+        if (host == null) return null;
+        // Guarded rather than a ConcurrentHashMap: a null token is a real cached answer, and that map
+        // forbids null values. The lock is held across the fetch on purpose — every worker wants the
+        // same host's token at the same moment, and one request beats six identical ones.
+        synchronized (cache) {
+            if (cache.containsKey(host)) return cache.get(host);
+            String token = null;
+            try {
+                CDNAuthToken tok = awaitDeferred(content.getCDNAuthToken(APP_ID, depot, host, GlobalScope.INSTANCE), 15000);
+                if (tok != null && tok.getResult() == EResult.OK) token = tok.getToken();
+            } catch (Throwable ignored) { }
+            cache.put(host, token);
+            return token;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T awaitDeferred(Deferred<T> d, long timeoutMs) throws Exception {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (!d.isCompleted()) {
+            if (System.currentTimeMillis() > deadline) throw new TimeoutException("deferred timed out");
+            Thread.sleep(40);
+        }
+        return (T) d.getCompleted();
+    }
+
+    /** Relative paths already written in full (the resume marker). */
+    private static Set<String> loadDoneSet(File f) {
+        Set<String> out = new HashSet<>();
+        if (f == null || !f.isFile()) return out;
+        try (BufferedReader r = new BufferedReader(new FileReader(f))) {
+            String line;
+            while ((line = r.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) out.add(line);
+            }
+        } catch (Exception ignored) { }
+        return out;
+    }
+
+    /** Several workers finish files at once, so appending is synchronized and flushed at once. */
+    private static synchronized void appendDone(File f, String rel) {
+        try (FileWriter w = new FileWriter(f, true)) {
+            w.write(rel);
+            w.write('\n');
+        } catch (Exception ignored) { }
+    }
+
+    private static String sanitizeRel(String name) {
+        if (name == null) return null;
+        String rel = name.replace('\\', '/');
+        while (rel.startsWith("/")) rel = rel.substring(1);
+        if (rel.isEmpty() || rel.contains("../")) return null;
+        return rel;
     }
 
     /**
