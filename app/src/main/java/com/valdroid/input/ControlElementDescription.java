@@ -28,6 +28,15 @@ public class ControlElementDescription {
      */
     public String[] bindings;
 
+    /**
+     * Zomdroid look. A non-zero ARGB {@code color} (Zomdroid's layouts carry -3355444 = #CCCCCC)
+     * switches a button to Zomdroid's outlined style AND its sizing (units of view width / 2560), so
+     * a Zomdroid layout file reproduces here as it looks there. 0 = ValDroid's own filled style.
+     */
+    public int     color;
+    /** Zomdroid icon name: "NO_ICON" | "GAMEPAD_BACK_ICON" | "GAMEPAD_START_ICON". Replaces the text. */
+    public String  icon;
+
     public boolean isToggle;        // BUTTON: hold (false) vs toggle (true)
     public float   sensitivity;     // MOUSE_STICK cursor speed (0.25..8.0)
 

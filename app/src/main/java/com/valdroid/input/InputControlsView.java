@@ -173,6 +173,9 @@ public class InputControlsView extends View {
 
     public float density() { return density; }
 
+    /** Zomdroid's size unit: its element dimensions are given for a 2560 px wide view. */
+    public float pixelScale() { return Math.max(1, getWidth()) / 2560f; }
+
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
         if (curX < 0) { curX = w / 2f; curY = h / 2f; }
     }
@@ -455,6 +458,9 @@ public class InputControlsView extends View {
         if (d == null || d.type == null) return null;
         switch (d.type) {
             case "BUTTON":      return new ButtonElement(this, d);
+            // Zomdroid's type names (its layout files are loaded as they are)
+            case "BUTTON_CIRCLE": d.shape = "CIRCLE"; return new ButtonElement(this, d);
+            case "BUTTON_RECT":   d.shape = "RECT";   return new ButtonElement(this, d);
             case "MOUSE_STICK": return new MouseStickElement(this, d);
             case "WASD_STICK":  return new WasdStickElement(this, d);
             case "STICK":       return new AnalogStickElement(this, d);

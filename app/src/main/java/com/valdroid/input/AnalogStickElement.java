@@ -8,33 +8,34 @@ import android.view.MotionEvent;
  * Analog stick of the virtual gamepad ({@link VirtualGamepad}): the knob offset goes out as a
  * continuous -1..1 pair on the left (ABS_X/ABS_Y) or right (ABS_RX/ABS_RY) stick, so the game sees
  * walk/run and camera speed the way a real pad gives them. Ported from Zomdroid's
- * StickControlElement; the touch handling is the same as {@link WasdStickElement}.
+ * StickControlElement with its geometry and look (sizes in units of view width / 2560, outlined
+ * ring, filled knob); the touch handling is the same as {@link WasdStickElement}.
  */
 public class AnalogStickElement extends ControlElement {
 
-    private static final float OUTER_DP = 58f;
-    private static final float KNOB_DP  = 26f;
+    private static final float OUTER_R = 160f, INNER_R = 90f;      // Zomdroid StickControlDrawable
+    private static final int   DEFAULT_COLOR = 0xFFCCCCCC, OUTLINE_COLOR = 0x00282828, OUTLINE_ALPHA = 70;
 
     private Binding stick;          // LEFT_JOYSTICK | RIGHT_JOYSTICK
+    private final int color;
     private int pointerId = -1;
     private float knobX, knobY;
 
     private final Paint fill   = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     public AnalogStickElement(InputControlsView view, ControlElementDescription d) {
         super(view, d);
         Binding b = (d.bindings != null && d.bindings.length > 0)
                 ? Binding.fromName(d.bindings[0], Binding.LEFT_JOYSTICK) : Binding.LEFT_JOYSTICK;
         this.stick = (b == Binding.RIGHT_JOYSTICK) ? Binding.RIGHT_JOYSTICK : Binding.LEFT_JOYSTICK;
+        this.color = d.color != 0 ? d.color : DEFAULT_COLOR;
         fill.setStyle(Paint.Style.FILL);
         stroke.setStyle(Paint.Style.STROKE);
-        textPaint.setTextAlign(Paint.Align.CENTER);
     }
 
-    private float outerR() { return dp(OUTER_DP) * scale; }
-    private float knobR()  { return dp(KNOB_DP) * scale; }
+    private float outerR() { return OUTER_R * view.pixelScale() * scale; }
+    private float knobR()  { return INNER_R * view.pixelScale() * scale; }
 
     @Override public boolean isGamepadElement() { return true; }
 
@@ -80,12 +81,15 @@ public class AnalogStickElement extends ControlElement {
     }
 
     private void update(float x, float y) {
+        // Zomdroid: the knob travels to the ring, and an axis is full at r / sqrt(2), so a diagonal
+        // push reaches (1, 1) like a real stick's square gate.
         float dx = x - centerX(), dy = y - centerY();
-        float max = outerR() - knobR();
+        float max = outerR();
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len > max && len > 0.001f) { float k = max / len; dx *= k; dy *= k; }
         knobX = dx; knobY = dy;
-        view.injectStick(stick, max > 0 ? dx / max : 0f, max > 0 ? dy / max : 0f);
+        float k = max > 0 ? (float) Math.sqrt(2) / max : 0f;
+        view.injectStick(stick, clamp(dx * k, -1f, 1f), clamp(dy * k, -1f, 1f));
     }
 
     private void center() {
@@ -96,25 +100,29 @@ public class AnalogStickElement extends ControlElement {
     @Override public void reset() { center(); pointerId = -1; }
 
     @Override public void draw(Canvas c) {
-        float cx = centerX(), cy = centerY();
-        fill.setColor(0x00FFFFFF | ((int) (alpha * 0.20f) << 24));
-        stroke.setColor(0x00FFFFFF | (Math.min(255, alpha + 30) << 24));
-        stroke.setStrokeWidth(dp(2));
-        if (highlighted) { stroke.setColor(0xFF33C0FF); stroke.setStrokeWidth(dp(3)); }
-        c.drawCircle(cx, cy, outerR(), fill);
+        float cx = centerX(), cy = centerY(), ps = view.pixelScale();
+        int rgb = color & 0x00FFFFFF;
+        float sw = 3f * (float) Math.sqrt(scale);
+        // ring: dark under-outline, then the coloured contour
+        stroke.setColor(OUTLINE_COLOR | (OUTLINE_ALPHA << 24));
+        stroke.setStrokeWidth(sw + 5f * ps);
         c.drawCircle(cx, cy, outerR(), stroke);
-        c.drawCircle(cx + knobX, cy + knobY, knobR(), fill);
+        stroke.setColor(highlighted ? 0xFF33C0FF : (rgb | (alpha << 24)));
+        stroke.setStrokeWidth(highlighted ? sw * 1.7f : sw);
+        c.drawCircle(cx, cy, outerR(), stroke);
+        // knob: dark outline, then the fill
+        stroke.setColor(OUTLINE_COLOR | (OUTLINE_ALPHA << 24));
+        stroke.setStrokeWidth(2f * ps);
         c.drawCircle(cx + knobX, cy + knobY, knobR(), stroke);
-        textPaint.setColor(0x00FFFFFF | (Math.min(255, alpha + 75) << 24));
-        textPaint.setTextSize(knobR() * 0.9f);
-        float ty = cy + knobY - (textPaint.descent() + textPaint.ascent()) / 2f;
-        c.drawText(stick == Binding.RIGHT_JOYSTICK ? "R" : "L", cx + knobX, ty, textPaint);
+        fill.setColor(rgb | (alpha << 24));
+        c.drawCircle(cx + knobX, cy + knobY, knobR(), fill);
     }
 
     @Override public ControlElementDescription describe() {
         ControlElementDescription d = new ControlElementDescription();
         d.type = "STICK";
         d.bindings = new String[]{ stick.name() };
+        d.color = color;
         return baseDescribe(d);
     }
 

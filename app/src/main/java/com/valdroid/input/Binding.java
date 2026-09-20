@@ -165,6 +165,9 @@ public enum Binding {
 
     public static Binding fromName(String name, Binding fallback) {
         if (name == null) return fallback;
+        // Zomdroid's names for the two overlay actions, so its layout files load unchanged.
+        if ("UI_TOGGLE_OVERLAY".equals(name)) return TOGGLE_CONTROLS;
+        if ("UI_TOGGLE_KEYBOARD".equals(name)) return TOGGLE_KEYBOARD;
         try { return Binding.valueOf(name); } catch (Exception e) { return fallback; }
     }
 }

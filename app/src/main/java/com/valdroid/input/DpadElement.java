@@ -1,44 +1,44 @@
 package com.valdroid.input;
 
 import android.graphics.Canvas;
+import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
-import android.graphics.RectF;
+import android.graphics.Path;
 import android.view.MotionEvent;
 
 /**
- * The virtual gamepad's d-pad as one element: the touch position inside the cross picks one of
- * eight directions (diagonals press two arms), sent as the pad's hat through
- * {@link InputControlsView#injectDpad}. Ported from Zomdroid's DpadControlElement.
+ * The virtual gamepad's d-pad as one element, ported from Zomdroid's DpadControlElement with its
+ * geometry and look: a 340-unit square (units of view width / 2560) holding four outlined arrow
+ * arms; the touch position inside the square presses the arms whose axis is past the dead zone
+ * (diagonals press two). The result goes out as the pad's hat through
+ * {@link InputControlsView#injectDpad}.
  */
 public class DpadElement extends ControlElement {
 
-    private static final float OUTER_DP = 56f;
-    private static final float ARM_DP   = 19f;    // half-width of an arm
-    private static final float DEAD = 0.22f;      // of the outer radius
-    private static final int[] BITS = { 1, 2, 4, 8 };   // up, right, down, left (Binding.GAMEPAD_DPAD_*.code)
+    private static final float SIZE = 340f;
+    private static final float DEAD = 0.3f;
+    private static final int   DEFAULT_COLOR = 0xFFCCCCCC, OUTLINE_COLOR = 0x00282828, OUTLINE_ALPHA = 70;
 
+    private final int color;
     private int pointerId = -1;
-    private int mask = 0;
+    private int mask = 0;          // up 1, right 2, down 4, left 8
 
-    private final Paint fill   = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint active = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF rect = new RectF();
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path path = new Path();
 
     public DpadElement(InputControlsView view, ControlElementDescription d) {
         super(view, d);
-        fill.setStyle(Paint.Style.FILL);
-        active.setStyle(Paint.Style.FILL);
-        stroke.setStyle(Paint.Style.STROKE);
+        this.color = d.color != 0 ? d.color : DEFAULT_COLOR;
+        paint.setStyle(Paint.Style.STROKE);
     }
 
-    private float outerR() { return dp(OUTER_DP) * scale; }
+    private float half() { return SIZE * view.pixelScale() * scale / 2f; }
 
     @Override public boolean isGamepadElement() { return true; }
 
     @Override public boolean isPointOver(float x, float y) {
-        float dx = x - centerX(), dy = y - centerY(); float r = outerR();
-        return dx * dx + dy * dy <= r * r;
+        float h = half();
+        return Math.abs(x - centerX()) <= h && Math.abs(y - centerY()) <= h;
     }
 
     @Override public boolean handleTouch(MotionEvent e) {
@@ -77,26 +77,14 @@ public class DpadElement extends ControlElement {
     }
 
     private void update(float x, float y) {
-        float r = outerR();
-        float nx = (x - centerX()) / r, ny = (y - centerY()) / r;
+        float h = half();
+        float nx = clamp((x - centerX()) / h, -1f, 1f), ny = clamp((y - centerY()) / h, -1f, 1f);
         int m = 0;
-        if (nx * nx + ny * ny >= DEAD * DEAD) {
-            // 8-way: an arm is pressed when the touch lies within 67.5 degrees of its axis.
-            double a = Math.atan2(ny, nx);                 // 0 = right, +90 = down (screen y grows downwards)
-            double t = Math.toRadians(67.5);
-            if (Math.abs(angleDiff(a, -Math.PI / 2)) < t) m |= BITS[0];
-            if (Math.abs(angleDiff(a, 0)) < t)            m |= BITS[1];
-            if (Math.abs(angleDiff(a, Math.PI / 2)) < t)  m |= BITS[2];
-            if (Math.abs(angleDiff(a, Math.PI)) < t)      m |= BITS[3];
-        }
+        if (ny < -DEAD) m |= 1;
+        if (nx >  DEAD) m |= 2;
+        if (ny >  DEAD) m |= 4;
+        if (nx < -DEAD) m |= 8;
         setMask(m);
-    }
-
-    private static double angleDiff(double a, double b) {
-        double d = a - b;
-        while (d > Math.PI) d -= 2 * Math.PI;
-        while (d < -Math.PI) d += 2 * Math.PI;
-        return d;
     }
 
     private void setMask(int m) {
@@ -108,33 +96,38 @@ public class DpadElement extends ControlElement {
 
     @Override public void reset() { setMask(0); pointerId = -1; }
 
+    /** Zomdroid's four arrow arms (DpadControlDrawable.calculatePath). */
+    private void buildPath() {
+        float cx = centerX(), cy = centerY(), size = half() * 2f;
+        float x0 = cx - size / 2f, y0 = cy - size / 2f;
+        float hw = size / 6f, hh = size / 4f, off = size / 12f;
+        path.reset();
+        path.moveTo(cx, cy - off); path.lineTo(cx - hw, cy - hh); path.lineTo(cx - hw, y0);
+        path.lineTo(cx + hw, y0); path.lineTo(cx + hw, cy - hh); path.close();
+        path.moveTo(cx - off, cy); path.lineTo(cx - hh, cy - hw); path.lineTo(x0, cy - hw);
+        path.lineTo(x0, cy + hw); path.lineTo(cx - hh, cy + hw); path.close();
+        path.moveTo(cx, cy + off); path.lineTo(cx - hw, cy + hh); path.lineTo(cx - hw, y0 + size);
+        path.lineTo(cx + hw, y0 + size); path.lineTo(cx + hw, cy + hh); path.close();
+        path.moveTo(cx + off, cy); path.lineTo(cx + hh, cy - hw); path.lineTo(x0 + size, cy - hw);
+        path.lineTo(x0 + size, cy + hw); path.lineTo(cx + hh, cy + hw); path.close();
+    }
+
     @Override public void draw(Canvas c) {
-        float cx = centerX(), cy = centerY(), r = outerR(), arm = dp(ARM_DP) * scale;
-        fill.setColor(0x00FFFFFF | ((int) (alpha * 0.30f) << 24));
-        active.setColor(0x00FFFFFF | (Math.min(255, alpha + 60) << 24));
-        stroke.setColor(0x00FFFFFF | (Math.min(255, alpha + 30) << 24));
-        stroke.setStrokeWidth(dp(2));
-        if (highlighted) { stroke.setColor(0xFF33C0FF); stroke.setStrokeWidth(dp(3)); }
-        float rr = dp(6) * scale;
-        // up, right, down, left arms
-        float[][] arms = {
-                { cx - arm, cy - r,   cx + arm, cy - arm },
-                { cx + arm, cy - arm, cx + r,   cy + arm },
-                { cx - arm, cy + arm, cx + arm, cy + r   },
-                { cx - r,   cy - arm, cx - arm, cy + arm },
-        };
-        for (int i = 0; i < 4; i++) {
-            rect.set(arms[i][0], arms[i][1], arms[i][2], arms[i][3]);
-            c.drawRoundRect(rect, rr, rr, (mask & BITS[i]) != 0 ? active : fill);
-            c.drawRoundRect(rect, rr, rr, stroke);
-        }
-        rect.set(cx - arm, cy - arm, cx + arm, cy + arm);
-        c.drawRect(rect, fill);
+        buildPath();
+        float sw = 4f * (float) Math.sqrt(scale);
+        paint.setPathEffect(new CornerPathEffect(15f * scale));
+        paint.setColor(OUTLINE_COLOR | (Math.min(alpha, OUTLINE_ALPHA) << 24));
+        paint.setStrokeWidth(sw + 1.25f * view.pixelScale());
+        c.drawPath(path, paint);
+        paint.setColor(highlighted ? 0xFF33C0FF : ((color & 0x00FFFFFF) | (alpha << 24)));
+        paint.setStrokeWidth(highlighted ? sw * 1.7f : sw);
+        c.drawPath(path, paint);
     }
 
     @Override public ControlElementDescription describe() {
         ControlElementDescription d = new ControlElementDescription();
         d.type = "DPAD";
+        d.color = color;
         return baseDescribe(d);
     }
 

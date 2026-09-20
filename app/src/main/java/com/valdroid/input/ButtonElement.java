@@ -17,11 +17,18 @@ public class ButtonElement extends ControlElement {
 
     private static final float RECT_W_DP = 120f, RECT_H_DP = 66f;
     private static final float CIRCLE_D_DP = 92f;
+    // Zomdroid look (ButtonControlDrawable): sizes in units of view width / 2560, outlined shape.
+    private static final float Z_CIRCLE_D = 160f, Z_RECT_W = 240f, Z_RECT_H = 120f;
+    private static final float Z_STROKE = 4f, Z_OUTLINE_EXTRA = 1.25f, Z_TEXT_OUTLINE = 2.5f;
+    private static final int   Z_OUTLINE_COLOR = 0xFF282828, Z_OUTLINE_ALPHA = 70, Z_TOGGLE_ON = 0xFFFFA726;
 
     private Shape shape;
     private String text;
     private boolean isToggle;
     private Binding binding;
+    private int color;            // 0 = ValDroid look; otherwise Zomdroid look in this colour
+    private String icon;          // Zomdroid icon name or null
+    private android.graphics.drawable.Drawable iconDrawable;
 
     private int pointerId = -1;
     private boolean toggledOn = false;
@@ -38,13 +45,29 @@ public class ButtonElement extends ControlElement {
         this.isToggle = d.isToggle;
         this.binding = (d.bindings != null && d.bindings.length > 0)
                 ? Binding.fromName(d.bindings[0], Binding.MOUSE_LEFT) : Binding.MOUSE_LEFT;
+        this.color = d.color;
+        this.icon = d.icon;
+        int iconRes = "GAMEPAD_BACK_ICON".equals(icon) ? com.valdroid.R.drawable.mt_icon_stack
+                    : "GAMEPAD_START_ICON".equals(icon) ? com.valdroid.R.drawable.mt_icon_menu : 0;
+        if (iconRes != 0) {
+            iconDrawable = androidx.core.content.ContextCompat.getDrawable(view.getContext(), iconRes);
+            if (iconDrawable != null) iconDrawable = iconDrawable.mutate();
+        }
         fill.setStyle(Paint.Style.FILL);
         stroke.setStyle(Paint.Style.STROKE);
         textPaint.setTextAlign(Paint.Align.CENTER);
     }
 
-    private float halfW() { return dp((shape == Shape.RECT ? RECT_W_DP : CIRCLE_D_DP) / 2f) * scale; }
-    private float halfH() { return dp((shape == Shape.RECT ? RECT_H_DP : CIRCLE_D_DP) / 2f) * scale; }
+    private boolean zomLook() { return color != 0; }
+
+    private float halfW() {
+        if (zomLook()) return (shape == Shape.RECT ? Z_RECT_W : Z_CIRCLE_D) / 2f * view.pixelScale() * scale;
+        return dp((shape == Shape.RECT ? RECT_W_DP : CIRCLE_D_DP) / 2f) * scale;
+    }
+    private float halfH() {
+        if (zomLook()) return (shape == Shape.RECT ? Z_RECT_H : Z_CIRCLE_D) / 2f * view.pixelScale() * scale;
+        return dp((shape == Shape.RECT ? RECT_H_DP : CIRCLE_D_DP) / 2f) * scale;
+    }
 
     // Touch-slop padding around the visible button: a finger landing just outside still counts as a
     // hit, so the overlay claims the touch (instead of it falling through to the map-pan gesture,
@@ -109,7 +132,60 @@ public class ButtonElement extends ControlElement {
         pointerId = -1;
     }
 
+    private void drawShape(Canvas c, float cx, float cy, float hw, float hh, Paint p) {
+        if (shape == Shape.CIRCLE) { c.drawCircle(cx, cy, hw, p); return; }
+        rect.set(cx - hw, cy - hh, cx + hw, cy + hh);
+        float r = 20f * view.pixelScale() * scale;
+        c.drawRoundRect(rect, r, r, p);
+    }
+
+    /** Zomdroid's ButtonControlDrawable: dark under-outline, coloured contour, text or icon fitted inside. */
+    private void drawZomdroid(Canvas c) {
+        float cx = centerX(), cy = centerY(), hw = halfW(), hh = halfH(), ps = view.pixelScale();
+        boolean on = isToggle && toggledOn;
+        int rgb = color & 0x00FFFFFF;
+        float sw = Z_STROKE * ps * (float) Math.sqrt(scale);
+        if (pointerId >= 0) {   // pressed: a light fill, so a touch is visible
+            fill.setColor(rgb | ((alpha / 2) << 24));
+            drawShape(c, cx, cy, hw, hh, fill);
+        }
+        stroke.setColor((Z_OUTLINE_COLOR & 0x00FFFFFF) | (Math.min(alpha, Z_OUTLINE_ALPHA) << 24));
+        stroke.setStrokeWidth(sw + Z_OUTLINE_EXTRA * ps);
+        drawShape(c, cx, cy, hw, hh, stroke);
+        stroke.setColor(on ? Z_TOGGLE_ON : (rgb | (alpha << 24)));
+        stroke.setStrokeWidth(on ? sw * 1.7f : sw);
+        if (highlighted) { stroke.setColor(0xFF33C0FF); stroke.setStrokeWidth(sw * 1.7f); }
+        drawShape(c, cx, cy, hw, hh, stroke);
+
+        // content box: 0.8 of the rect, or the square inscribed in 0.8 of the circle
+        float bw = (shape == Shape.RECT ? hw * 0.8f : hw * 0.8f / (float) Math.sqrt(2));
+        float bh = (shape == Shape.RECT ? hh * 0.8f : hw * 0.8f / (float) Math.sqrt(2));
+        if (iconDrawable != null) {
+            float ia = (float) iconDrawable.getIntrinsicWidth() / Math.max(1, iconDrawable.getIntrinsicHeight());
+            float w = bw, h = bw / ia;
+            if (h > bh) { h = bh; w = bh * ia; }
+            iconDrawable.setBounds(Math.round(cx - w), Math.round(cy - h), Math.round(cx + w), Math.round(cy + h));
+            iconDrawable.setTint(on ? Z_TOGGLE_ON : (rgb | 0xFF000000));
+            iconDrawable.setAlpha(alpha);
+            iconDrawable.draw(c);
+        } else if (!text.isEmpty()) {
+            textPaint.setTextSize(100f);
+            android.graphics.Rect tb = new android.graphics.Rect();
+            textPaint.getTextBounds(text, 0, text.length(), tb);
+            float k = Math.min(2f * bw / Math.max(1, tb.width()), 2f * bh / Math.max(1, tb.height()));
+            textPaint.setTextSize(100f * k);
+            textPaint.getTextBounds(text, 0, text.length(), tb);
+            float ty = cy - tb.exactCenterY(), o = Z_TEXT_OUTLINE * ps;
+            textPaint.setColor((Z_OUTLINE_COLOR & 0x00FFFFFF) | (Math.min(alpha, Z_OUTLINE_ALPHA) << 24));
+            c.drawText(text, cx - o, ty, textPaint); c.drawText(text, cx + o, ty, textPaint);
+            c.drawText(text, cx, ty - o, textPaint); c.drawText(text, cx, ty + o, textPaint);
+            textPaint.setColor(on ? Z_TOGGLE_ON : (rgb | (alpha << 24)));
+            c.drawText(text, cx, ty, textPaint);
+        }
+    }
+
     @Override public void draw(Canvas c) {
+        if (zomLook()) { drawZomdroid(c); return; }
         float cx = centerX(), cy = centerY(), hw = halfW(), hh = halfH();
         boolean active = (pointerId >= 0) || (isToggle && toggledOn);
         int baseA = alpha;
@@ -147,6 +223,8 @@ public class ButtonElement extends ControlElement {
         d.text = text;
         d.isToggle = isToggle;
         d.bindings = new String[]{ binding.name() };
+        d.color = color;
+        d.icon = icon;
         return baseDescribe(d);
     }
 
