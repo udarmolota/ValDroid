@@ -19,7 +19,8 @@ import java.util.zip.ZipOutputStream;
  * <p>In our in-process setup box64 has no separate file — its output folds into Unity's
  * Player.log — so the most useful artifacts are Player.log + Player-prev.log (the
  * previous run, which often holds the crash). We also include box64.log / rimdroid.log
- * if present and Config/Prefs.xml (handy for resolution / settings issues), plus
+ * if present and the game's PlayerPrefs (its graphics settings — the first thing to check on a
+ * "slow"/"looks wrong" report), plus
  * exit_info.txt — the system's record of WHY our previous processes died (ANR / native
  * crash / LMK / user swipe), with the stored ANR thread dump when one exists. Missing
  * files are skipped silently.
@@ -30,6 +31,10 @@ public final class LogExporter {
     private static final long SIGSEGV_TAIL_BYTES = 256 * 1024;
 
     private LogExporter() {}
+
+    private static void put(java.util.Map<String, File> m, String entryName, File f) {
+        if (f != null && f.isFile()) m.put(entryName, f);
+    }
 
     public static final class Result {
         public final List<String> items = new ArrayList<>();
@@ -44,18 +49,21 @@ public final class LogExporter {
 
         File gamePath = new File(gi.getGamePath());
         File userDir  = gi.getUserDataDir();
-        File configDir = new File(userDir, "Config");
 
         // Global (not instance-scoped) uncaught-crash log — e.g. an in-app Steam download that
         // hard-crashed the app. Lives in the app's private files dir.
         File crashLog = new File(AppStorage.requireSingleton().getHomePath(),
                 ValDroidApplication.CRASH_LOG);
 
-        File[] candidates = {
-                new File(userDir, "Player.log"),
-                new File(userDir, "Player-prev.log"),
-                new File(gamePath, "box64.log"),
-                new File(gamePath, "rimdroid.log"),
+        // Zip entry name -> file. Names are explicit because two of the files are both called
+        // "prefs" (Unity writes one set under the game's company/product and, under box64, one under
+        // "unknown/unknown" — which is the set the game actually reads here).
+        java.util.LinkedHashMap<String, File> candidates = new java.util.LinkedHashMap<>();
+        {
+                put(candidates, "Player.log", new File(userDir, "Player.log"));
+                put(candidates, "Player-prev.log", new File(userDir, "Player-prev.log"));
+                put(candidates, "box64.log", new File(gamePath, "box64.log"));
+                put(candidates, "rimdroid.log", new File(gamePath, "rimdroid.log"));
                 // box64 appends one line per SIGSEGV here (raw write(), so it survives a hard crash)
                 // with the guest RIP/RSP, the native pc and the tid — often the only crash locator we
                 // get, since rimdroid.log can lose its tail and a non-root app cannot read the system
@@ -63,21 +71,23 @@ public final class LogExporter {
                 // (.prev = the run before), and the copy below ships only the tail: the GC/dynarec
                 // hotpage dance can repeat one fault endlessly (91 MB in a field report), and for a
                 // crash locator only the end of the file matters.
-                new File(gamePath, "sigsegv_fault.log"),
-                new File(gamePath, "sigsegv_fault.prev.log"),
-                new File(configDir, "Prefs.xml"),
-                new File(configDir, "ModsConfig.xml"),   // active mods + load order — vital for mod/Harmony issues
-                crashLog,
-        };
+                put(candidates, "sigsegv_fault.log", new File(gamePath, "sigsegv_fault.log"));
+                put(candidates, "sigsegv_fault.prev.log", new File(gamePath, "sigsegv_fault.prev.log"));
+                // The game's own settings: graphics preset, resolution, VSync, FPS limit, tessellation…
+                put(candidates, "prefs-game.xml", new File(userDir, "prefs"));
+                put(candidates, "prefs-unknown.xml", new File(gamePath, "unity3d/unknown/unknown/prefs"));
+                put(candidates, ValDroidApplication.CRASH_LOG, crashLog);
+        }
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
             byte[] buf = new byte[65536];
-            for (File f : candidates) {
+            for (java.util.Map.Entry<String, File> e : candidates.entrySet()) {
+                File f = e.getValue();
                 if (f == null || !f.isFile()) continue;
-                zos.putNextEntry(new ZipEntry(f.getName()));
+                zos.putNextEntry(new ZipEntry(e.getKey()));
                 try (FileInputStream in = new FileInputStream(f)) {
                     // Tail cap for the per-fault SIGSEGV logs (see the candidates note above).
-                    if (f.getName().startsWith("sigsegv_fault") && f.length() > SIGSEGV_TAIL_BYTES) {
+                    if (e.getKey().startsWith("sigsegv_fault") && f.length() > SIGSEGV_TAIL_BYTES) {
                         long skip = f.length() - SIGSEGV_TAIL_BYTES;
                         while (skip > 0) {
                             long s = in.skip(skip);
@@ -92,8 +102,9 @@ public final class LogExporter {
                     }
                 }
                 zos.closeEntry();
-                r.items.add(f.getName());
+                r.items.add(e.getKey());
             }
+            addInstanceSettings(zos, gi, r);
             addLogcat(zos, buf, r);
             if (ctx != null) addExitInfo(ctx, zos, buf, r);
         } catch (Exception e) {
@@ -215,6 +226,47 @@ public final class LogExporter {
      * but Java, native and box64 output from ValDroid remains available. A capture failure is
      * recorded inside the entry instead of preventing the regular log files from being exported.
      */
+    /**
+     * What the LAUNCHER was told to do for this instance: renderer and driver, render scale, texture
+     * tier, the toggles and the Extra env field. The game's own settings ship as prefs-*.xml; together
+     * they answer most of "why is it slow / why does it look like that" without another round trip.
+     */
+    private static void addInstanceSettings(ZipOutputStream zos, GameInstance gi, Result r)
+            throws java.io.IOException {
+        final String name = "instance-settings.txt";
+        com.valdroid.InstanceSettings s = gi.settings();
+        StringBuilder sb = new StringBuilder();
+        line(sb, "instance", gi.getName());
+        line(sb, "app version", BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE
+                + (BuildConfig.DEBUG ? ", debug)" : ")"));
+        line(sb, "device", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + ", Android " + android.os.Build.VERSION.RELEASE);
+        line(sb, "renderer", String.valueOf(s.getRenderer()));
+        line(sb, "vulkan driver", String.valueOf(s.getVulkanDriverSo()));
+        line(sb, "render scale", s.getRenderScalePercent() + "%");
+        line(sb, "fixed res mode", String.valueOf(s.getFixedResMode()));
+        line(sb, "fps cap", String.valueOf(s.getFpsCap()));
+        line(sb, "texture tier", s.getTexTier() + "   (0 none, 1 low, 2 ultra low)");
+        line(sb, "native mono", String.valueOf(s.isNativeMono()));
+        line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));
+        line(sb, "interpreter", String.valueOf(s.isInterpreter()));
+        line(sb, "drag pan", String.valueOf(s.isDragPan()));
+        line(sb, "extra env", s.getEnvVars() == null ? "" : s.getEnvVars());
+        byte[] out = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        zos.putNextEntry(new ZipEntry(name));
+        zos.write(out);
+        zos.closeEntry();
+        r.bytes += out.length;
+        r.items.add(name);
+    }
+
+    /** One "key : value" line, padded, newline-terminated. */
+    private static void line(StringBuilder sb, String key, String value) {
+        sb.append(key);
+        for (int i = key.length(); i < 15; i++) sb.append(' ');
+        sb.append(": ").append(value).append((char) 10);
+    }
+
     private static void addLogcat(ZipOutputStream zos, byte[] buf, Result r)
             throws java.io.IOException {
         final String name = "logcat.txt";

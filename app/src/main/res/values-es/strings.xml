@@ -117,7 +117,7 @@ En la nube: %2$s
     <string name="link_reddit">RimDroid en Reddit</string>
     <string name="link_support">Apoyar al desarrollador</string>
     <string name="link_soon">Próximamente</string>
-    <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
+    <string name="bug_report_subject">VALDROID REPORT %1$s</string>
     <string name="bug_report_body">Hola, tengo un nuevo reporte de error.\n\nDescripción: \n\n\n---\n%1$s</string>
     <string name="bug_report_no_mail">No se encontró una app de correo en este dispositivo.</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
