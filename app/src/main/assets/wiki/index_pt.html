@@ -41,55 +41,54 @@
 </head>
 <body>
 <ul>
-    <li><a href="#quick-start">Início rápido</a></li>
+    <li><a href="#quick-start">Começo rápido</a></li>
     <li>
         <a href="#get-game">Como obter o jogo</a>
         <ol>
-            <li><a href="#steam-in-app">Pela Steam, dentro do app</a></li>
-            <li><a href="#zip-archive">A partir de um arquivo .zip</a></li>
+            <li><a href="#steam-in-app">Da Steam, no app</a></li>
+            <li><a href="#zip-archive">De um arquivo .zip</a></li>
         </ol>
     </li>
-    <li><a href="#dlc">DLC</a></li>
-    <li><a href="#mods">Mods</a></li>
-    <li><a href="#renderers">Renderizadores e drivers</a></li>
-    <li><a href="#picture">Imagem e fluidez</a></li>
+    <li><a href="#picture">Imagem e quadros</a></li>
     <li><a href="#controls">Controles</a></li>
-    <li><a href="#saves">Jogos salvos e configurações</a></li>
-    <li><a href="#compat-mode">Modo de compatibilidade</a></li>
+    <li><a href="#saves">Saves</a></li>
+    <li><a href="#renderers">Drivers gráficos</a></li>
+    <li><a href="#mods">Mods</a></li>
     <li><a href="#native-mono">Mono ARM64 nativo</a></li>
-    <li><a href="#performance">Como tirar o máximo de desempenho</a></li>
+    <li><a href="#compat-mode">Configurações avançadas</a></li>
+    <li><a href="#performance">Tirando o máximo de desempenho</a></li>
     <li><a href="#known-issues">Problemas conhecidos</a></li>
-    <li><a href="#report">Como relatar um problema</a></li>
+    <li><a href="#report">Relatar um problema</a></li>
 </ul>
 
 <hr>
 
 <section id="quick-start">
-    <h2>Início rápido</h2>
+    <h2>Começo rápido</h2>
     <p>
-        O RimDroid é um launcher: ele roda <b>a sua própria cópia</b> do RimWorld no Android.
-        O jogo não vem incluído.
+        O ValDroid é um launcher: ele roda <b>a sua própria cópia</b> de Valheim no Android. O jogo
+        em si não vem junto.
     </p>
     <ol>
-        <li>Você precisa ter o <b>RimWorld</b> na <b>Steam</b>. O RimDroid roda a
-            versão <b>Linux</b> do jogo, <b>RimWorld 1.5</b> ou <b>1.6</b>.</li>
-        <li>Coloque o jogo no app. Com a Steam, abra o menu lateral e toque em
-            <b>Downloads da Steam</b>: o jogo é baixado direto para uma instância pronta. Para
-            as outras formas, veja <a href="#get-game">Como obter o jogo</a>.</li>
-        <li>Uma <b>instância</b> é uma cópia instalada do jogo. Cada uma tem o seu próprio cartão na
-            tela principal e as suas próprias configurações no <b>ícone de engrenagem</b>. Você pode
-            ter várias, por exemplo 1.5 e 1.6 lado a lado.</li>
-        <li>Ao criar uma instância, o RimDroid detecta a GPU do seu celular e escolhe sozinho um
-            driver gráfico adequado.</li>
-        <li>Toque no botão <b>▶</b> do cartão. A primeira inicialização demora mais enquanto o jogo
-            prepara os arquivos. Não aperte Voltar enquanto ele carrega.</li>
+        <li>Você precisa ter <b>Valheim</b> na <b>Steam</b>. O ValDroid roda a versão <b>Linux</b>
+            do jogo.</li>
+        <li>Coloque o jogo no app: abra o menu lateral e toque em <b>Baixar jogo (Steam)</b>. O jogo
+            é baixado direto para uma instância pronta. A outra forma é
+            <a href="#zip-archive">um arquivo .zip</a> preparado num PC.</li>
+        <li>Uma <b>instância</b> é uma cópia instalada do jogo. Ela tem seu próprio cartão na tela
+            principal e suas configurações atrás do <b>ícone de engrenagem</b>.</li>
+        <li>Ao criar uma instância, o ValDroid detecta a GPU do telefone e escolhe um driver gráfico
+            adequado.</li>
+        <li>Toque no botão <b>▶</b> do cartão. O primeiro início demora mais porque o jogo prepara
+            seus arquivos. Não aperte Voltar enquanto carrega.</li>
     </ol>
     <p>
-        Você precisa de Android 11 ou mais novo, um celular de 64 bits e pelo menos <b>6 GB de
-        RAM</b> (8 GB ou mais para jogar com conforto), além de 5–10 GB de espaço livre.
+        São necessários Android 11 ou mais novo, um telefone de 64 bits com GPU <b>Adreno</b>
+        (Snapdragon) e pelo menos <b>8 GB de RAM</b>, além de cerca de 6 GB livres. Outras GPUs não
+        foram testadas.
     </p>
     <p>O <b>?</b> no topo de cada tela abre esta página na parte sobre aquela tela.</p>
-    <p>Algo deu errado? Veja <a href="#report">Como relatar um problema</a>.</p>
+    <p>Deu algo errado? Veja <a href="#report">Relatar um problema</a>.</p>
 </section>
 
 <hr>
@@ -97,154 +96,74 @@
 <section id="get-game">
     <h2>Como obter o jogo</h2>
     <p>
-        O RimDroid precisa da <b>versão Linux</b> do RimWorld, de uma loja onde você tenha o jogo.
-        Escolha uma das formas abaixo.
+        O ValDroid precisa da <b>versão Linux</b> de Valheim, da conta Steam que tem o jogo.
     </p>
 
     <section id="steam-in-app">
-        <h3>1. Pela Steam, dentro do app</h3>
+        <h3>1. Da Steam, no app</h3>
         <ol>
-            <li>Abra o menu lateral e toque em <b>Downloads da Steam</b>, aba <b>Jogo</b>.</li>
-            <li>Escolha <b>RimWorld 1.5</b> ou <b>RimWorld 1.6</b> e digite um nome para a nova
-                instância.</li>
-            <li>Entre com a sua conta Steam. Seus dados vão só para a Steam e não são guardados.
+            <li>Abra o menu lateral e toque em <b>Baixar jogo (Steam)</b>, aba <b>Jogo</b>.</li>
+            <li>Digite um nome para a nova instância.</li>
+            <li>Entre com a sua conta Steam. O login vai só para a Steam e não é guardado aqui.
                 Aprove o login no app Steam Mobile ou digite o código do Steam Guard.</li>
-            <li>Toque em <b>Baixar</b>. O jogo vai direto para uma nova instância: sem PC e sem
-                arquivos compactados.</li>
-            <li>Se o download parar, comece de novo com o <b>mesmo nome de instância</b> e ele
+            <li>Toque em <b>Baixar</b>. A build pública mais recente vai direto para uma instância
+                nova: são cerca de 4 GB, melhor no Wi-Fi. Dá para usar outros apps enquanto
+                isso.</li>
+            <li>Se o download parar, inicie de novo com o <b>mesmo nome de instância</b> e ele
                 continua de onde parou.</li>
         </ol>
         <p>
-            Para baixar uma versão mais antiga em vez da recomendada, digite o <b>ID do
-            manifesto</b> dela no campo avançado (os IDs estão no SteamDB). Caso contrário, deixe
-            vazio.
+            Para pegar uma build específica em vez da mais recente, digite o <b>Manifest ID</b> dela
+            no campo avançado (os IDs estão no SteamDB). Caso contrário, deixe vazio.
         </p>
     </section>
 
     <section id="zip-archive">
-        <h3>2. A partir de um arquivo .zip</h3>
+        <h3>2. De um arquivo .zip</h3>
         <p>
-            Abra o menu lateral e toque em <b>Adicionar instância do jogo</b>, ou no <b>+</b> no
-            topo da tela principal. Digite um nome, toque em <b>Escolher arquivo ZIP</b>, escolha o
+            Abra o menu lateral e toque em <b>Adicionar instância</b>, ou no <b>+</b> no topo da
+            tela principal. Digite um nome, toque em <b>Escolher arquivo ZIP</b>, selecione o
             arquivo e toque em <b>Instalar</b>.
         </p>
         <ul>
-            <li>O .zip pode conter a versão <b>Linux</b> do RimWorld, a que tem o arquivo
-                <code>RimWorldLinux</code> (pode estar dentro de uma pasta, o RimDroid encontra),.</li>
+            <li>O .zip precisa conter a versão <b>Linux</b> de Valheim — aquela com o arquivo
+                <code>valheim.x86_64</code>. Uma pasta em volta não atrapalha, o ValDroid
+                encontra.</li>
+            <li>Num PC dá para montar esse arquivo com o
+                <a href="https://github.com/SteamRE/DepotDownloader" target="_blank">DepotDownloader</a>:
+                <code>DepotDownloader -app 892970 -depot 892971 -os linux</code>, e depois compactar
+                o resultado.</li>
             <li>Use um nome curto: letras latinas e números, até 40 caracteres.</li>
-            <li>Guardar o .zip não é obrigatório, mas ajuda depois para reinstalar ou criar outra
-                instância da mesma versão.</li>
         </ul>
     </section>
 </section>
 
 <hr>
 
-<section id="dlc">
-    <h2>DLC</h2>
-    <ul>
-        <li><b>Pela Steam:</b> em <b>Downloads da Steam</b>, aba <b>DLC</b>, marque os DLCs que a sua
-            conta tem e toque em <b>Baixar os DLCs selecionados</b>. Cada um é salvo como um .zip em
-            <b>Download/RimDroid</b>.</li>
-        <li><b>Para instalar um arquivo de DLC</b>, abra o menu lateral, toque em <b>Instalar mod /
-            DLC</b>, escolha o arquivo e a instância, abra a aba <b>DLC</b> e toque em
-            <b>Instalar</b>.</li>
-        <li>Um DLC tem que combinar com a versão do jogo da instância: um DLC para 1.6 vai em uma
-            instância 1.6. Por isso a tela de instalação sempre pede para você escolher a
-            instância.</li>
-    </ul>
-</section>
-
-<hr>
-
-<section id="mods">
-    <h2>Mods</h2>
-    <ul>
-        <li><b>Downloads da Steam</b>, aba <b>Mods</b>, baixa mods do Workshop por ID: o número no
-            fim do link do Workshop (<i>…/filedetails/?id=NÚMERO</i>). Não precisa entrar na Steam;
-            vários IDs podem ser separados por espaços. Cada mod é salvo como um .zip em
-            <b>Download/RimDroid</b>. <b>Baixar pelo navegador</b>, na mesma aba, abre um site de
-            terceiros no lugar.</li>
-        <li>Instale pelo menu lateral, <b>Instalar mod / DLC</b>, aba <b>MODS</b>. O RimDroid
-            encontra a pasta real do mod (a que tem <code>About/About.xml</code>) dentro de qualquer
-            .zip.</li>
-        <li>Mods que precisam do <b>Harmony</b> funcionam: adicione também o próprio mod Harmony,
-            como no PC.</li>
-        <li>Foram testadas listas de até uns 50 mods. Listas maiores ainda não foram
-            testadas.</li>
-        <li><b>Gerenciar armazenamento</b>, no menu ⋮ de um cartão de instância, abre a pasta dessa
-            instância no gerenciador de arquivos do celular, se você quiser adicionar ou remover
-            arquivos à mão.</li>
-        <li>Se o texto em chinês, japonês ou coreano não aparecer, instale o mod de fontes
-            <a href="https://www.mediafire.com/file/s4axik3wwdvrtze/RimDroidCJKmod.zip/file" target="_blank">RimDroidCJKmod</a>:
-            adicione o .zip com <b>Instalar mod / DLC</b>, aba <b>MODS</b>, e ative-o no menu de mods
-            do jogo. Ele não precisa de outros mods.</li>
-    </ul>
-</section>
-
-<hr>
-
-<section id="renderers">
-    <h2>Renderizadores e drivers</h2>
-    <p>
-        Um renderizador traduz os gráficos de desktop do jogo para o Android. Escolha nas
-        configurações da instância (ícone de engrenagem), cartão <b>Vídeo</b>.
-    </p>
-
-    <h3>Zink ZFA (Vulkan)</h3>
-    <p>
-        É o padrão e o recomendado. Desenha pelo driver Vulkan do seu celular, escolhido logo
-        abaixo.
-    </p>
-
-    <h3>MobileGlues (sem Vulkan)</h3>
-    <p>
-        Desenha pelo driver OpenGL ES do celular e não precisa de Vulkan. Experimental. Experimente
-        se o Zink der tela preta ou imagem quebrada; pode ajudar em celulares sem GPU Snapdragon
-        (Adreno).
-    </p>
-
-    <h3>Drivers Vulkan (para o Zink)</h3>
-    <p>
-        Ao criar uma instância, o RimDroid escolhe um driver para a sua GPU, e
-        <b>Driver recomendado (detectar GPU)</b> faz isso de novo. Se a imagem ficar errada ou
-        continuar preta, tente outro.
-    </p>
-    <ul>
-        <li><b>System (phone driver)</b>: o driver do próprio celular. Funciona com qualquer GPU e é
-            a escolha certa em celulares sem GPU Snapdragon (Adreno).</li>
-        <li><b>Turnip</b> e <b>Freedreno</b>: drivers de código aberto para GPUs Snapdragon (Adreno),
-            cada um feito para a geração de GPU indicada na lista (6xx, 7xx, 8xx, 830/840).</li>
-        <li><b>Turnip Adreno 7XX_new (v26.2)</b>: o primeiro a tentar em Adreno 7xx quando a tela
-            continua preta.</li>
-        <li><b>Turnip Adreno 6xx (legacy)</b>: para GPUs Adreno 6xx antigas, como a do
-            Snapdragon 685.</li>
-        <li><b>Custom driver (imported)</b>: o seu próprio driver. Importe no menu lateral,
-            <b>Driver Vulkan personalizado</b> (um arquivo .so ou um .zip do AdrenoTools). Depois ele
-            é compartilhado por todas as instâncias.</li>
-    </ul>
-</section>
-
-<hr>
-
 <section id="picture">
-    <h2>Imagem e fluidez</h2>
-    <p>Tudo isso fica nas configurações da instância (ícone de engrenagem).</p>
+    <h2>Imagem e quadros</h2>
+    <p>Tudo isso fica nas configurações da instância (engrenagem), cartão <b>Vídeo</b>.</p>
     <ul>
-        <li><b>Resolução de renderização</b>: uma resolução menor dá mais FPS em GPUs fracas e uma
-            interface maior; tela cheia na resolução do próprio celular é a mais nítida.
-            <b>Bordas pretas 1280×720</b> é a mais rápida.</li>
-        <li><b>Compressão de texturas</b> reduz as texturas para economizar memória e ganhar FPS, e
-            é necessária para carregar vários DLCs em celulares mais fracos. Afeta principalmente
-            plantas e recursos; colonos e animais nunca são alterados. <b>Baixa</b> é um bom
-            equilíbrio; <b>Muito baixa</b> é um pouco mais rápida, mas as plantas ficam
-            borradas.</li>
-        <li><b>Mostrar contador de FPS</b> mostra a taxa de quadros no canto superior
-            esquerdo.</li>
-        <li><b>Limite de FPS</b> (30, 60 ou sem limite) suaviza os solavancos e deixa mais
-            processador para o jogo, o que pode aumentar a velocidade do jogo em celulares mais
-            fracos. Tente 60 ou 30 se o contador oscilar muito.</li>
+        <li><b>Gráficos</b> grava no jogo um conjunto de ajustes antes de iniciá-lo, pensado para a
+            emulação: sem tesselação, sem sombras e sem distância de desenho extra, que é o que mais
+            custa aqui. <b>Baixa</b> mantém os efeitos que a GPU faz quase de graça (antialiasing,
+            bloom, raios de sol); <b>Muito baixa</b> também os remove e desenha o mundo em resolução
+            interna menor. <b>Não mexer</b> deixa o que você configurou no jogo.</li>
+        <li><b>Resolução de renderização</b> define o tamanho da janela do jogo. Menos porcentagem
+            dá mais FPS e uma interface maior; 100% é o mais nítido.</li>
+        <li><b>Qualidade das texturas</b> reduz as texturas para economizar memória: <b>Baixa</b>
+            corta as maiores pela metade, <b>Muito baixa</b> deixa um quarto. Economiza algumas
+            centenas de MB de memória de vídeo, o que importa em telefones com menos RAM, e custa
+            um pouco de nitidez de perto.</li>
+        <li><b>Mostrar contador de FPS</b> coloca a taxa de quadros no canto superior esquerdo.</li>
+        <li><b>Limite de quadros</b> (30, 60 ou sem limite) suaviza as oscilações. Uns 30 estáveis
+            costumam agradar mais do que pular entre 25 e 60.</li>
     </ul>
+    <p>
+        Mude a resolução no <b>launcher</b>, não no jogo: o launcher inicia Valheim no tamanho da
+        sua janela, então a lista de resoluções do jogo não faz nada (e mostra
+        <code>0x0</code>).
+    </p>
 </section>
 
 <hr>
@@ -252,127 +171,153 @@
 <section id="controls">
     <h2>Controles</h2>
 
-    <h3>Toque</h3>
-    <ul>
-        <li><b>Toque</b> para clique esquerdo.</li>
-        <li><b>Segure um dedo parado</b> por um instante para clique direito, que dá ordens como
-            “ir aqui”. Uma vibração curta confirma.</li>
-        <li><b>Faça pinça</b> com dois dedos para dar zoom.</li>
-        <li>Mova a câmera com o analógico esquerdo. Para arrastar o mapa com um dedo, ative
-            <b>Mover o mapa arrastando o dedo</b> nas configurações da instância.</li>
-    </ul>
-
-    <h3>Controles na tela</h3>
-    <ul>
-        <li>O layout padrão tem um analógico para o cursor do mouse, um analógico para a câmera,
-            botões de clique esquerdo e direito, <b>Esc</b>, <b>Space</b> (pausa), as velocidades
-            <b>1</b>–<b>3</b> e os atalhos do jogo. <b>V</b> esconde e mostra os controles;
-            <b>KB</b> abre o teclado do celular.</li>
-        <li>Mude nas configurações da instância, <b>Editar controles na tela</b>: toque em um item
-            para selecioná-lo e arraste para movê-lo. <b>Adicionar</b> cria botões ligados a
-            qualquer tecla ou ação do mouse; <b>Restaurar</b> volta ao layout padrão.</li>
-        <li><b>Exportar layout dos controles</b> e <b>Importar layout dos controles</b>, no menu
-            lateral, compartilham um layout como arquivo .json.</li>
-    </ul>
-
-    <h3>Digitar</h3>
+    <h3>Controle na tela</h3>
     <p>
-        Para digitar no jogo, por exemplo para renomear um colono, toque no campo de texto e depois
-        em <b>KB</b>: o teclado do celular abre e o que você digitar vai para o jogo. Toque em
-        <b>KB</b> de novo para fechar. Funciona só no RimWorld 1.6 e só com letras latinas.
+        Valheim tem uma interface completa para controle, então o ValDroid entrega a ele um controle
+        virtual: para o jogo, os controles na tela são um gamepad de verdade, com os ícones de botão
+        do próprio jogo.
     </p>
-
-    <h3>Controle, mouse e teclado</h3>
     <ul>
-        <li>Um <b>controle</b> físico funciona: o analógico direito move o cursor, o esquerdo a
-            câmera, os gatilhos clicam e os botões de ombro dão zoom. Se os botões estiverem
-            trocados, corrija nas configurações da instância, <b>Mapeamento do controle</b>: toque
-            em <b>Começar</b> e pressione o botão que quiser para cada ação.</li>
+        <li>O layout padrão é o de sempre: <b>dois analógicos</b>, um <b>direcional</b>,
+            <b>A/B/X/Y</b>, <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> e <b>Start</b>, e os cliques dos
+            analógicos <b>L</b> e <b>R</b>. <b>V</b> esconde e mostra os controles, <b>KB</b> abre o
+            teclado do telefone.</li>
+        <li>Edite nas configurações da instância, <b>Editar controles na tela</b>: toque num
+            elemento para selecioná-lo, arraste para mover e segure um instante para abrir as
+            configurações dele (tamanho, opacidade, ação e, num analógico, a
+            <b>sensibilidade</b> — o analógico direito vem em 70%, porque com o dedo no vidro é
+            fácil exagerar).</li>
+        <li><b>Adicionar</b> cria analógicos, um direcional ou botões ligados a um botão do
+            controle, a uma tecla ou ao mouse. Elementos de teclado e de controle podem conviver no
+            mesmo layout: o jogo aceita os dois ao mesmo tempo.</li>
+        <li><b>Restaurar</b> oferece os dois layouts incluídos: o de <b>controle</b> e o de
+            <b>teclado e mouse</b> (VKBD), com analógico de cursor.</li>
+        <li><b>Exportar</b> e <b>importar layout de controles</b> no menu lateral compartilham o
+            layout como arquivo .json.</li>
+    </ul>
+
+    <h3>Controle físico, mouse e teclado</h3>
+    <ul>
+        <li>Um <b>controle</b> físico funciona e alimenta o mesmo controle virtual. Enquanto ele
+            estiver conectado, os elementos de controle na tela ficam escondidos; os botões de apoio
+            de teclado e mouse continuam.</li>
         <li><b>Mouse e teclado</b> físicos também funcionam.</li>
-        <li>O jogo roda sempre na horizontal. <b>Girar a imagem (180°)</b> inverte a imagem para um
-            controle ou suporte que segura o celular de cabeça para baixo. Vale a partir da próxima
-            inicialização.</li>
+        <li>O jogo sempre roda na horizontal. <b>Espelhar a imagem (180°)</b> a vira para suportes
+            ou controles que seguram o telefone ao contrário. Vale a partir do próximo início.</li>
     </ul>
 </section>
 
 <hr>
 
 <section id="saves">
-    <h2>Jogos salvos e configurações</h2>
+    <h2>Saves</h2>
+    <p>
+        Valheim guarda um mundo em dois arquivos (<code>.fwl</code> e <code>.db</code>) e um
+        personagem em um (<code>.fch</code>).
+    </p>
     <ul>
-        <li><b>Exportar jogos salvos</b> e <b>Importar jogos salvos</b>, no menu lateral, tiram e
-            colocam os jogos salvos de uma instância como um .zip: para backup ou para levar a outra
-            instância ou outro celular.</li>
-        <li><b>Exportar configurações</b> e <b>Importar configurações</b> fazem o mesmo com as
-            configurações do jogo: opções, atalhos de teclado, a lista de mods e as configurações
-            dos mods.</li>
-        <li><b>Jogos salvos na Steam Cloud</b>: se você também joga RimWorld no PC pela Steam, isto
-            traz os seus jogos salvos da nuvem para o celular e envia os do celular de volta. O
-            login é aprovado no app Steam Mobile, então o Steam Guard precisa estar ativo lá. Quando
-            o mesmo jogo salvo existe dos dois lados, você escolhe qual manter. Feche o jogo antes
-            de enviar.</li>
+        <li><b>Exportar</b> e <b>importar saves</b> no menu lateral tiram e colocam os saves de uma
+            instância como um .zip: para backup ou para levar a outra instância ou telefone.</li>
+        <li><b>Saves na Steam Cloud</b>: se você também joga Valheim no PC pela Steam, isso traz
+            seus mundos e personagens da nuvem para o telefone e manda os do telefone de volta. O
+            login é aprovado no app Steam Mobile, então o Steam Guard precisa estar ligado. Quando o
+            mesmo nome existe dos dois lados, você escolhe qual manter. Feche o jogo antes de
+            enviar.</li>
+        <li>A nuvem do Valheim funciona <b>por mundo e por personagem</b>: no PC, cada save precisa
+            ser movido para a nuvem no menu do próprio jogo. Um save que nunca foi movido não está
+            na nuvem, e a lista vai parecer vazia.</li>
     </ul>
 </section>
 
 <hr>
 
-<section id="compat-mode">
-    <h2>Modo de compatibilidade</h2>
+<section id="renderers">
+    <h2>Drivers gráficos</h2>
     <p>
-        Nas configurações da instância, cartão <b>Avançado</b> (toque no título para abrir). Ative
-        se o jogo não iniciar: tela preta ou travado no carregamento. Com ele o jogo fica um pouco
-        mais lento, então deixe desligado quando não precisar. É uma solução provisória e pode não
-        ajudar em todos os celulares.
+        Valheim desenha pelo <b>Vulkan</b>, então o que importa é o driver Vulkan. Escolha nas
+        configurações da instância (engrenagem), cartão <b>Vídeo</b>.
     </p>
+    <ul>
+        <li>Ao criar uma instância, o ValDroid escolhe um driver para a sua GPU, e <b>Driver
+            recomendado (detectar GPU)</b> faz isso de novo. Se a imagem sair errada ou ficar preta,
+            tente outro.</li>
+        <li><b>Turnip</b>: driver de código aberto para GPUs Snapdragon (Adreno), compilado para a
+            geração indicada na lista (6xx, 7xx, 8xx, 830/840). Foi com ele que Valheim foi posto
+            para rodar.</li>
+        <li><b>Sistema (driver do telefone)</b>: o driver do próprio telefone. É a única opção em
+            telefones sem GPU Adreno, e Valheim não foi testado neles.</li>
+        <li><b>Driver próprio (importado)</b>: o seu. Importe no menu lateral, <b>Driver Vulkan
+            próprio</b> (um arquivo .so ou um .zip do AdrenoTools), e ele fica disponível para todas
+            as instâncias.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="mods">
+    <h2>Mods</h2>
     <p>
-        O mesmo cartão tem o <b>Modo de depuração</b>, que grava um registro mais detalhado, e
-        <b>Variáveis de ambiente</b>. Não mexa neles a menos que a gente peça.
+        Mods de Valheim ainda não são suportados. Eles dependem do <b>BepInEx</b>, que carrega o
+        próprio runtime no jogo, e isso não está montado aqui. A tela <b>Instalar mod / DLC</b> é
+        herança do passado do launcher com RimWorld e não serve para Valheim.
     </p>
 </section>
 
+<hr>
+
 <section id="native-mono">
     <h2>Mono ARM64 nativo</h2>
+    <p>Nas configurações da instância, cartão <b>Avançado</b>. Ligado por padrão.</p>
     <p>
-        Nas configurações da instância, cartão <b>Avançado</b>. Apenas RimWorld 1.6, ativado por
-        padrão.
+        O jogo é uma build Linux x86_64, então o ValDroid o emula. Com esta opção, o código do
+        próprio jogo (tudo que é escrito em C#) roda <b>direto no processador do telefone</b> e só o
+        motor Unity é emulado.
     </p>
     <p>
-        Normalmente o RimDroid emula o RimWorld inteiro, incluindo o código do próprio jogo e dos
-        mods. Com esta opção o código do jogo e dos mods roda direto no processador do celular, e só
-        o motor Unity é emulado. A simulação, o carregamento e as velocidades altas do jogo ficam
-        bem mais rápidos. Para os nossos testers o carregamento ficou cerca de duas vezes mais
-        rápido, e a velocidade 3 finalmente ficou mais rápida que a 2. Quanto maior a colônia e a
-        lista de mods, maior a diferença.
+        Se algo der errado, desligue: o jogo volta à emulação completa. Seus saves não são afetados,
+        eles carregam nos dois modos.
+    </p>
+</section>
+
+<section id="compat-mode">
+    <h2>Configurações avançadas</h2>
+    <p>
+        Nas configurações da instância, cartão <b>Avançado</b> (toque no título para abrir).
     </p>
     <ul>
-        <li>Se o jogo fechar duas vezes seguidas ao iniciar, o launcher vai sugerir desativar o
-            Mono nativo.</li>
-        <li>Se algo der errado, é só desativar a opção: o jogo volta ao modo anterior. Seus saves
-            não mudam e carregam nos dois modos.</li>
+        <li><b>Modo de compatibilidade</b>: ligue se o jogo não iniciar — tela preta ou travado no
+            carregamento. Com ele o jogo fica um pouco mais lento, então deixe desligado quando não
+            precisar.</li>
+        <li><b>Modo de depuração</b> escreve um log mais detalhado.</li>
+        <li><b>Variáveis de ambiente</b> é um campo para ajustes de inicialização que podemos pedir
+            para testar. Deixe vazio a não ser que esteja testando algo.</li>
     </ul>
 </section>
 
 <hr>
 
 <section id="performance">
-    <h2>Como tirar o máximo de desempenho</h2>
+    <h2>Tirando o máximo de desempenho</h2>
     <p>
-        O RimWorld exige muito do processador, e a emulação soma a isso. Um começo novo com três
-        colonos é leve; uma colônia grande e antiga, com muitos colonos e mods, é bem mais pesada, e
-        até um celular forte sente.
+        O motor Unity inteiro é emulado, então o limite é o <b>processador</b>, não a GPU. Tudo que
+        acrescenta objetos ou passadas a um quadro — sombras, tesselação, distância de desenho,
+        vegetação — custa muito mais do que resolução ou tamanho de textura.
     </p>
     <ul>
-        <li>Ative o <b>modo de jogo</b> do seu celular e escolha o perfil de maior desempenho:
-            Samsung Game Booster, Xiaomi/POCO Game Turbo, Realme/OPPO/OnePlus Game Space, vivo/iQOO
-            Ultra Game Mode, Infinix/Tecno Game Mode.</li>
-        <li>Instale um <b>mod de desempenho</b> como o RocketMan. O limite é o processador, e esses
-            mods cortam direto o custo da simulação.</li>
-        <li>Defina um <b>Limite de FPS</b> de 60 ou 30 e, em celulares mais fracos, tente
-            <b>Compressão de texturas: Baixa</b> e uma <b>Resolução de renderização</b> menor.</li>
-        <li>Em celulares mais fracos, mantenha a colônia e a lista de mods modestas, e feche os apps
-            em segundo plano.</li>
-        <li>Em celulares mais fracos, os botões de velocidade do jogo podem nem mudar a taxa de
-            quadros. É o esperado: o limite é a simulação, não os gráficos.</li>
+        <li>Confira primeiro o <b>perfil de desempenho</b> do telefone. Na Samsung, um perfil como
+            <i>Leve</i> nas configurações de bateria limita o processador e a GPU a cerca de metade,
+            e só isso já pode custar metade dos quadros. Coloque em <b>Padrão</b> e ligue o modo
+            jogo do telefone para o ValDroid: Samsung Game Booster, Xiaomi/POCO Game Turbo,
+            Realme/OPPO/OnePlus Game Space, vivo/iQOO Ultra Game Mode, Infinix/Tecno Game
+            Mode.</li>
+        <li>Use a predefinição <b>Gráficos</b> (cartão Vídeo). Se preferir ajustar no jogo, a
+            primeira coisa a desligar é a <b>tesselação</b>.</li>
+        <li>Baixe a <b>Resolução de renderização</b> — 60–72% é uma boa faixa — e defina um
+            <b>Limite de quadros</b> para a taxa ficar estável em vez de oscilar.</li>
+        <li>O telefone esquenta, e todo telefone se desacelera sozinho quando isso acontece. Um
+            telefone frio pode ir bem mais rápido do que ele mesmo vinte minutos depois; tirar a
+            capa e ficar num ambiente fresco ajuda mais do que parece.</li>
+        <li>Feche apps em segundo plano, principalmente outros jogos e navegadores.</li>
     </ul>
 </section>
 
@@ -381,44 +326,54 @@
 <section id="known-issues">
     <h2>Problemas conhecidos</h2>
 
+    <h3>A lista de resoluções no jogo mostra 0x0</h3>
+    <p>
+        É o esperado. O launcher inicia o jogo no tamanho da própria janela, e esse tamanho não é um
+        dos modos padrão de Valheim. Mude a resolução em <b>Resolução de renderização</b> nas
+        configurações da instância; a lista dentro do jogo não faz nada.
+    </p>
+
+    <h3>Som estalando sob carga</h3>
+    <p>
+        O som pode estalar durante o carregamento ou em cenas pesadas, e melhora depois. Ainda não
+        corrigido.
+    </p>
+
     <h3>Tela preta ao iniciar o jogo de novo</h3>
     <p>
-        Se você sair do jogo enquanto ele ainda está rodando e tocar em <b>▶</b> de novo, a tela
-        pode ficar preta. Em vez disso, volte ao jogo aberto pela tela de apps recentes. Se já
-        estiver preta, feche o RimDroid por completo (deslize-o para fora nos apps recentes) e
-        inicie de novo.
+        Se você sair do jogo enquanto ele ainda roda e tocar <b>▶</b> de novo, a tela pode ficar
+        preta. Volte ao jogo em execução pela tela de apps recentes. Se já estiver preta, feche o
+        ValDroid por completo (deslize nos recentes) e abra de novo.
     </p>
 
-    <h3>Imagem cortada dos dois lados (OPPO e outros celulares com ColorOS)</h3>
+    <h3>Imagem cortada nas laterais (OPPO e outros telefones com ColorOS)</h3>
     <p>
-        A configuração de tela por app <b>Ocultar câmera</b> (Hide camera) encolhe o jogo e corta os
-        dois lados. <b>Solução:</b> desative <b>Ocultar câmera</b> para o RimDroid, mantenha
-        <b>Tela cheia</b> (Full screen) ativada, feche o app por completo e inicie de novo. Os nomes
-        dessas configurações variam de celular para celular; procure “tela cheia” nas configurações
-        do celular.
+        A configuração de tela por app <b>Ocultar câmera</b> encolhe o jogo e corta as laterais.
+        <b>Solução:</b> desligue <b>Ocultar câmera</b> para o ValDroid, mantenha <b>Tela cheia</b>
+        ligado, feche o app por completo e abra de novo. Os nomes dessas opções mudam de telefone
+        para telefone; procure por "tela cheia" nas configurações.
     </p>
 
-    <h3>Artefatos em GPUs Mali antigas</h3>
+    <h3>Telefones sem GPU Adreno</h3>
     <p>
-        Em celulares com GPU Mali antiga, a imagem pode mostrar artefatos que mudam de uma
-        inicialização para outra. Tente o renderizador <b>MobileGlues</b>.
+        Valheim só foi posto para rodar em telefones Snapdragon (Adreno). Em Mali e outras GPUs pode
+        nem iniciar, ou a imagem pode sair errada. Relatos com logs são bem-vindos.
     </p>
 </section>
 
 <hr>
 
 <section id="report">
-    <h2>Como relatar um problema</h2>
+    <h2>Relatar um problema</h2>
     <p>
-        Abra o menu lateral, toque em <b>Relatar um problema</b> e escolha a instância onde o
-        problema aconteceu. O RimDroid anexa os registros dela e os dados do seu celular a uma
-        mensagem para nós: escolha o seu app de e-mail, descreva o problema e toque em
-        <b>Enviar</b>. Relate logo depois que o problema acontecer, enquanto o registro ainda o
-        guarda. <b>Exportar registros (ZIP)</b> salva os mesmos registros como arquivo, por exemplo
-        para anexar a uma issue no GitHub.
+        Abra o menu lateral e toque em <b>Relatar um erro</b>, depois escolha a instância onde o
+        problema aconteceu. O ValDroid anexa os logs, suas configurações gráficas e os dados do
+        telefone a uma mensagem para nós: escolha o app de e-mail, descreva o problema e envie.
+        Relate logo depois que acontecer, enquanto o log ainda tem o registro. <b>Exportar logs
+        (ZIP)</b> salva os mesmos logs como arquivo, por exemplo para anexar a uma issue no GitHub.
     </p>
     <p>
-        Os ícones no topo do menu lateral levam às novas versões no GitHub e ao RimDroid no X e no
+        Os ícones no topo do menu lateral levam às novas versões no GitHub e ao autor no X e no
         Reddit.
     </p>
 </section>

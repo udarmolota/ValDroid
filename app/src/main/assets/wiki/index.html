@@ -49,14 +49,13 @@
             <li><a href="#zip-archive">From a .zip archive</a></li>
         </ol>
     </li>
-    <li><a href="#dlc">DLC</a></li>
-    <li><a href="#mods">Mods</a></li>
-    <li><a href="#renderers">Renderers and drivers</a></li>
     <li><a href="#picture">Picture and frame rate</a></li>
     <li><a href="#controls">Controls</a></li>
-    <li><a href="#saves">Saves and settings</a></li>
-    <li><a href="#compat-mode">Compatibility mode</a></li>
+    <li><a href="#saves">Saves</a></li>
+    <li><a href="#renderers">Graphics drivers</a></li>
+    <li><a href="#mods">Mods</a></li>
     <li><a href="#native-mono">Native ARM64 Mono</a></li>
+    <li><a href="#compat-mode">Advanced settings</a></li>
     <li><a href="#performance">Getting the best performance</a></li>
     <li><a href="#known-issues">Known issues</a></li>
     <li><a href="#report">Reporting a problem</a></li>
@@ -67,26 +66,25 @@
 <section id="quick-start">
     <h2>Quick start</h2>
     <p>
-        RimDroid is a launcher: it runs <b>your own copy</b> of RimWorld on Android.
-        The game itself is not included.
+        ValDroid is a launcher: it runs <b>your own copy</b> of Valheim on Android. The game itself
+        is not included.
     </p>
     <ol>
-        <li>You need to own <b>RimWorld</b> on <b>Steam</b>. RimDroid runs the
-            <b>Linux</b> version of the game, <b>RimWorld 1.5</b> or <b>1.6</b>.</li>
-        <li>Get the game into the app. With Steam, open the side menu and tap
-            <b>Steam Downloads</b>: the game downloads straight into a ready instance. For
-            the other ways, see <a href="#get-game">Getting the game</a>.</li>
-        <li>An <b>instance</b> is one installed copy of the game. Each one has its own card on the
-            main screen and its own settings behind the <b>gear icon</b>. You can keep several, for
-            example 1.5 and 1.6 side by side.</li>
-        <li>When an instance is created, RimDroid detects your phone's GPU and picks a matching
+        <li>You need to own <b>Valheim</b> on <b>Steam</b>. ValDroid runs the <b>Linux</b> build of
+            the game.</li>
+        <li>Get the game into the app: open the side menu and tap <b>Download game (Steam)</b>. The
+            game downloads straight into a ready instance. The other way is
+            <a href="#zip-archive">a .zip archive</a> prepared on a PC.</li>
+        <li>An <b>instance</b> is one installed copy of the game. It has its own card on the main
+            screen and its own settings behind the <b>gear icon</b>.</li>
+        <li>When an instance is created, ValDroid detects your phone's GPU and picks a matching
             graphics driver by itself.</li>
         <li>Tap the <b>▶</b> button on the card. The first launch takes longer while the game
             prepares its files. Do not press Back while it loads.</li>
     </ol>
     <p>
-        You need Android 11 or newer, a 64-bit phone and at least <b>6 GB of RAM</b> (8 GB or
-        more for comfortable play), plus 5–10 GB of free storage.
+        You need Android 11 or newer, a 64-bit phone with an <b>Adreno</b> (Snapdragon) GPU and at
+        least <b>8 GB of RAM</b>, plus about 6 GB of free storage. Other GPUs are untested.
     </p>
     <p>The <b>?</b> at the top of each screen opens this page at the part about that screen.</p>
     <p>Something went wrong? See <a href="#report">Reporting a problem</a>.</p>
@@ -97,26 +95,24 @@
 <section id="get-game">
     <h2>Getting the game</h2>
     <p>
-        RimDroid needs the <b>Linux version</b> of RimWorld, from a store where you own the game.
-        Pick one of the ways below.
+        ValDroid needs the <b>Linux build</b> of Valheim, from the Steam account that owns the game.
     </p>
 
     <section id="steam-in-app">
         <h3>1. From Steam, in the app</h3>
         <ol>
-            <li>Open the side menu and tap <b>Steam Downloads</b>, tab <b>Game</b>.</li>
-            <li>Choose <b>RimWorld 1.5</b> or <b>RimWorld 1.6</b> and enter a name for the new
-                instance.</li>
+            <li>Open the side menu and tap <b>Download game (Steam)</b>, tab <b>Game</b>.</li>
+            <li>Enter a name for the new instance.</li>
             <li>Sign in with your Steam account. Your login goes to Steam only and is not stored.
                 Approve the sign-in in the Steam Mobile app, or enter the Steam Guard code.</li>
-            <li>Tap <b>Download</b>. The game goes straight into a new instance: no PC and no
-                archives needed.</li>
+            <li>Tap <b>Download</b>. The newest public build goes straight into a new instance:
+                about 4 GB, so use Wi-Fi. You can switch to other apps meanwhile.</li>
             <li>If the download stops, start it again with the <b>same instance name</b> and it
                 continues where it stopped.</li>
         </ol>
         <p>
-            To get an older build instead of the recommended one, enter its <b>Manifest ID</b> in
-            the advanced field (the IDs are listed on SteamDB). Otherwise leave it empty.
+            To get an older build instead of the newest one, enter its <b>Manifest ID</b> in the
+            advanced field (the IDs are listed on SteamDB). Otherwise leave it empty.
         </p>
     </section>
 
@@ -128,116 +124,42 @@
             <b>Install</b>.
         </p>
         <ul>
-            <li>The .zip can hold the RimWorld <b>Linux</b> build, the one with the
-                <code>RimWorldLinux</code> file (a folder around it is fine, RimDroid finds it).</li>
+            <li>The .zip must hold the <b>Linux</b> build of Valheim — the one with the
+                <code>valheim.x86_64</code> file. A folder around it is fine, ValDroid finds it.</li>
+            <li>On a PC you can make that archive with
+                <a href="https://github.com/SteamRE/DepotDownloader" target="_blank">DepotDownloader</a>:
+                <code>DepotDownloader -app 892970 -depot 892971 -os linux</code>, then zip the
+                result.</li>
             <li>Keep the name short: Latin letters and digits, up to 40 characters.</li>
-            <li>Keeping the .zip is not required, but it is handy later to reinstall or to create
-                another instance of the same version.</li>
         </ul>
     </section>
 </section>
 
 <hr>
 
-<section id="dlc">
-    <h2>DLC</h2>
-    <ul>
-        <li><b>From Steam:</b> in <b>Steam Downloads</b>, tab <b>DLC</b>, tick the DLC your account
-            owns and tap <b>Download selected DLC</b>. Each one is saved as a .zip in
-            <b>Download/RimDroid</b>.</li>
-        <li><b>To install a DLC file</b>, open the side menu, tap <b>Install mod / DLC</b>, choose
-            the file and the instance, open the <b>DLC</b> tab and tap <b>Install</b>.</li>
-        <li>A DLC must match the game version of the instance: a DLC for 1.6 goes into a 1.6
-            instance. That is why the install screen always asks you to choose the instance.</li>
-    </ul>
-</section>
-
-<hr>
-
-<section id="mods">
-    <h2>Mods</h2>
-    <ul>
-        <li><b>Steam Downloads</b>, tab <b>Mods</b>, downloads Workshop mods by ID: the number at
-            the end of the Workshop link (<i>…/filedetails/?id=NUMBER</i>). No Steam login needed;
-            several IDs can be separated by spaces. Each mod is saved as a .zip in
-            <b>Download/RimDroid</b>. <b>Download via browser</b> on the same tab opens a
-            third-party site instead.</li>
-        <li>Install them in the side menu, <b>Install mod / DLC</b>, tab <b>MODS</b>. RimDroid finds
-            the mod's real folder (the one with <code>About/About.xml</code>) inside any
-            .zip.</li>
-        <li>Mods that need <b>Harmony</b> work: add the Harmony mod itself, as on a PC.</li>
-        <li>Mod lists of up to about 50 mods have been tested. Bigger lists are untested
-            territory.</li>
-        <li><b>Manage Storage</b> in the ⋮ menu of an instance card opens that instance's folder in
-            your phone's file manager, if you want to add or remove files by hand.</li>
-        <li>If Chinese, Japanese or Korean text does not show, install the
-            <a href="https://www.mediafire.com/file/s4axik3wwdvrtze/RimDroidCJKmod.zip/file" target="_blank">RimDroidCJKmod</a>
-            font mod: add the .zip with <b>Install mod / DLC</b>, tab <b>MODS</b>, then turn it on in
-            the game's Mods menu. It needs no other mods.</li>
-    </ul>
-</section>
-
-<hr>
-
-<section id="renderers">
-    <h2>Renderers and drivers</h2>
-    <p>
-        A renderer translates the game's desktop graphics for Android. Pick it in the instance
-        settings (gear icon), card <b>Video</b>.
-    </p>
-
-    <h3>Zink ZFA (Vulkan)</h3>
-    <p>
-        The default and the recommended one. It draws through your phone's Vulkan driver, chosen
-        right below it.
-    </p>
-
-    <h3>MobileGlues (no Vulkan)</h3>
-    <p>
-        Draws through the phone's OpenGL ES driver instead and needs no Vulkan at all.
-        Experimental. Try it if Zink gives a black screen or a broken picture; it can help on
-        phones without a Snapdragon (Adreno) GPU.
-    </p>
-
-    <h3>Vulkan drivers (for Zink)</h3>
-    <p>
-        When you create an instance, RimDroid picks a driver for your GPU, and
-        <b>Recommended driver (detect GPU)</b> does the same again. If the picture looks wrong or
-        stays black, try another one.
-    </p>
-    <ul>
-        <li><b>System (phone driver)</b>: the phone's own driver. Works on any GPU and is the right
-            choice on phones without a Snapdragon (Adreno) GPU.</li>
-        <li><b>Turnip</b> and <b>Freedreno</b>: open-source drivers for Snapdragon (Adreno) GPUs,
-            each built for the GPU generation named in the list (6xx, 7xx, 8xx, 830/840).</li>
-        <li><b>Turnip Adreno 7XX_new (v26.2)</b>: the first one to try on Adreno 7xx when the
-            screen stays black.</li>
-        <li><b>Turnip Adreno 6xx (legacy)</b>: for older Adreno 6xx GPUs, such as the one in the
-            Snapdragon 685.</li>
-        <li><b>Custom driver (imported)</b>: your own driver. Import it in the side menu,
-            <b>Custom Vulkan driver</b> (a .so file or an AdrenoTools .zip). It is then shared by all
-            instances.</li>
-    </ul>
-</section>
-
-<hr>
-
 <section id="picture">
     <h2>Picture and frame rate</h2>
-    <p>All of these are in the instance settings (gear icon).</p>
+    <p>All of these are in the instance settings (gear icon), card <b>Video</b>.</p>
     <ul>
-        <li><b>Render resolution</b>: a lower resolution gives more FPS on weak GPUs and a bigger
-            interface; fullscreen at the phone's own resolution is the sharpest.
-            <b>Black margins 1280×720</b> is the fastest.</li>
-        <li><b>Texture compression</b> shrinks textures to save memory and gain FPS, and is needed
-            to load several DLC on weaker phones. It mainly affects plants and resources; pawns and
-            animals are never touched. <b>Low</b> is a good balance, <b>Ultra low</b> is a bit
-            faster but plants look blurry.</li>
+        <li><b>Graphics</b> writes a set of in-game graphics settings before the game starts, tuned
+            for emulation: no tessellation, no shadows, no extra draw distance — those cost the most
+            here. <b>Low</b> keeps the effects the GPU handles for free (antialiasing, bloom, sun
+            shafts); <b>Very low</b> drops them too and renders the world at a lower internal
+            resolution. <b>Don't touch</b> leaves whatever you set inside the game.</li>
+        <li><b>Render resolution</b> sets the size of the game window. A lower percentage gives more
+            FPS and a bigger interface; 100% is the sharpest.</li>
+        <li><b>Texture quality</b> shrinks textures to save memory: <b>Low</b> halves the biggest
+            ones, <b>Ultra low</b> quarters them. It saves a few hundred MB of video memory, which
+            matters on phones with less RAM, and costs some sharpness up close.</li>
         <li><b>Show FPS counter</b> puts the frame rate in the top-left corner.</li>
-        <li><b>Frame rate limit</b> (30, 60 or no limit) smooths out swings and leaves more of the
-            processor to the game, which can raise the game speed on weaker phones. Try 60 or 30 if
-            the counter jumps around.</li>
+        <li><b>Frame rate limit</b> (30, 60 or no limit) smooths out swings. A steady 30 often feels
+            better than a frame rate that jumps between 25 and 60.</li>
     </ul>
+    <p>
+        Set the resolution in the <b>launcher</b>, not in the game: the launcher starts Valheim at
+        the size of its window, so the game's own resolution list has no effect (and shows
+        <code>0x0</code>).
+    </p>
 </section>
 
 <hr>
@@ -245,42 +167,34 @@
 <section id="controls">
     <h2>Controls</h2>
 
-    <h3>Touch</h3>
-    <ul>
-        <li><b>Tap</b> for a left click.</li>
-        <li><b>Hold a finger still</b> for a moment for a right click, which gives orders such as
-            "move here". A short vibration confirms it.</li>
-        <li><b>Pinch</b> with two fingers to zoom.</li>
-        <li>Move the camera with the left stick. To drag the map with one finger instead, turn on
-            <b>Drag the map with a finger to pan</b> in the instance settings.</li>
-    </ul>
-
-    <h3>On-screen controls</h3>
-    <ul>
-        <li>The default layout has a stick for the mouse cursor, a stick for the camera, left and
-            right click buttons, <b>Esc</b>, <b>Space</b> (pause), game speeds <b>1</b>–<b>3</b> and
-            the game's hotkeys. <b>V</b> hides and shows the controls; <b>KB</b> opens the phone's
-            keyboard.</li>
-        <li>Change them in the instance settings, <b>Edit on-screen controls</b>: tap an element to
-            select it and drag it to move it. <b>Add</b> creates buttons bound to any key or mouse
-            action; <b>Reset</b> returns to the default layout.</li>
-        <li><b>Export controls layout</b> and <b>Import controls layout</b> in the side menu share
-            a layout as a .json file.</li>
-    </ul>
-
-    <h3>Typing</h3>
+    <h3>On-screen gamepad</h3>
     <p>
-        To type in the game, for example to rename a colonist, tap the text field, then <b>KB</b>:
-        the phone's keyboard opens and what you type goes into the game. Tap <b>KB</b> again to
-        close it. This works on RimWorld 1.6 only, and types Latin letters only.
+        Valheim has a full controller interface, so ValDroid feeds it a virtual gamepad: the
+        on-screen controls are a real pad as far as the game is concerned, with the game's own
+        button hints.
     </p>
-
-    <h3>Gamepad, mouse and keyboard</h3>
     <ul>
-        <li>A physical <b>gamepad</b> works: the right stick moves the cursor, the left stick moves
-            the camera, the triggers click and the bumpers zoom. If buttons are swapped, fix them in
-            the instance settings, <b>Gamepad mapping</b>: tap <b>Start</b> and press the button you
-            want for each action.</li>
+        <li>The default layout is the familiar one: <b>two sticks</b>, a <b>d-pad</b>,
+            <b>A/B/X/Y</b>, <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> and <b>Start</b>, and the stick
+            clicks <b>L</b> and <b>R</b>. <b>V</b> hides and shows the controls, <b>KB</b> opens the
+            phone's keyboard.</li>
+        <li>Edit it in the instance settings, <b>Edit on-screen controls</b>: tap an element to
+            select it, drag to move it, hold it for a moment to open its settings (size, opacity,
+            action, and for a stick its <b>sensitivity</b> — the right stick is at 70% by default,
+            because a thumb on glass overshoots easily).</li>
+        <li><b>Add</b> creates sticks, a d-pad, or buttons bound to a gamepad button, a key or a
+            mouse action. Keyboard and gamepad elements can be mixed in one layout: the game accepts
+            both at the same time.</li>
+        <li><b>Reset</b> offers the two bundled layouts: the <b>gamepad</b> one, and a
+            <b>keyboard and mouse</b> layout (VKBD) with a cursor stick.</li>
+        <li><b>Export controls layout</b> and <b>Import controls layout</b> in the side menu share a
+            layout as a .json file.</li>
+    </ul>
+
+    <h3>Physical gamepad, mouse and keyboard</h3>
+    <ul>
+        <li>A physical <b>gamepad</b> works and feeds the same virtual pad. While one is connected,
+            the on-screen gamepad elements are hidden; keyboard and mouse helper buttons stay.</li>
         <li>A physical <b>mouse and keyboard</b> work too.</li>
         <li>The game always runs in landscape. <b>Mirror the picture (180°)</b> flips it for a
             gamepad or cradle that holds the phone the other way up. It applies from the next
@@ -291,54 +205,86 @@
 <hr>
 
 <section id="saves">
-    <h2>Saves and settings</h2>
+    <h2>Saves</h2>
+    <p>
+        Valheim keeps a world as two files (<code>.fwl</code> and <code>.db</code>) and a character
+        as one (<code>.fch</code>).
+    </p>
     <ul>
         <li><b>Export saves</b> and <b>Import saves</b> in the side menu move an instance's saves
-            out and in as a .zip: for a backup, or to carry them to another instance or
-            phone.</li>
-        <li><b>Export settings</b> and <b>Import settings</b> do the same for the game's settings:
-            options, key bindings, the mod list and mod settings.</li>
-        <li><b>Steam Cloud saves</b>: if you also play RimWorld on a PC through Steam, this brings
-            your cloud saves onto the phone and sends the phone's saves back. The sign-in is
-            approved in the Steam Mobile app, so Steam Guard must be on there. When the same save
-            exists on both sides, you choose which one to keep. Close the game before
-            sending.</li>
+            out and in as a .zip: for a backup, or to carry them to another instance or phone.</li>
+        <li><b>Steam Cloud saves</b>: if you also play Valheim on a PC through Steam, this brings
+            your cloud worlds and characters onto the phone and sends the phone's back. The sign-in
+            is approved in the Steam Mobile app, so Steam Guard must be on there. When the same name
+            exists on both sides, you choose which one to keep. Close the game before sending.</li>
+        <li>Valheim's cloud is <b>per world and per character</b>: on the PC, a save has to be moved
+            to the cloud in the game's own menu. A save that was never moved there is not in the
+            cloud, and the list will look empty.</li>
     </ul>
 </section>
 
 <hr>
 
-<section id="compat-mode">
-    <h2>Compatibility mode</h2>
+<section id="renderers">
+    <h2>Graphics drivers</h2>
     <p>
-        In the instance settings, card <b>Advanced</b> (tap its title to open it). Turn it on if the
-        game will not start: a black screen, or stuck on loading. The game runs a bit slower with
-        it, so leave it off when you do not need it. It is a workaround and may not help on every
-        phone.
+        Valheim draws through <b>Vulkan</b>, and what matters is the Vulkan driver. Pick it in the
+        instance settings (gear icon), card <b>Video</b>.
     </p>
+    <ul>
+        <li>When you create an instance, ValDroid picks a driver for your GPU, and
+            <b>Recommended driver (detect GPU)</b> does the same again. If the picture looks wrong
+            or stays black, try another one.</li>
+        <li><b>Turnip</b>: an open-source driver for Snapdragon (Adreno) GPUs, built for the GPU
+            generation named in the list (6xx, 7xx, 8xx, 830/840). This is the one Valheim was
+            brought up on.</li>
+        <li><b>System (phone driver)</b>: the phone's own driver. It is the only choice on phones
+            without an Adreno GPU, and Valheim on those is untested.</li>
+        <li><b>Custom driver (imported)</b>: your own driver. Import it in the side menu,
+            <b>Custom Vulkan driver</b> (a .so file or an AdrenoTools .zip). It is then shared by
+            all instances.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="mods">
+    <h2>Mods</h2>
     <p>
-        The same card has <b>Debug mode</b>, which writes a more detailed log, and
-        <b>Environment variables</b>. Leave both alone unless we ask you to change them.
+        Valheim mods are not supported yet. They rely on <b>BepInEx</b>, which loads its own runtime
+        into the game, and that is not wired up here. The <b>Install mod / DLC</b> screen is left
+        over from the launcher's RimWorld origins and is not useful for Valheim.
     </p>
 </section>
 
+<hr>
+
 <section id="native-mono">
     <h2>Native ARM64 Mono</h2>
+    <p>In the instance settings, card <b>Advanced</b>. On by default.</p>
     <p>
-        In the instance settings, card <b>Advanced</b>. RimWorld 1.6 only, on by default.
+        The game is a Linux x86_64 build, so ValDroid emulates it. With this switch the game's own
+        code (everything written in C#) runs <b>directly on your phone's processor</b> instead, and
+        only the Unity engine is emulated.
     </p>
     <p>
-        Normally RimDroid emulates all of RimWorld, including the code of the game itself and of its
-        mods. With this switch the game's and the mods' code runs directly on the phone's processor,
-        and only the Unity engine is emulated. Simulation, loading and high game speeds get
-        noticeably faster. For our testers loading got about twice as fast, and speed 3 is finally
-        really faster than speed 2. The bigger the colony and the modlist, the bigger the difference.
+        If something is wrong, turn the switch off: the game goes back to full emulation. Your saves
+        are not affected, they load in both modes.
+    </p>
+</section>
+
+<section id="compat-mode">
+    <h2>Advanced settings</h2>
+    <p>
+        In the instance settings, card <b>Advanced</b> (tap its title to open it).
     </p>
     <ul>
-        <li>If the game crashes twice in a row while starting, the launcher offers to turn native
-            Mono off.</li>
-        <li>If something is wrong, just turn the switch off: the game goes back to the previous
-            mode. Your saves are not affected, they load in both modes.</li>
+        <li><b>Compatibility mode</b>: turn it on if the game will not start — a black screen, or
+            stuck on loading. The game runs a bit slower with it, so leave it off when you do not
+            need it.</li>
+        <li><b>Debug mode</b> writes a more detailed log.</li>
+        <li><b>Environment variables</b> is a field for launch settings we may ask you to try.
+            Leave it empty unless you are testing something.</li>
     </ul>
 </section>
 
@@ -347,22 +293,24 @@
 <section id="performance">
     <h2>Getting the best performance</h2>
     <p>
-        RimWorld is very demanding on the processor, and emulation adds to that. A fresh
-        three-colonist start is light; a large, old colony with many pawns and mods is far heavier,
-        and even a strong phone feels it.
+        The whole Unity engine is emulated, so the <b>processor</b> is the limit, not the GPU.
+        Anything that adds objects or passes to a frame — shadows, tessellation, draw distance,
+        vegetation — costs far more than resolution or texture size.
     </p>
     <ul>
-        <li>Turn on your phone's <b>game booster</b> and set it to its highest-performance profile:
-            Samsung Game Booster, Xiaomi/POCO Game Turbo, Realme/OPPO/OnePlus Game Space, vivo/iQOO
-            Ultra Game Mode, Infinix/Tecno Game Mode.</li>
-        <li>Install a <b>performance mod</b> such as RocketMan. The processor is the limit, and
-            these mods cut the cost of the simulation directly.</li>
-        <li>Set a <b>Frame rate limit</b> of 60 or 30, and on weaker phones try
-            <b>Texture compression: Low</b> and a lower <b>Render resolution</b>.</li>
-        <li>Keep the colony and the mod list modest on weaker phones, and close background
-            apps.</li>
-        <li>On weaker phones the game speed buttons may not change the frame rate at all. That is
-            expected: the simulation, not the graphics, is the limit.</li>
+        <li>Check your phone's <b>performance profile</b> first. On Samsung, a profile such as
+            <i>Light</i> in Battery settings caps the processor and the GPU to roughly half their
+            speed, and that alone can halve the frame rate. Set it to <b>Standard</b>, and turn on
+            the phone's game booster for ValDroid: Samsung Game Booster, Xiaomi/POCO Game Turbo,
+            Realme/OPPO/OnePlus Game Space, vivo/iQOO Ultra Game Mode, Infinix/Tecno Game Mode.</li>
+        <li>Use the <b>Graphics</b> preset (card Video). If you prefer to set things in the game
+            yourself, the one thing to turn off first is <b>tessellation</b>.</li>
+        <li>Lower the <b>Render resolution</b> — 60–72% is a good range — and set a <b>Frame rate
+            limit</b> so the rate stays steady instead of swinging.</li>
+        <li>The phone heats up, and every phone slows itself down when it does. A cool phone can be
+            noticeably faster than the same phone twenty minutes later; a case off and a cool room
+            help more than they sound like they would.</li>
+        <li>Close background apps, especially other games and browsers.</li>
     </ul>
 </section>
 
@@ -371,26 +319,38 @@
 <section id="known-issues">
     <h2>Known issues</h2>
 
+    <h3>The resolution list in the game shows 0x0</h3>
+    <p>
+        Expected. The launcher starts the game at the size of its own window, and that size is not
+        one of Valheim's standard modes. Change the resolution with <b>Render resolution</b> in the
+        instance settings instead; the list inside the game does nothing.
+    </p>
+
+    <h3>Crackling sound under load</h3>
+    <p>
+        Sound can crackle while the game is loading or during heavy scenes. It settles down once the
+        scene is loaded. Not fixed yet.
+    </p>
+
     <h3>Black screen after starting the game again</h3>
     <p>
-        If you leave the game while it is still running and then tap <b>▶</b> again, the screen
-        can stay black. Return to the running game from the recent-apps screen instead. If it is
-        already black, close RimDroid completely (swipe it away in recent apps) and launch
-        again.
+        If you leave the game while it is still running and then tap <b>▶</b> again, the screen can
+        stay black. Return to the running game from the recent-apps screen instead. If it is already
+        black, close ValDroid completely (swipe it away in recent apps) and launch again.
     </p>
 
     <h3>Picture cut off at both sides (OPPO and other ColorOS phones)</h3>
     <p>
         The per-app display setting <b>Hide camera</b> shrinks the game and cuts off both sides.
-        <b>Fix:</b> turn <b>Hide camera</b> off for RimDroid, keep <b>Full screen</b> on, close the
-        app completely and launch again. The names of these settings vary between phones; search
-        the phone's settings for "full screen".
+        <b>Fix:</b> turn <b>Hide camera</b> off for ValDroid, keep <b>Full screen</b> on, close the
+        app completely and launch again. The names of these settings vary between phones; search the
+        phone's settings for "full screen".
     </p>
 
-    <h3>Artifacts on older Mali GPUs</h3>
+    <h3>Phones without an Adreno GPU</h3>
     <p>
-        On phones with an older Mali GPU the picture may show artifacts that change from launch to
-        launch. Try the <b>MobileGlues</b> renderer.
+        Valheim has only been brought up on Snapdragon (Adreno) phones. On Mali and other GPUs it
+        may not start at all, or the picture may be wrong. Reports with logs are welcome.
     </p>
 </section>
 
@@ -400,13 +360,13 @@
     <h2>Reporting a problem</h2>
     <p>
         Open the side menu and tap <b>Report a bug</b>, then choose the instance where the problem
-        happened. RimDroid attaches its logs and your phone's details to a message to us: pick your
-        email app, describe the problem and tap <b>Send</b>. Report right after the problem
-        happens, while the log still holds it. <b>Export logs (ZIP)</b> saves the same logs as a
-        file, for example to attach to a GitHub issue.
+        happened. ValDroid attaches its logs, your graphics settings and your phone's details to a
+        message to us: pick your email app, describe the problem and tap <b>Send</b>. Report right
+        after the problem happens, while the log still holds it. <b>Export logs (ZIP)</b> saves the
+        same logs as a file, for example to attach to a GitHub issue.
     </p>
     <p>
-        The icons at the top of the side menu lead to new versions on GitHub and to RimDroid on X
+        The icons at the top of the side menu lead to new versions on GitHub and to the author's X
         and Reddit.
     </p>
 </section>
