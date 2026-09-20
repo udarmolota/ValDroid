@@ -1608,6 +1608,32 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     int nh = g_rimdroid_surface.height > 0 ? g_rimdroid_surface.height : 1080;
     snprintf(rd_w_str, sizeof(rd_w_str), "%d", nw);
     snprintf(rd_h_str, sizeof(rd_h_str), "%d", nh);
+    // ValDroid: extra Unity switches from the launcher's "Extra env" field, so they can be tried on a
+    // release build without a rebuild. This is the ONLY place the game's command line is built, so
+    // anything added in Java elsewhere would never reach the game.
+    //   VALDROID_JOB_WORKERS=3           -> -job-worker-count 3
+    //   VALDROID_GAME_ARGS=a,b,c         -> a b c   (comma-separated: the env field splits on spaces)
+    static char rd_workers[16];
+    const char* rd_extra_args[32];
+    int rd_extra_n = 0;
+    const char* workers = getenv("VALDROID_JOB_WORKERS");
+    if (workers && workers[0] >= '0' && workers[0] <= '9') {
+        snprintf(rd_workers, sizeof(rd_workers), "%s", workers);
+        rd_extra_args[rd_extra_n++] = "-job-worker-count";
+        rd_extra_args[rd_extra_n++] = rd_workers;
+    }
+    static char rd_args_buf[512];
+    const char* game_args = getenv("VALDROID_GAME_ARGS");
+    if (game_args && game_args[0]) {
+        snprintf(rd_args_buf, sizeof(rd_args_buf), "%s", game_args);
+        char* tok = strtok(rd_args_buf, ",");
+        while (tok && rd_extra_n < (int)(sizeof(rd_extra_args) / sizeof(rd_extra_args[0]))) {
+            while (*tok == ' ') ++tok;                       // tolerate "a, b"
+            if (*tok) rd_extra_args[rd_extra_n++] = tok;
+            tok = strtok(NULL, ",");
+        }
+    }
+
     const char* extra_argv[] = {
         "-screen-fullscreen", "0",
         "-screen-width",  rd_w_str,
@@ -1615,13 +1641,18 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     };
     const int extra_n = (int)(sizeof(extra_argv) / sizeof(extra_argv[0]));
 
-    const char** full_argv = malloc((argc + extra_n + 1) * sizeof(char*));
-    full_argv[0] = binary_path;
-    for (int i = 0; i < argc; i++) full_argv[i + 1] = argv[i];
-    for (int i = 0; i < extra_n; i++) full_argv[argc + 1 + i] = extra_argv[i];
+    const int total = argc + extra_n + rd_extra_n;
+    const char** full_argv = malloc((total + 1) * sizeof(char*));
+    int n = 0;
+    full_argv[n++] = binary_path;
+    for (int i = 0; i < argc; i++) full_argv[n++] = argv[i];
+    for (int i = 0; i < extra_n; i++) full_argv[n++] = extra_argv[i];
+    for (int i = 0; i < rd_extra_n; i++) full_argv[n++] = rd_extra_args[i];
 
-    LOGI("Executing: %s (+ -screen-fullscreen 0 -screen-width 2340 -screen-height 1080)", binary_path);
-    run_elf_file(binary_path, argc + extra_n + 1, full_argv);
+    LOGI("Executing: %s -screen-fullscreen 0 -screen-width %s -screen-height %s (+%d passed, +%d extra)",
+         binary_path, rd_w_str, rd_h_str, argc, rd_extra_n);
+    for (int i = 0; i < rd_extra_n; i++) LOGI("  extra arg: %s", rd_extra_args[i]);
+    run_elf_file(binary_path, n, full_argv);
     free(full_argv);
 }
 

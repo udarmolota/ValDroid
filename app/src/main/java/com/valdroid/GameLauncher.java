@@ -950,15 +950,16 @@ public class GameLauncher {
             // load no frame ever completes/presents and Unity's 2MB device-memory pool chunks
             // are never recycled → "Vulkan - Out of memory" at ~3GB. The gfx thread presents
             // between load steps like on desktop. 1.5 (SDL/GL path) keeps gfx-direct.
-            boolean rdX11 = new java.io.File(gameInstance.getGamePath(), "rd_x11").exists();
-            // NOTE: the RIMDROID_NO_GFX_DIRECT switch does NOT belong here. This exec path is not the
-            // one 1.5 actually launches through — the args come from GameInstance.getArgs(), which is
-            // where the flag is really decided (and where the switch now lives). Putting it here once
-            // produced a build where the env var did nothing at all.
+            // Unity arguments: this exec path is the ONLY one in use, and the native side builds the
+            // command line (screen size from the real surface, plus VALDROID_GAME_ARGS /
+            // VALDROID_JOB_WORKERS from the Extra env field). RimWorld's -force-gfx-direct is NOT
+            // inherited: Valheim renders on its own thread, and forcing the render onto the main
+            // thread only makes the emulated main thread carry more. Put it in the Extra env field
+            // (VALDROID_GAME_ARGS=-force-gfx-direct) to measure it.
             int code = execStandaloneGame(
                     gameInstance.getGamePath(),
                     gameInstance.getNativeLibraryPath(),
-                    rdX11 ? null : "-force-gfx-direct");
+                    null);
             postLog("Standalone exec exited, code=" + code);
             Log.i(TAG, "execStandaloneGame returned code=" + code);
         } else {
