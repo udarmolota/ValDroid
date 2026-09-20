@@ -22,7 +22,7 @@
     <string name="reverse_landscape_label">Зеркальная ориентация (180°)</string>
     <string name="nav_cloud_saves">Сейвы из Steam Cloud</string>
     <string name="cloud_saves_title">Сейвы из Steam Cloud</string>
-    <string name="cloud_saves_hint">Если ты играешь в RimWorld ещё и на ПК через Steam, твои сейвы синхронизируются в Steam Cloud — здесь их можно забрать на телефон.\n\nВход подтверждается через приложение Steam Mobile: в него нужно хотя бы раз войти и включить в нём Steam Guard. После нажатия кнопки Steam пришлёт туда запрос на подтверждение. Пароль уходит напрямую в Steam и здесь нигде не сохраняется.</string>
+    <string name="cloud_saves_hint">Если ты играешь в Valheim ещё и на ПК через Steam, твои сейвы синхронизируются в Steam Cloud — здесь их можно забрать на телефон.\n\nВход подтверждается через приложение Steam Mobile: в него нужно хотя бы раз войти и включить в нём Steam Guard. После нажатия кнопки Steam пришлёт туда запрос на подтверждение. Пароль уходит напрямую в Steam и здесь нигде не сохраняется.</string>
     <string name="cloud_saves_user">Логин Steam</string>
     <string name="cloud_saves_pass">Пароль Steam</string>
     <string name="cloud_saves_instance">Скопировать сейвы в</string>
@@ -163,9 +163,9 @@
     <string name="install_content_go">Установить</string>
 
     <!-- Экран загрузки -->
-    <string name="download_game_title">Загрузка RimWorld из Steam</string>
+    <string name="download_game_title">Загрузка Valheim из Steam</string>
     <string name="download_version_note">Загружает Linux-сборку прямо в новый инстанс — без Termux и без ПК.</string>
-    <string name="download_instance_hint">Имя инстанса (например, RimWorld 1.5)</string>
+    <string name="download_instance_hint">Имя инстанса (например, Valheim)</string>
     <string name="download_version_label">Версия игры</string>
     <string name="download_version_15">RimWorld 1.5</string>
     <string name="download_version_16">RimWorld 1.6</string>

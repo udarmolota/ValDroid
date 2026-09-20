@@ -23,7 +23,7 @@
     <string name="reverse_landscape_label">Mirror the picture (180°)</string>
     <string name="nav_cloud_saves">Steam Cloud saves</string>
     <string name="cloud_saves_title">Steam Cloud saves</string>
-    <string name="cloud_saves_hint">If you also play RimWorld on a PC through Steam, your saves are synced to Steam Cloud — this pulls them onto the phone.\n\nSigning in is confirmed through the Steam Mobile app: you must have signed into it at least once and turned Steam Guard on there. When you tap the button, Steam sends an approval request to that app. The password goes straight to Steam and is never stored here.</string>
+    <string name="cloud_saves_hint">If you also play Valheim on a PC through Steam, your saves are synced to Steam Cloud — this pulls them onto the phone.\n\nSigning in is confirmed through the Steam Mobile app: you must have signed into it at least once and turned Steam Guard on there. When you tap the button, Steam sends an approval request to that app. The password goes straight to Steam and is never stored here.</string>
     <string name="cloud_saves_user">Steam username</string>
     <string name="cloud_saves_pass">Steam password</string>
     <string name="cloud_saves_instance">Copy the saves into</string>
@@ -184,9 +184,9 @@ In the cloud: %2$s
     <string name="install_content_go">Install</string>
 
     <!-- Download screen -->
-    <string name="download_game_title">Download RimWorld from Steam</string>
+    <string name="download_game_title">Download Valheim from Steam</string>
     <string name="download_version_note">Downloads the Linux build straight into a new instance — no Termux, no PC.</string>
-    <string name="download_instance_hint">Instance name (e.g. RimWorld 1.5)</string>
+    <string name="download_instance_hint">Instance name (e.g. Valheim)</string>
     <string name="download_version_label">Game version</string>
     <string name="download_version_15">RimWorld 1.5</string>
     <string name="download_version_16">RimWorld 1.6</string>
@@ -271,7 +271,7 @@ In the cloud: %2$s
     <string name="env_section_header">Environment variables</string>
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
-    <string name="steam_dl_label">Steam download spike (RimWorld)</string>
+    <string name="steam_dl_label">Steam download spike (Valheim)</string>
     <string name="pick_zip">Pick ZIP file</string>
     <string name="install">Install</string>
     <string name="installing">Installing…</string>

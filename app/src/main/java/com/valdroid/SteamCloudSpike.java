@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  *
  * This spike answers the ONE open design question that gates the real feature: HOW does
  * RimWorld lay its files out in the cloud — what path prefixes/roots ({@code pathPrefixes}),
- * which files (Saves/*.rws? Config? ModsConfig.xml?), what sizes and timestamps. It logs the
+ * which files (worlds/*.fwl + *.db, characters/*.fch), what sizes and timestamps. It logs the
  * complete file list and touches NOTHING: no downloads, no uploads, no instance writes.
  *
  * Auth = the proven credentials + Steam-Mobile-approval flow copied from
@@ -54,8 +54,8 @@ public class SteamCloudSpike implements Runnable, Cancellable {
 
     /** One cloud file, in plain terms the UI can render without touching JavaSteam types. */
     public static final class CloudFile {
-        public final String filename;      // e.g. "Autosave-1.rws" (no path prefix)
-        public final long rawSize;         // bytes of the real .rws
+        public final String filename;      // e.g. "Vikingworld.fwl" (no path prefix)
+        public final long rawSize;         // bytes of the real save file
         public final long timestampMs;     // when the cloud copy was written
         CloudFile(String filename, long rawSize, long timestampMs) {
             this.filename = filename; this.rawSize = rawSize; this.timestampMs = timestampMs;
@@ -332,7 +332,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                             f.getTimestamp() == null ? 0L : f.getTimestamp().getTime()));
                     cloudSha.put(f.getFilename(), f.getShaFile());
                 }
-                uploadAll(cloud, prefixes.isEmpty() ? DEFAULT_CLOUD_PREFIX : prefixes.get(0),
+                uploadAll(cloud, prefixes,
                         inCloud, cloudSha);
                 return;
             }
@@ -359,7 +359,9 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                 // Already have this exact file? The changelist carries the cloud's SHA-1, so we can
                 // tell before spending any bandwidth — and it keeps the "same name" dialog for real
                 // differences instead of asking about a file that is identical.
-                if (compareDir != null && sameContent(new File(compareDir, f.getFilename()), f.getShaFile())) {
+                if (compareDir != null && sameContent(
+                        new File(new File(compareDir, localDirFor(f.getFilename())), f.getFilename()),
+                        f.getShaFile())) {
                     progress("Unchanged, skipping: " + f.getFilename());
                     same++;
                     continue;
@@ -394,10 +396,44 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         }
     }
 
-    /** Where RimWorld's saves live in the cloud when the account has never synced from a PC yet.
-     *  (Observed prefix on a real account: this exact string.) */
-    private static final String DEFAULT_CLOUD_PREFIX =
-            "%WinAppDataLocalLow%Ludeon Studios/RimWorld by Ludeon Studios/Saves/";
+    /**
+     * Valheim's save layout. Worlds are a pair of files ({@code .fwl} meta + {@code .db} data) and a
+     * character is one {@code .fch}; the game keeps them in {@code worlds_local/} and
+     * {@code characters_local/} and their Steam Cloud copies under {@code worlds/} and
+     * {@code characters/}. Backups ({@code .old}, {@code .db2}/{@code .fwl2}) stay on the phone.
+     */
+    public static final String WORLDS_DIR = "worlds_local", CHARACTERS_DIR = "characters_local";
+
+    /** True for a file Valheim itself would load (not a backup). */
+    public static boolean isSaveFile(String name) {
+        return name.endsWith(".fwl") || name.endsWith(".db") || name.endsWith(".fch");
+    }
+
+    /** Which of the two local folders a save belongs in. */
+    public static String localDirFor(String name) {
+        return name.endsWith(".fch") ? CHARACTERS_DIR : WORLDS_DIR;
+    }
+
+    /** Cloud prefixes when the account has never synced this game from a PC yet. */
+    private static final String DEFAULT_WORLDS_PREFIX = "%WinAppDataLocalLow%IronGate/Valheim/worlds/";
+    private static final String DEFAULT_CHARACTERS_PREFIX = "%WinAppDataLocalLow%IronGate/Valheim/characters/";
+
+    /**
+     * The cloud folder a file goes to: whichever prefix Steam itself reported for this app that
+     * names the matching folder, else our default. Steam's list is authoritative — it is how the PC
+     * copy is laid out — so we only guess for an empty cloud.
+     */
+    private static String cloudPrefixFor(String name, java.util.List<String> prefixes) {
+        boolean character = name.endsWith(".fch");
+        for (String p : prefixes) {
+            String low = p.toLowerCase(java.util.Locale.ROOT);
+            boolean isCharacters = low.contains("characters");
+            boolean isWorlds = low.contains("worlds");
+            if (character && isCharacters && !isWorlds) return p;
+            if (!character && isWorlds && !isCharacters) return p;
+        }
+        return character ? DEFAULT_CHARACTERS_PREFIX : DEFAULT_WORLDS_PREFIX;
+    }
 
     /**
      * Push the selected local saves up to the cloud.
@@ -414,15 +450,18 @@ public class SteamCloudSpike implements Runnable, Cancellable {
      * Uploading REPLACES the cloud file of the same name, i.e. what the PC will next pick up, so the
      * log states for every file whether it creates or replaces.
      */
-    private void uploadAll(SteamCloud cloud, String cloudPrefix,
+    private void uploadAll(SteamCloud cloud, java.util.List<String> prefixes,
                            java.util.Map<String, CloudFile> alreadyInCloud,
                            java.util.Map<String, byte[]> cloudSha) {
         CloudSyncState state = CloudSyncState.load(instanceName);
         File saveDir = new File(AppStorage.requireSingleton().getInstanceDir(instanceName),
-                "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
+                "unity3d/IronGate/Valheim");
+        java.util.List<File> local = new java.util.ArrayList<>();
+        for (String sub : new String[]{ WORLDS_DIR, CHARACTERS_DIR })
+            for (File f : orEmpty(new File(saveDir, sub).listFiles((d, n) -> isSaveFile(n)))) local.add(f);
         java.util.List<File> picked = new java.util.ArrayList<>();
         int unchanged = 0;
-        for (File f : orEmpty(saveDir.listFiles((d, n) -> n.endsWith(".rws")))) {
+        for (File f : local) {
             // Identical to what's already up there? Sending it again would burn quota and bandwidth
             // and move the cloud timestamp for nothing — and would make us ask about "replacing" a
             // file with itself, e.g. right after pulling.
@@ -434,11 +473,11 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         // treating "not in this folder" as "deleted" would let a sync from an instance holding two
         // saves wipe every other colony out of the cloud, and off the PC on its next sync.
         java.util.Set<String> localNames = new java.util.HashSet<>();
-        for (File f : orEmpty(saveDir.listFiles((d, n) -> n.endsWith(".rws")))) localNames.add(f.getName());
+        for (File f : local) localNames.add(f.getName());
         java.util.List<String> toDelete = new java.util.ArrayList<>();
         for (String known : state.knownNames())
             if (!localNames.contains(known) && alreadyInCloud.containsKey(known))
-                toDelete.add(cloudPrefix + known);
+                toDelete.add(cloudPrefixFor(known, prefixes) + known);
 
         if (picked.isEmpty() && toDelete.isEmpty()) {
             enumerationCompleted = true;
@@ -487,7 +526,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         int ok = 0, failed = 0;
         try {
             java.util.List<String> names = new java.util.ArrayList<>();
-            for (File f : picked) names.add(cloudPrefix + f.getName());
+            for (File f : picked) names.add(cloudPrefixFor(f.getName(), prefixes) + f.getName());
             progress("Opening upload batch for " + picked.size() + " file(s)…");
             batchId = cloud.beginAppUploadBatch(
                             appId, "ValDroid", names, toDelete,
@@ -504,7 +543,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                     byte[] raw = readFile(f);
                     byte[] zip = zipSingleEntry(raw);
                     byte[] sha = java.security.MessageDigest.getInstance("SHA-1").digest(raw);
-                    String cloudPath = cloudPrefix + f.getName();
+                    String cloudPath = cloudPrefixFor(f.getName(), prefixes) + f.getName();
                     progress((alreadyInCloud.containsKey(f.getName()) ? "Replacing " : "Creating ")
                             + f.getName() + " (" + zip.length + " B zipped / " + raw.length + " B raw)…");
 

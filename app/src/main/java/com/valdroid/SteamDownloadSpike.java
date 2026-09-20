@@ -34,6 +34,7 @@ import in.dragonbra.javasteam.steam.steamclient.callbacks.DisconnectedCallback;
 import in.dragonbra.javasteam.util.log.DefaultLogListener;
 import in.dragonbra.javasteam.util.log.LogManager;
 
+import com.valdroid.game.GameDescriptor;
 import com.valdroid.game.GameInstanceManager;
 
 import java.io.File;
@@ -72,37 +73,9 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
 
     private static final String TAG = "ValDroid/SteamDL";
 
-    /** RimWorld on Steam, mirroring `DepotDownloader -app 294100 -depot 294103 -manifest …`. */
-    public static final int RIMWORLD_APP_ID = 294100;
-    private static final int RIMWORLD_LINUX_DEPOT = 294103;
-    // ValDroid currently targets RimWorld 1.5 ONLY. The Steam "public" branch is now 1.6, so we do
-    // NOT auto-resolve "latest" (that would pull 1.6). Default = the LAST stable (non-unstable) 1.5
-    // manifest for depot 294103 (newest 1.5 build, all bugfixes). 1.5 is frozen now that 1.6 shipped,
-    // so this stays "latest stable 1.5". Advanced users can override with a specific manifest id
-    // (older public 1.5 builds, newest→oldest, are listed in memory/in_app_game_downloader.md).
-    private static final long RIMWORLD_1_5_MANIFEST = 2197714010033731403L;
-
-    /** Target game version. 1.5 pins the frozen manifest (Steam "public" is now 1.6, so "latest"
-     *  would silently pull 1.6). 1.6 uses "latest" = the current public branch = 1.6, so no manifest
-     *  id needs hard-coding — an empty manifest list resolves to the newest build. */
-    public enum Version { V1_5, V1_6 }
-
-    /**
-     * Pin DLC to the last 1.5 build too — otherwise DepotDownloader pulls "latest" (= 1.6), which is
-     * a version mismatch with the 1.5 base game. Keyed by the DLC's Linux DEPOT id (resolved from base
-     * app 294100; it's printed in the debug log as the "DLC depot map="). Fill each from SteamDB:
-     * app 294100 → Depots → the DLC's Linux depot → its last 1.5 manifest (newest manifest dated just
-     * before the 1.6 switch). Any depot NOT listed here falls back to latest. RimWorld DLC app ids for
-     * reference: Royalty 1149640, Ideology 1392840, Biotech 1826140, Anomaly 2380740.
-     */
-    private static final java.util.Map<Integer, Long> DLC_DEPOT_1_5_MANIFEST = new java.util.HashMap<>();
-    static {
-        // Linux depot (under base app 294100) → last 1.5 manifest. Provided by the maintainer from SteamDB.
-        DLC_DEPOT_1_5_MANIFEST.put(1149643, 7489971535168711930L);   // Royalty  (app 1149640)
-        DLC_DEPOT_1_5_MANIFEST.put(294108,  8829858508882856102L);   // Ideology (app 1392840)
-        DLC_DEPOT_1_5_MANIFEST.put(367686,  8944803661678388929L);   // Biotech  (app 1826140)
-        DLC_DEPOT_1_5_MANIFEST.put(294112,  6055297988647927242L);   // Anomaly  (app 2380740)
-    }
+    /** Valheim on Steam: `DepotDownloader -app 892970 -depot 892971`, newest public build. */
+    public static final int APP_ID = 892970;
+    private static final int LINUX_DEPOT = 892971;
 
     private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
     /** Re-tries of the INITIAL sign-in if the CM connection drops mid-approval (Steam-Mobile excursion). */
@@ -120,13 +93,6 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         void onDone(String message);
     }
 
-    /** A downloadable DLC: its own Steam app id + a display/file name. */
-    public static final class Dlc {
-        public final int appId;
-        public final String name;
-        public Dlc(int appId, String name) { this.appId = appId; this.name = name; }
-    }
-
     // Concurrency caps for DepotDownloader (library defaults are 8/8). JavaSteam's VZipUtil keeps an
     // 8 MB decompression buffer in a ThreadLocal, which lives as long as the pooled thread does — so
     // every additional worker thread permanently costs 8 MB of Java heap. On budget phones (256 MB
@@ -141,8 +107,6 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private final String installDir;      // GAME mode: ABSOLUTE path = AppStorage.getInstanceDir(name)
     private final boolean manifestOnly;
     private final long manifestId;        // 0 = default to the recommended 1.5 build; >0 = pin this build
-    private final Version version;        // which RimWorld version to fetch (base game + DLC pinning)
-    private final List<Dlc> dlcs;         // DLC mode (non-null) → download these into /Download/ValDroid as zips
     private final List<Long> workshopIds; // MODS mode (non-null) → download these Workshop items (logged-in)
     private final Listener listener;
 
@@ -166,43 +130,32 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private int downloadAttempts;
     private int authAttempts;                      // initial-sign-in attempts (drops during approval)
 
-    /** GAME mode: download RimWorld into instances/&lt;name&gt; and make it launchable. */
+    /** GAME mode: download Valheim into instances/&lt;name&gt; and make it launchable. */
     public SteamDownloadSpike(String username, String password, String instanceName,
-                              boolean manifestOnly, long manifestId, Version version, Listener listener) {
+                              boolean manifestOnly, long manifestId, Listener listener) {
         this.username = username;
         this.password = password;
         this.instanceName = instanceName;
-        // Download straight into the instance's game dir; once RimWorldLinux lands there,
+        // Download straight into the instance's game dir; once the game binary lands there,
         // GameInstance.isInstalled() is true and it becomes launchable.
         this.installDir = AppStorage.requireSingleton().getInstanceDir(instanceName).getAbsolutePath();
         this.manifestOnly = manifestOnly;
         this.manifestId = manifestId;
-        this.version = version != null ? version : Version.V1_5;
-        this.dlcs = null;
         this.workshopIds = null;
         this.listener = listener;
     }
 
-    // DLC + MODS share one private ctor (separate public 4-arg ctors would clash on erasure:
-    // both List<Dlc> and List<Long> erase to List). Use the factories below.
+    /** MODS mode ctor. */
     private SteamDownloadSpike(String username, String password,
-                               List<Dlc> dlcs, List<Long> workshopIds, Version version, Listener listener) {
+                               List<Long> workshopIds, Listener listener) {
         this.username = username;
         this.password = password;
-        this.dlcs = dlcs;
         this.workshopIds = workshopIds;
         this.listener = listener;
         this.instanceName = null;
         this.installDir = null;
         this.manifestOnly = false;
         this.manifestId = 0L;
-        this.version = version != null ? version : Version.V1_5;
-    }
-
-    /** DLC mode: download each owned DLC and pack it into a zip under /Download/ValDroid. */
-    public static SteamDownloadSpike forDlc(String username, String password, List<Dlc> dlcs,
-                                            Version version, Listener listener) {
-        return new SteamDownloadSpike(username, password, dlcs, null, version, listener);
     }
 
     /**
@@ -211,8 +164,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
      * the UGC; same as `depotdownloader -app 294100 -pubfile <id>`, which runs under your account).
      */
     public static SteamDownloadSpike forMods(String username, String password, List<Long> workshopIds, Listener listener) {
-        // Workshop items resolve their own content version — no base-game manifest pin needed.
-        return new SteamDownloadSpike(username, password, null, workshopIds, Version.V1_5, listener);
+        return new SteamDownloadSpike(username, password, workshopIds, listener);
     }
 
     private void progress(String m) {
@@ -381,197 +333,10 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         // Start exactly one download attempt per (re)connect; never while one is in flight or done.
         if (downloadStarted || downloadInProgress || downloadCompleted) return;
         downloadStarted = true;
-        Runnable job = (workshopIds != null) ? this::downloadMods
-                : (dlcs != null) ? this::downloadDlcs : this::download;
+        Runnable job = (workshopIds != null) ? this::downloadMods : this::download;
         Thread t = new Thread(job, "rd-depot-dl");
         workerThread = t;            // tracked so cancel() can interrupt the blocking download
         t.start();
-    }
-
-    /**
-     * DLC mode: resolve ownership + the DLC's base-app (294100) Linux depots from PICS, then for each
-     * OWNED selected DLC download its depot(s) (via the base app) into a temp work dir and pack it into
-     * /Download/ValDroid/&lt;name&gt;.zip — a portable archive the smart importer later unwraps into an
-     * instance. Unowned DLC are skipped WITHOUT attempting a download (so they can't hang the flow).
-     */
-    private void downloadDlcs() {
-        downloadInProgress = true;
-        downloadCompleted = true;   // DLC mode is single-pass; disconnect handler won't retry it
-        AppStorage storage = AppStorage.requireSingleton();
-        File downloadsDir = storage.getDownloadsDir();
-        File tmpRoot = new File(storage.getCachePath(), "dlc_work");
-        int ok = 0, skipped = 0;
-        try {
-            if (!downloadsDir.exists() && !downloadsDir.mkdirs()) {
-                done("Cannot create downloads folder: " + downloadsDir
-                        + " (grant All-files access?)");
-                running = false;
-                return;
-            }
-
-            // RimWorld DLC depots live UNDER the base app 294100 (with a dlcappid), NOT under the DLC's
-            // own app id (downloading by DLC app id → "Couldn't find any depots"). Resolve from PICS:
-            // which app ids the account owns + which base-app linux depots belong to each DLC.
-            Set<Integer> ownedAppIds = new HashSet<>();
-            Map<Integer, List<Integer>> dlcDepots = new HashMap<>();
-            progress("Resolving DLC info from Steam...");
-            resolveDlcInfo(ownedAppIds, dlcDepots);
-
-            for (Dlc d : dlcs) {
-                if (!running) { progress("Aborted (disconnected)."); break; }
-                if (!ownedAppIds.contains(d.appId)) {
-                    progress("• " + d.name + " — not owned on this account, skipping.");
-                    skipped++;
-                    continue;
-                }
-                List<Integer> depots = dlcDepots.get(d.appId);
-                if (depots == null || depots.isEmpty()) {
-                    progress("✗ " + d.name + " — no Linux depot found.");
-                    skipped++;
-                    continue;
-                }
-                progress("=== " + d.name + " (app " + d.appId + ", depots " + depots + ") ===");
-                File work = new File(tmpRoot, String.valueOf(d.appId));
-                deleteRecursive(work);
-                if (!work.mkdirs()) { progress("✗ " + d.name + ": cannot create work dir"); skipped++; continue; }
-                lastError = null;
-                boolean got = false;
-                // Version pinning: 1.6 → empty manifests = latest (= public branch 1.6). 1.5 → pin the
-                // frozen 1.5 manifest for EVERY resolved depot (AppItem needs depot[i]↔manifest[i]
-                // parallel); if any depot lacks a known 1.5 pin, fall back to latest for this DLC.
-                List<Long> manifests = new ArrayList<>();
-                if (version == Version.V1_6) {
-                    manifests = List.of();
-                    progress("  (1.6 → downloading LATEST)");
-                } else {
-                    for (Integer dep : depots) {
-                        Long m = DLC_DEPOT_1_5_MANIFEST.get(dep);
-                        if (m == null) { manifests = List.of(); break; }
-                        manifests.add(m);
-                    }
-                    if (manifests.isEmpty()) {
-                        progress("  (no pinned 1.5 manifest for depots " + depots + " → downloading LATEST = 1.6)");
-                    } else {
-                        progress("  (pinned to 1.5 manifests " + manifests + ")");
-                    }
-                }
-                try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true,
-                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
-                    dd.addListener(this);
-                    AppItem item = new AppItem(
-                            /* appId */ RIMWORLD_APP_ID,             // DLC depots are under the base app
-                            /* installToGameNameDirectory */ false,
-                            /* installDirectory */ work.getAbsolutePath(),
-                            /* branch */ "public",
-                            /* branchPassword */ "",
-                            /* downloadAllPlatforms */ false,
-                            /* os */ "linux",
-                            /* downloadAllArchs */ false,
-                            /* osArch */ "64",
-                            /* downloadAllLanguages */ false,
-                            /* language */ "english",
-                            /* lowViolence */ false,
-                            /* depot */ depots,           // the DLC's linux depot(s), resolved above
-                            /* manifest */ manifests,     // pinned 1.5 (parallel to depots) or empty = latest
-                            /* verify */ false,
-                            /* downloadManifestOnly */ false);
-                    dd.add(item);
-                    dd.finishAdding();
-                    // Bounded wait: an unowned/odd DLC must never hang the whole flow (and lock the UI).
-                    // A real DLC is a few hundred MB → minutes; 20 min is a safe ceiling.
-                    dd.getCompletion().get(20, java.util.concurrent.TimeUnit.MINUTES);
-                    dd.removeListener(this);
-                    got = lastError == null && containsAboutXml(work);
-                } catch (java.util.concurrent.TimeoutException te) {
-                    progress("✗ " + d.name + ": timed out (20 min) — skipping");
-                    lastError = te;
-                } catch (Throwable t) {
-                    Log.e(TAG, "DLC " + d.appId + " download crashed", t);
-                    lastError = t;
-                }
-                if (got) {
-                    try {
-                        // Tag the archive with the game version it was downloaded for (e.g.
-                        // "Biotech_1.5.zip") so 1.5 and 1.6 DLC downloads don't get confused.
-                        String verTag = (version == Version.V1_6) ? "_1.6" : "_1.5";
-                        File zip = new File(downloadsDir, sanitizeName(d.name) + verTag + ".zip");
-                        ZipUtil.zipDir(work, zip);
-                        progress("✓ " + d.name + " → " + zip.getAbsolutePath());
-                        ok++;
-                    } catch (Throwable t) {
-                        Log.e(TAG, "zip failed for " + d.name, t);
-                        progress("✗ " + d.name + ": zip failed — " + describe(t));
-                        skipped++;
-                    }
-                } else {
-                    progress("✗ " + d.name + " — not owned or failed"
-                            + (lastError != null ? (": " + describe(lastError)) : ""));
-                    skipped++;
-                }
-                deleteRecursive(work);
-            }
-            done("DLC done: " + ok + " packed, " + skipped + " skipped. Saved to " + downloadsDir);
-        } catch (Throwable t) {
-            Log.e(TAG, "downloadDlcs crashed", t);
-            done("DLC error: " + describe(t));
-        } finally {
-            running = false;
-            downloadInProgress = false;
-            try { steamUser.logOff(); } catch (Throwable ignored) {}
-        }
-    }
-
-    /**
-     * One PICS query to learn (1) which app ids the account OWNS (from its license packages' "appids")
-     * and (2) which base-app (294100) Linux depots belong to each DLC (depots carry a "dlcappid").
-     * Runs on the download thread; the main callback loop pumps the responses. Bounded so it can't hang.
-     */
-    private void resolveDlcInfo(Set<Integer> ownedAppIds, Map<Integer, List<Integer>> dlcDepots)
-            throws Exception {
-        SteamApps apps = steamClient.getHandler(SteamApps.class);
-
-        // Access token for the base app's product info (owned, but Steam usually wants the token).
-        long appToken = 0L;
-        try {
-            PICSTokensCallback tk = apps.picsGetAccessTokens(
-                    Collections.singletonList(RIMWORLD_APP_ID), Collections.<Integer>emptyList())
-                    .toFuture().get(30, TimeUnit.SECONDS);
-            Long t = tk.getAppTokens().get(RIMWORLD_APP_ID);
-            if (t != null) appToken = t;
-        } catch (Throwable ignored) { /* try without a token */ }
-
-        List<PICSRequest> appReqs = Collections.singletonList(new PICSRequest(RIMWORLD_APP_ID, appToken));
-        List<PICSRequest> pkgReqs = new ArrayList<>();
-        for (License l : licenseList) pkgReqs.add(new PICSRequest(l.getPackageID(), l.getAccessToken()));
-
-        AsyncJobMultiple.ResultSet<PICSProductInfoCallback> rs =
-                apps.picsGetProductInfo(appReqs, pkgReqs).toFuture().get(60, TimeUnit.SECONDS);
-
-        for (PICSProductInfoCallback cb : rs.getResults()) {
-            // (1) owned app ids — from each owned package's "appids" list.
-            for (PICSProductInfo pkg : cb.getPackages().values()) {
-                for (KeyValue a : pkg.getKeyValues().get("appids").getChildren()) {
-                    ownedAppIds.add(a.asInteger(0));
-                }
-            }
-            // (2) DLC depots — from the base app's "depots" section (depot → dlcappid + oslist).
-            PICSProductInfo app = cb.getApps().get(RIMWORLD_APP_ID);
-            if (app != null) {
-                for (KeyValue depot : app.getKeyValues().get("depots").getChildren()) {
-                    int depotId;
-                    try { depotId = Integer.parseInt(depot.getName()); }
-                    catch (NumberFormatException e) { continue; }   // skip "branches", "baselanguages", etc.
-                    int dlcAppId = depot.get("dlcappid").asInteger(0);
-                    if (dlcAppId <= 0) continue;                    // base depot, not a DLC
-                    String os = depot.get("config").get("oslist").asString();
-                    if (os != null && !os.isEmpty() && !os.contains("linux")) continue;  // wrong OS
-                    List<Integer> list = dlcDepots.get(dlcAppId);
-                    if (list == null) { list = new ArrayList<>(); dlcDepots.put(dlcAppId, list); }
-                    list.add(depotId);
-                }
-            }
-        }
-        Log.i(TAG, "PICS: owned apps=" + ownedAppIds.size() + ", DLC depot map=" + dlcDepots);
     }
 
     /**
@@ -594,7 +359,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             }
             for (Long id : workshopIds) {
                 if (!running) { progress("Aborted (disconnected)."); break; }
-                progress("=== Workshop mod " + id + " (app " + RIMWORLD_APP_ID + ") ===");
+                progress("=== Workshop mod " + id + " (app " + APP_ID + ") ===");
                 File work = new File(tmpRoot, String.valueOf(id));
                 deleteRecursive(work);
                 if (!work.mkdirs()) { progress("✗ " + id + ": cannot create work dir"); skipped++; continue; }
@@ -604,7 +369,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                         /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
                     dd.addListener(this);
                     PubFileItem item = new PubFileItem(
-                            /* appId */ RIMWORLD_APP_ID,
+                            /* appId */ APP_ID,
                             /* pubFile */ id,
                             /* installToGameNameDirectory */ false,
                             /* installDirectory */ work.getAbsolutePath(),
@@ -694,30 +459,18 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             File state = new File(installDir, ".DepotDownloader");
             if (state.exists()) progress("Found partial download — resuming where it stopped…");
         }
-        // Manifest selection:
-        //  - explicit user build (manifestId>0) always wins;
-        //  - 1.6 → empty list = "latest" = the current Steam public branch (= 1.6), no pin needed;
-        //  - 1.5 → pin the frozen 1.5 manifest ("latest" would now pull 1.6).
-        List<Long> manifests;
-        String verLabel;
-        if (manifestId > 0) {
-            manifests = List.of(manifestId);
-            verLabel = "manifest " + manifestId;
-        } else if (version == Version.V1_6) {
-            manifests = List.of();
-            verLabel = "latest 1.6 build";
-        } else {
-            manifests = List.of(RIMWORLD_1_5_MANIFEST);
-            verLabel = "recommended 1.5 build " + RIMWORLD_1_5_MANIFEST;
-        }
+        // Manifest: an explicit user build wins, otherwise an empty list = the newest build of the
+        // public branch. (RimDroid pinned a frozen 1.5 manifest here; Valheim just follows public.)
+        List<Long> manifests = (manifestId > 0) ? List.of(manifestId) : List.of();
+        String verLabel = (manifestId > 0) ? ("manifest " + manifestId) : "newest public build";
         progress((manifestOnly ? "[manifest-only] " : "")
                 + "[attempt " + downloadAttempts + "] " + verLabel + " → " + installDir);
         try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true,
                         /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
             dd.addListener(this);
 
-            AppItem rimworld = new AppItem(
-                    /* appId */ RIMWORLD_APP_ID,
+            AppItem game = new AppItem(
+                    /* appId */ APP_ID,
                     /* installToGameNameDirectory */ false,    // land directly in installDir
                     /* installDirectory */ installDir,          // ABSOLUTE — required on Android
                     /* branch */ "public",
@@ -729,12 +482,12 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                     /* downloadAllLanguages */ false,
                     /* language */ "english",
                     /* lowViolence */ false,
-                    /* depot */ List.of(RIMWORLD_LINUX_DEPOT),  // explicit → skip the DLC-depot iteration
+                    /* depot */ List.of(LINUX_DEPOT),           // explicit → no depot iteration
                     /* manifest */ manifests,                   // empty = latest; pinned = a specific version
                     /* verify */ false,
                     /* downloadManifestOnly */ manifestOnly);
 
-            dd.add(rimworld);
+            dd.add(game);
             dd.finishAdding();
             dd.awaitCompletion();           // blocks until the queue drains (or fails)
             dd.removeListener(this);
@@ -799,22 +552,19 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
      */
     private void finalizeInstance() {
         try {
-            File bin = new File(installDir, C.files.RIMWORLD_BIN);
+            File dir = new File(installDir);
+            File bin = new File(dir, GameDescriptor.VALHEIM.executable());
             if (bin.exists()) bin.setExecutable(true, false);
-            if (version == Version.V1_6) {
-                // The Unity 2022 build must use ValDroid's proven X11 -> GLX -> ZFA/Zink path.
-                // Without these markers a freshly downloaded instance selects direct Vulkan and
-                // crashes in UnityPlayer while beginning its first command buffer, before Mono or
-                // any mods load. Texture compression is safe with the CompressBC low-quality shim
-                // and is required to keep 1.6 + DLC within the RAM budget on 6-8 GB devices.
-                RimWorldInstanceSetup.configure(new File(installDir), true);
-                progress("Configured RimWorld 1.6 renderer (X11 + ZFA/Zink + texture compression).");
-            }
+            // Same setup the zip installer runs: Goldberg shim in place of Valve's libsteam_api,
+            // steam_settings for offline single player, and the auto-login pref off. Without it
+            // Valheim quits at startup.
+            String warning = ValheimInstanceSetup.apply(dir, this::progress);
+            if (warning != null) progress(warning);
             // The install-time save fix (Assembly-CSharp bspatch) used to run here. Removed
             // entirely 2026-08-28 — root-fixed in box64 (see InstallerService for the history).
             LauncherPreferences.requireSingleton().setLastInstanceName(instanceName);
             GameInstanceManager.requireSingleton().reload();
-            progress("Instance '" + instanceName + "' is now installed (" + RIMWORLD_APP_ID + ").");
+            progress("Instance '" + instanceName + "' is now installed (" + APP_ID + ").");
             backupInstanceZip(new File(installDir));
         } catch (Throwable t) {
             Log.e(TAG, "finalizeInstance failed", t);
@@ -832,7 +582,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         try {
             AppStorage storage = AppStorage.requireSingleton();
             String versionTag = readVersionTag(instanceDir);
-            File zip = new File(storage.getDownloadsDir(), "RimWorld_" + versionTag + ".zip");
+            File zip = new File(storage.getDownloadsDir(), "Valheim_" + versionTag + ".zip");
             progress("Backing up install to " + zip.getAbsolutePath() + "...");
             ZipUtil.zipDir(instanceDir, zip);
             progress("Backup saved: " + zip.getName());
@@ -842,7 +592,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         }
     }
 
-    /** Version.txt's own content (e.g. "1.6.4871") if readable, else the requested Version enum. */
+    /** Version.txt's own content (e.g. "0.220.3") if readable, else a neutral tag. */
     private String readVersionTag(File instanceDir) {
         File versionFile = new File(instanceDir, "Version.txt");
         if (versionFile.isFile()) {
@@ -852,7 +602,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 if (!raw.isEmpty()) return sanitizeName(raw);
             } catch (java.io.IOException ignored) {}
         }
-        return version == Version.V1_6 ? "1.6" : "1.5";
+        return "latest";
     }
 
     /** Exception class + message + first useful cause/frame — getMessage() alone is often null. */

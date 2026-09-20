@@ -45,14 +45,6 @@
                 android:text="@string/download_tab_game" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_type_dlc"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="@string/download_tab_dlc" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_type_mods"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
@@ -93,32 +85,6 @@
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Shared game-version selector: applies to BOTH the game download and the DLC
-                 download (a 1.5 base + 1.6 DLC, or vice-versa, would version-mismatch). -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/download_version_label"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="4dp" />
-            <RadioGroup
-                android:id="@+id/rg_dl_version"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <RadioButton
-                    android:id="@+id/rb_dl_15"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="@string/download_version_15" />
-                <RadioButton
-                    android:id="@+id/rb_dl_16"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:text="@string/download_version_16" />
-            </RadioGroup>
         </LinearLayout>
 
         <!-- ============ GAME ============ -->
@@ -128,13 +94,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Game-version note: only relevant to the game download. -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/download_version_note"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:layout_marginBottom="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -167,80 +126,6 @@
                 android:text="@string/download_start" />
         </LinearLayout>
 
-        <!-- ============ DLC ============ -->
-        <LinearLayout
-            android:id="@+id/section_dlc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/download_dlc_note"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:layout_marginBottom="8dp" />
-
-            <!-- DLC in a 2-column grid to save vertical space. -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <CheckBox
-                    android:id="@+id/cb_dlc_royalty"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Royalty" />
-                <CheckBox
-                    android:id="@+id/cb_dlc_ideology"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Ideology" />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <CheckBox
-                    android:id="@+id/cb_dlc_biotech"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Biotech" />
-                <CheckBox
-                    android:id="@+id/cb_dlc_anomaly"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Anomaly" />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <CheckBox
-                    android:id="@+id/cb_dlc_odyssey"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Odyssey"
-                    android:visibility="gone" />
-                <Space
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="0dp" />
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/btn_dlc_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/download_dlc_start" />
-        </LinearLayout>
 
         <!-- ============ MODS ============ -->
         <LinearLayout

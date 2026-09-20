@@ -32,9 +32,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * "Download game (Steam)" screen — front-end for the in-app Steam downloader (SteamDownloadSpike).
- * One page, three tabs sharing the Steam login + console log:
- *   • Game — downloads RimWorld 1.5 into instances/&lt;name&gt; (launchable).
- *   • DLC  — downloads each owned DLC as a portable .zip into /Download/ValDroid (needs All-files access).
+ * One page, two tabs sharing the Steam login + console log:
+ *   • Game — downloads the newest public build of Valheim into instances/&lt;name&gt; (launchable).
  *   • Mods — Workshop (anonymous) — coming soon.
  * Login is sent to Steam (like DepotDownloader) and never stored; the token lives only in memory.
  */
@@ -43,12 +42,10 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     private final Handler mainH = new Handler(Looper.getMainLooper());
 
     private EditText etInstance, etUser, etPass, etManifest, etModsIds, etModsBrowserId;
-    private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser, btnCancel;
-    private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly, cbOdyssey;
-    private android.widget.RadioGroup rgVersion;
+    private Button btnStart, btnModsStart, btnModsBrowser, btnCancel;
     private ProgressBar progress;
     private TextView tvStatus;
-    private View blockLogin, sectionGame, sectionDlc, sectionMods, sectionModsBrowser, tvLoginNote, btnInstallContent;
+    private View blockLogin, sectionGame, sectionMods, sectionModsBrowser, tvLoginNote, btnInstallContent;
     private android.content.Context appCtx;   // for the keep-alive service (valid even if detached)
 
     @Override
@@ -69,14 +66,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         etUser     = v.findViewById(R.id.et_dl_user);
         etPass     = v.findViewById(R.id.et_dl_pass);
         etManifest = v.findViewById(R.id.et_dl_manifest);
-        rgVersion  = v.findViewById(R.id.rg_dl_version);
         btnStart   = v.findViewById(R.id.btn_dl_start);
-        btnDlcStart = v.findViewById(R.id.btn_dlc_start);
-        cbRoyalty  = v.findViewById(R.id.cb_dlc_royalty);
-        cbIdeology = v.findViewById(R.id.cb_dlc_ideology);
-        cbBiotech  = v.findViewById(R.id.cb_dlc_biotech);
-        cbAnomaly  = v.findViewById(R.id.cb_dlc_anomaly);
-        cbOdyssey  = v.findViewById(R.id.cb_dlc_odyssey);
         etModsIds  = v.findViewById(R.id.et_mods_ids);
         btnModsStart = v.findViewById(R.id.btn_mods_start);
         etModsBrowserId = v.findViewById(R.id.et_mods_browser_id);
@@ -85,7 +75,6 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         tvStatus   = v.findViewById(R.id.tv_dl_status);
         blockLogin  = v.findViewById(R.id.block_login);
         sectionGame = v.findViewById(R.id.section_game);
-        sectionDlc  = v.findViewById(R.id.section_dlc);
         sectionMods = v.findViewById(R.id.section_mods);
         sectionModsBrowser = v.findViewById(R.id.section_mods_browser);
         tvLoginNote = v.findViewById(R.id.tv_login_note);
@@ -94,15 +83,14 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         btnCancel = v.findViewById(R.id.btn_dl_cancel);
         tvStatus.setMovementMethod(new ScrollingMovementMethod());   // make the log area scrollable
         btnStart.setOnClickListener(view -> startGame());
-        btnDlcStart.setOnClickListener(view -> startDlc());
         btnModsStart.setOnClickListener(view -> startMods());
         btnModsBrowser.setOnClickListener(view -> openModInBrowser());
         btnCancel.setOnClickListener(view -> confirmCancel());
         btnInstallContent.setOnClickListener(view ->
                 androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_open_install));
 
-        // Game / DLC / Mods selector → swap the visible section. Login block shown for Game + DLC.
-        // The "install downloaded content" button is for DLC/Mods only (Game makes an instance directly).
+        // Game / Mods selector → swap the visible section. The login block is for Game (mods download
+        // anonymously), and "install downloaded content" is for Mods only (Game makes an instance directly).
         com.google.android.material.button.MaterialButtonToggleGroup toggle =
                 v.findViewById(R.id.toggle_dl_type);
         toggle.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
@@ -110,19 +98,14 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             boolean game = checkedId == R.id.btn_type_game;
             boolean mods = checkedId == R.id.btn_type_mods;
             sectionGame.setVisibility(game ? View.VISIBLE : View.GONE);
-            sectionDlc.setVisibility(checkedId == R.id.btn_type_dlc ? View.VISIBLE : View.GONE);
             sectionMods.setVisibility(mods ? View.VISIBLE : View.GONE);
             sectionModsBrowser.setVisibility(mods ? View.VISIBLE : View.GONE);
-            // Login (and its privacy preamble) is needed for game + DLC; mods download anonymously.
+            // Login (and its privacy preamble) is needed for the game; mods download anonymously.
             blockLogin.setVisibility(mods ? View.GONE : View.VISIBLE);
             tvLoginNote.setVisibility(mods ? View.GONE : View.VISIBLE);
             btnInstallContent.setVisibility(game ? View.GONE : View.VISIBLE);
         });
         toggle.check(R.id.btn_type_game);   // default to Game
-
-        rgVersion.setOnCheckedChangeListener((group, checkedId) ->
-                updateOdysseyVisibility(checkedId == R.id.rb_dl_16));
-        updateOdysseyVisibility(rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16);
 
         // Re-attach to a download already running in the background (the worker thread outlives this
         // fragment via SteamDownloadState), restoring the log + progress + "busy" state on return.
@@ -159,57 +142,16 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (name.isEmpty()) { etInstance.setError(getString(R.string.error_name_required)); return; }
         if (!loginFilled()) return;
 
-        long manifestId = 0L;   // 0 = recommended 1.5 build
+        long manifestId = 0L;   // 0 = the newest public build
         try {
             String mt = text(etManifest);
             if (!mt.isEmpty()) manifestId = Long.parseLong(mt);
         } catch (NumberFormatException ignored) { /* blank/invalid → default */ }
 
-        SteamDownloadSpike.Version version = (rgVersion != null && rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16)
-                ? SteamDownloadSpike.Version.V1_6 : SteamDownloadSpike.Version.V1_5;
         SteamDownloadState st = SteamDownloadState.get();
         SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
-                /* manifestOnly */ false, manifestId, version, st);
+                /* manifestOnly */ false, manifestId, st);
         st.begin(appCtx, name);          // adviseInstance = name → auto-set GPU driver on success
-        st.setActive(dl);
-        beginUi();
-        new Thread(dl, "rd-download").start();
-    }
-
-    // ---- DLC ----
-    private void startDlc() {
-        if (SteamDownloadState.get().isDownloading()) return;
-        if (!loginFilled()) return;
-
-        List<SteamDownloadSpike.Dlc> dlcs = new ArrayList<>();
-        if (cbRoyalty.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(1149640, "Royalty"));
-        if (cbIdeology.isChecked()) dlcs.add(new SteamDownloadSpike.Dlc(1392840, "Ideology"));
-        if (cbBiotech.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(1826140, "Biotech"));
-        if (cbAnomaly.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(2380740, "Anomaly"));
-        if (cbOdyssey.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(3022790, "Odyssey"));
-        if (dlcs.isEmpty()) {
-            Toast.makeText(requireContext(), "Pick at least one DLC", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // DLC zip lands in the public /Download folder → needs All-files access on Android 11+.
-        if (!StorageAccess.hasAllFilesAccess()) {
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
-                    .setTitle("Storage access needed")
-                    .setMessage("DLC are saved as zips into the public Download folder so you can see, "
-                            + "share and reuse them. Please grant \"All files access\" to ValDroid, "
-                            + "then tap Download again.")
-                    .setPositiveButton("Grant", (d, w) -> StorageAccess.requestAllFilesAccess(requireActivity()))
-                    .setNegativeButton("Cancel", null)
-                    .show();
-            return;
-        }
-
-        SteamDownloadSpike.Version version = (rgVersion != null && rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16)
-                ? SteamDownloadSpike.Version.V1_6 : SteamDownloadSpike.Version.V1_5;
-        SteamDownloadState st = SteamDownloadState.get();
-        SteamDownloadSpike dl = SteamDownloadSpike.forDlc(text(etUser), etPass.getText().toString(), dlcs, version, st);
-        st.begin(appCtx, null);
         st.setActive(dl);
         beginUi();
         new Thread(dl, "rd-download").start();
@@ -322,12 +264,6 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     }
 
     // ---- shared ----
-    private void updateOdysseyVisibility(boolean rimWorld16) {
-        if (cbOdyssey == null) return;
-        cbOdyssey.setVisibility(rimWorld16 ? View.VISIBLE : View.GONE);
-        if (!rimWorld16) cbOdyssey.setChecked(false);
-    }
-
     private boolean loginFilled() {
         if (text(etUser).isEmpty()) { etUser.setError("Required"); return false; }
         if (etPass.getText().toString().isEmpty()) { etPass.setError("Required"); return false; }
@@ -345,7 +281,6 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     /** Enable/disable the start controls (everything except Cancel) while a download runs. */
     private void setControlsEnabled(boolean enabled) {
         if (btnStart != null) btnStart.setEnabled(enabled);
-        if (btnDlcStart != null) btnDlcStart.setEnabled(enabled);
         if (btnModsStart != null) btnModsStart.setEnabled(enabled);
         if (btnModsBrowser != null) btnModsBrowser.setEnabled(enabled);
         if (etInstance != null) etInstance.setEnabled(enabled);

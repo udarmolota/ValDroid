@@ -49,7 +49,7 @@ import java.util.concurrent.CompletableFuture;
 public class CloudSavesFragment extends Fragment {
 
     /** RimWorld's Steam app id — the only game this launcher manages. */
-    private static final int RIMWORLD_APP_ID = 294100;
+    private static final int APP_ID = com.valdroid.SteamDownloadSpike.APP_ID;   // Valheim
 
     private final Handler ui = new Handler(Looper.getMainLooper());
 
@@ -109,9 +109,18 @@ public class CloudSavesFragment extends Fragment {
         return (pos >= 1 && pos <= instances.size()) ? instances.get(pos - 1) : null;
     }
 
+    /** The folder holding Valheim's {@code worlds_local/} and {@code characters_local/}. */
     private File savesDirOf(GameInstance gi) {
         return new File(AppStorage.requireSingleton().getInstanceDir(gi.getName()),
-                "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
+                "unity3d/IronGate/Valheim");
+    }
+
+    /** Where one pulled file belongs: worlds and characters live in separate folders. */
+    private File destDirFor(File savesDir, String name) {
+        File dir = new File(savesDir, SteamCloudSpike.localDirFor(name));
+        //noinspection ResultOfMethodCallIgnored
+        dir.mkdirs();
+        return dir;
     }
 
     /** Scratch folder the cloud copy lands in before anything touches the real saves. */
@@ -135,7 +144,7 @@ public class CloudSavesFragment extends Fragment {
         if (pullDirection) {
             final File temp = pullTempDir(gi);
             appendLog(getString(R.string.cloud_saves_log_connecting));
-            new Thread(SteamCloudSpike.forPull(u, p, RIMWORLD_APP_ID, temp, savesDirOf(gi), new Callbacks() {
+            new Thread(SteamCloudSpike.forPull(u, p, APP_ID, temp, savesDirOf(gi), new Callbacks() {
                 @Override public void onDone(String message) {
                     ui.post(() -> {
                         appendLog("— " + message);
@@ -146,14 +155,14 @@ public class CloudSavesFragment extends Fragment {
             }), "CloudSavesPull").start();
         } else {
             appendLog(getString(R.string.cloud_saves_log_connecting));
-            new Thread(SteamCloudSpike.forPush(u, p, RIMWORLD_APP_ID, gi.getName(), new Callbacks()),
+            new Thread(SteamCloudSpike.forPush(u, p, APP_ID, gi.getName(), new Callbacks()),
                     "CloudSavesPush").start();
         }
     }
 
     // ===== placement: runs offline, after the Steam session is gone =====
 
-    /** Move every downloaded file into Saves/, asking only where the name already exists. */
+    /** Move every downloaded file into its folder, asking only where the name already exists. */
     private void placeAll(File temp, File savesDir) {
         List<File> pending = new ArrayList<>();
         File[] fs = temp.listFiles();
@@ -164,6 +173,7 @@ public class CloudSavesFragment extends Fragment {
             busy(false);
             return;
         }
+        // Worlds and characters go to different folders; destDirFor creates whichever is needed.
         GameInstance gi = chosenInstance();
         placeNext(pending, 0, savesDir,
                 gi == null ? null : com.valdroid.CloudSyncState.load(gi.getName()),
@@ -181,7 +191,7 @@ public class CloudSavesFragment extends Fragment {
             return;
         }
         File src = pending.get(i);
-        File dest = new File(savesDir, src.getName());
+        File dest = new File(destDirFor(savesDir, src.getName()), src.getName());
         if (!dest.exists()) {
             copyInto(src, dest, tally, state);
             placeNext(pending, i + 1, savesDir, state, tally);
@@ -212,13 +222,15 @@ public class CloudSavesFragment extends Fragment {
                 .setNeutralButton(R.string.cloud_saves_clash_both, (d, w) -> {
                     // The cloud copy lands under a new name, so neither name matches the cloud now.
                     if (state != null) state.forget(src.getName());
-                    copyInto(src, uniqueName(savesDir, src.getName()), tally, null);
+                    copyInto(src, uniqueName(destDirFor(savesDir, src.getName()), src.getName()), tally, null);
                     placeNext(pending, i + 1, savesDir, state, tally);
                 })
                 .show();
     }
 
-    /** "Colony.rws" -> "Colony (from cloud).rws", and "… 2" etc. if that is taken too. */
+    /** "Vikingworld.fwl" -> "Vikingworld (from cloud).fwl", and "… 2" etc. if that is taken too.
+     *  A world is a .fwl + .db pair: renaming only one of them would leave the pair broken, so the
+     *  "keep both" option is best used on a whole world (both files) or a character. */
     private File uniqueName(File dir, String filename) {
         int dot = filename.lastIndexOf('.');
         String base = dot > 0 ? filename.substring(0, dot) : filename;

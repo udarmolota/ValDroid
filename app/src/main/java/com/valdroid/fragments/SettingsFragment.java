@@ -244,11 +244,9 @@ public class SettingsFragment extends Fragment {
                             tvSteamDlStatus.setVisibility(View.VISIBLE);
                             tvSteamDlStatus.setText("Steam: connecting…");
                         });
-                        // Advanced/debug downloader: no version toggle here — defaults to 1.5 (the
-                        // main DownloadFragment carries the 1.5/1.6 selector). A manifest id override
-                        // still pins any specific build.
+                        // Advanced/debug downloader: newest public build unless a manifest id pins
+                        // a specific one.
                         new Thread(new com.valdroid.SteamDownloadSpike(u, p, name, manifestOnly, manifestIdF,
-                                com.valdroid.SteamDownloadSpike.Version.V1_5,
                                 new com.valdroid.SteamDownloadSpike.Listener() {
                             @Override public java.util.concurrent.CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
                                 final java.util.concurrent.CompletableFuture<String> fut = new java.util.concurrent.CompletableFuture<>();
