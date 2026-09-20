@@ -186,10 +186,18 @@ public class LauncherFragment extends Fragment {
                 ImageButton settings = v.findViewById(R.id.instance_item_settings);
                 ImageButton launch = v.findViewById(R.id.instance_item_launch);
 
-                // Flag an incomplete game copy (missing Data/Core etc.) right in the list, so the user
-                // sees it before tapping Launch. Cheap (a few File.isFile checks). launchInstance()
-                // still explains what's missing if they tap it.
-                name.setText(gi.isComplete() ? gi.getName() : gi.getName() + "  ⚠ incomplete");
+                // An instance folder exists from the moment a download starts (that is what makes a
+                // download resumable), so a half-downloaded copy is in this list too. Say so on the
+                // card and take the ▶ button away: there is nothing to launch yet, and a play button
+                // that only opens an error dialog reads like a bug. Cheap (a few File.isFile checks).
+                boolean ready = gi.isComplete();
+                com.valdroid.SteamDownloadState dl = com.valdroid.SteamDownloadState.get();
+                boolean downloadingThis = dl.isDownloading()
+                        && gi.getName().equals(dl.getAdviseInstance());
+                name.setText(ready ? gi.getName()
+                        : gi.getName() + (downloadingThis ? "  ⤓ " + getString(R.string.instance_downloading)
+                                                          : "  ⚠ " + getString(R.string.instance_incomplete)));
+                launch.setVisibility(ready ? View.VISIBLE : View.GONE);
                 // (renderer subtitle is commented out in the layout — keep the binding out too)
 
                 launch.setOnClickListener(x -> launchInstance(gi));

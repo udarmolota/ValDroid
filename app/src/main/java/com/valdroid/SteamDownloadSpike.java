@@ -35,6 +35,7 @@ import in.dragonbra.javasteam.util.log.DefaultLogListener;
 import in.dragonbra.javasteam.util.log.LogManager;
 
 import com.valdroid.game.GameDescriptor;
+import com.valdroid.game.GameInstance;
 import com.valdroid.game.GameInstanceManager;
 
 import java.io.File;
@@ -455,6 +456,15 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         // restarting from zero — essential for big multi-GB downloads (start at home, finish later
         // on another network). The earlier hard-crash was the orphaned SteamClient (fixed in run()'s
         // finally), not this cache, so wiping here would only cost the user their progress.
+        // Mark the instance as "being downloaded" until finalizeInstance clears it, so the launcher
+        // does not offer a ▶ button on a copy that is still missing most of its assets.
+        try {
+            File marker = new File(installDir, GameInstance.DOWNLOAD_MARKER);
+            marker.getParentFile().mkdirs();
+            if (!marker.isFile()) new java.io.FileOutputStream(marker).close();
+        } catch (Throwable t) {
+            Log.w(TAG, "cannot write the download marker", t);
+        }
         if (downloadAttempts == 1) {
             File state = new File(installDir, ".DepotDownloader");
             if (state.exists()) progress("Found partial download — resuming where it stopped…");
@@ -553,6 +563,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private void finalizeInstance() {
         try {
             File dir = new File(installDir);
+            //noinspection ResultOfMethodCallIgnored
+            new File(dir, GameInstance.DOWNLOAD_MARKER).delete();   // the copy is complete now
             File bin = new File(dir, GameDescriptor.VALHEIM.executable());
             if (bin.exists()) bin.setExecutable(true, false);
             // Same setup the zip installer runs: Goldberg shim in place of Valve's libsteam_api,

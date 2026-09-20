@@ -111,6 +111,19 @@ public class GameInstance {
         return new String[0];
     }
 
+    /**
+     * Written by the Steam downloader while a download is running and removed when it finishes. The
+     * required-files check alone is not enough: the downloader fetches the small files first, so a
+     * quarter-downloaded copy already has the executable, UnityPlayer and the managed assemblies
+     * while gigabytes of assets are still missing.
+     */
+    public static final String DOWNLOAD_MARKER = ".valdroid_downloading";
+
+    public File downloadMarker() { return new File(getGamePath(), DOWNLOAD_MARKER); }
+
+    /** True while a download into this instance has not finished (or died halfway). */
+    public boolean isDownloadUnfinished() { return downloadMarker().isFile(); }
+
     public boolean isInstalled() {
         return new File(getGamePath(), GAME.executable()).isFile();
     }
@@ -119,6 +132,7 @@ public class GameInstance {
     public java.util.List<String> missingCoreFiles() {
         File root = new File(getGamePath());
         java.util.List<String> missing = new ArrayList<>();
+        if (isDownloadUnfinished()) missing.add("(the download has not finished)");
         for (String rel : GAME.requiredFiles())
             if (!new File(root, rel).isFile()) missing.add(rel);
         // Existence alone is not enough: an interrupted download (the Steam downloader can die

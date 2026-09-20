@@ -253,4 +253,6 @@ Na nuvem: %2$s
     <string name="gfx_preset_low">Baixa</string>
     <string name="gfx_preset_ultra">Muito baixa</string>
     <string name="gfx_preset_hint">Grava no jogo um conjunto de ajustes gráficos antes de iniciá-lo, pensado para a emulação: sem tesselação, sem sombras e sem distância de desenho extra, que é o que mais custa aqui. «Baixa» mantém os efeitos que a GPU faz quase de graça. «Muito baixa» também os remove e desenha o mundo em resolução interna menor.</string>
+    <string name="instance_downloading">baixando</string>
+    <string name="instance_incomplete">não terminado</string>
 </resources>
