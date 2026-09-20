@@ -11,54 +11,46 @@
 #define ADDED_FUNCTIONS() 
 #endif
 
-typedef void (*vFp_t)(void*);
-typedef int32_t (*iFp_t)(void*);
 typedef void (*vFpp_t)(void*, void*);
-typedef int32_t (*iFpu_t)(void*, uint32_t);
 typedef int32_t (*iFpp_t)(void*, void*);
 typedef void* (*pFpp_t)(void*, void*);
 typedef void (*vFpUp_t)(void*, uint64_t, void*);
-typedef void (*vFppu_t)(void*, void*, uint32_t);
 typedef void (*vFppp_t)(void*, void*, void*);
-typedef int32_t (*iFpup_t)(void*, uint32_t, void*);
 typedef int32_t (*iFppp_t)(void*, void*, void*);
-typedef void (*vFpuup_t)(void*, uint32_t, uint32_t, void*);
-typedef int32_t (*iFpupp_t)(void*, uint32_t, void*, void*);
 typedef int32_t (*iFpppp_t)(void*, void*, void*, void*);
 typedef uint32_t (*uFpupp_t)(void*, uint32_t, void*, void*);
-typedef void (*vFpuuuu_t)(void*, uint32_t, uint32_t, uint32_t, uint32_t);
-typedef int32_t (*iFpupuU_t)(void*, uint32_t, void*, uint32_t, uint64_t);
 typedef int32_t (*iFpuppp_t)(void*, uint32_t, void*, void*, void*);
 typedef int32_t (*iFppppp_t)(void*, void*, void*, void*, void*);
-typedef void (*vFpuuuiu_t)(void*, uint32_t, uint32_t, uint32_t, int32_t, uint32_t);
+typedef void (*vFppupup_t)(void*, void*, uint32_t, void*, uint32_t, void*);
+typedef void (*vFpppuup_t)(void*, void*, void*, uint32_t, uint32_t, void*);
 typedef int32_t (*iFpUuppp_t)(void*, uint64_t, uint32_t, void*, void*, void*);
 typedef int32_t (*iFppuppp_t)(void*, void*, uint32_t, void*, void*, void*);
 typedef int32_t (*iFppUppp_t)(void*, void*, uint64_t, void*, void*, void*);
+typedef void (*vFppupuup_t)(void*, void*, uint32_t, void*, uint32_t, uint32_t, void*);
 typedef int32_t (*iFpppuppp_t)(void*, void*, void*, uint32_t, void*, void*, void*);
-typedef void (*vFpupuupup_t)(void*, uint32_t, void*, uint32_t, uint32_t, void*, uint32_t, void*);
+typedef void (*vFppupuupu_t)(void*, void*, uint32_t, void*, uint32_t, uint32_t, void*, uint32_t);
+typedef void (*vFpuuuupupup_t)(void*, uint32_t, uint32_t, uint32_t, uint32_t, void*, uint32_t, void*, uint32_t, void*);
 
 #define SUPER() ADDED_FUNCTIONS() \
-	GO(vkCmdEndRenderPass, vFp_t) \
-	GO(vkCmdEndRendering, vFp_t) \
-	GO(vkDeviceWaitIdle, iFp_t) \
-	GO(vkEndCommandBuffer, iFp_t) \
-	GO(vkQueueWaitIdle, iFp_t) \
-	GO(vkCmdBeginRendering, vFpp_t) \
+	GO(vkCmdBlitImage2, vFpp_t) \
+	GO(vkCmdBlitImage2KHR, vFpp_t) \
+	GO(vkCmdCopyBufferToImage2, vFpp_t) \
+	GO(vkCmdCopyBufferToImage2KHR, vFpp_t) \
+	GO(vkCmdCopyImage2, vFpp_t) \
+	GO(vkCmdCopyImage2KHR, vFpp_t) \
+	GO(vkCmdPipelineBarrier2, vFpp_t) \
+	GO(vkCmdPipelineBarrier2KHR, vFpp_t) \
 	GO(vkDestroyDevice, vFpp_t) \
 	GO(vkDestroyInstance, vFpp_t) \
 	GO(vkGetPhysicalDeviceMemoryProperties, vFpp_t) \
 	GO(vkGetPhysicalDeviceMemoryProperties2, vFpp_t) \
 	GO(vkGetPhysicalDeviceMemoryProperties2KHR, vFpp_t) \
 	GO(vkGetPhysicalDeviceProperties2, vFpp_t) \
-	GO(vkResetCommandBuffer, iFpu_t) \
-	GO(vkBeginCommandBuffer, iFpp_t) \
-	GO(vkGetFenceStatus, iFpp_t) \
 	GO(vkQueuePresentKHR, iFpp_t) \
 	GO(vkGetDeviceProcAddr, pFpp_t) \
 	GO(vkGetInstanceProcAddr, pFpp_t) \
 	GO(vkDestroyCudaFunctionNV, vFpUp_t) \
 	GO(vkDestroyCudaModuleNV, vFpUp_t) \
-	GO(vkCmdBeginRenderPass, vFppu_t) \
 	GO(vkDestroyAccelerationStructureKHR, vFppp_t) \
 	GO(vkDestroyAccelerationStructureNV, vFppp_t) \
 	GO(vkDestroyBuffer, vFppp_t) \
@@ -107,16 +99,12 @@ typedef void (*vFpupuupup_t)(void*, uint32_t, void*, uint32_t, uint32_t, void*, 
 	GO(vkDestroyVideoSessionKHR, vFppp_t) \
 	GO(vkDestroyVideoSessionParametersKHR, vFppp_t) \
 	GO(vkFreeMemory, vFppp_t) \
-	GO(vkResetFences, iFpup_t) \
-	GO(vkAcquireNextImage2KHR, iFppp_t) \
 	GO(vkCreateDeferredOperationKHR, iFppp_t) \
 	GO(vkCreateInstance, iFppp_t) \
 	GO(vkEnumerateInstanceExtensionProperties, iFppp_t) \
 	GO(vkGetPhysicalDeviceSurfaceCapabilities2KHR, iFppp_t) \
 	GO(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, iFppp_t) \
 	GO(vkReleaseCapturedPipelineDataKHR, iFppp_t) \
-	GO(vkGetDeviceQueue, vFpuup_t) \
-	GO(vkQueueSubmit, iFpupp_t) \
 	GO(vkAllocateMemory, iFpppp_t) \
 	GO(vkCreateAccelerationStructureKHR, iFpppp_t) \
 	GO(vkCreateAccelerationStructureNV, iFpppp_t) \
@@ -175,25 +163,26 @@ typedef void (*vFpupuupup_t)(void*, uint32_t, void*, uint32_t, uint32_t, void*, 
 	GO(vkCreateXlibSurfaceKHR, iFpppp_t) \
 	GO(vkEnumerateDeviceExtensionProperties, iFpppp_t) \
 	GO(vkGetPhysicalDeviceSurfaceFormatsKHR, iFpppp_t) \
-	GO(vkGetSwapchainImagesKHR, iFpppp_t) \
 	GO(vkRegisterDeviceEventEXT, iFpppp_t) \
 	GO(vkGetPhysicalDeviceSurfaceSupportKHR, uFpupp_t) \
 	GO(vkGetPhysicalDeviceXcbPresentationSupportKHR, uFpupp_t) \
 	GO(vkGetPhysicalDeviceXlibPresentationSupportKHR, uFpupp_t) \
-	GO(vkCmdDraw, vFpuuuu_t) \
-	GO(vkWaitForFences, iFpupuU_t) \
 	GO(vkCreateShadersEXT, iFpuppp_t) \
 	GO(vkCreateSharedSwapchainsKHR, iFpuppp_t) \
 	GO(vkCreateDisplayModeKHR, iFppppp_t) \
 	GO(vkRegisterDisplayEventEXT, iFppppp_t) \
-	GO(vkCmdDrawIndexed, vFpuuuiu_t) \
+	GO(vkCmdClearColorImage, vFppupup_t) \
+	GO(vkCmdCopyImageToBuffer, vFppupup_t) \
+	GO(vkCmdCopyBufferToImage, vFpppuup_t) \
 	GO(vkCreateExecutionGraphPipelinesAMDX, iFpUuppp_t) \
 	GO(vkCreateComputePipelines, iFppuppp_t) \
 	GO(vkCreateGraphicsPipelines, iFppuppp_t) \
 	GO(vkCreateRayTracingPipelinesNV, iFppuppp_t) \
 	GO(vkAcquireNextImageKHR, iFppUppp_t) \
+	GO(vkCmdCopyImage, vFppupuup_t) \
 	GO(vkCreateDataGraphPipelinesARM, iFpppuppp_t) \
 	GO(vkCreateRayTracingPipelinesKHR, iFpppuppp_t) \
-	GO(vkCmdBindDescriptorSets, vFpupuupup_t)
+	GO(vkCmdBlitImage, vFppupuupu_t) \
+	GO(vkCmdPipelineBarrier, vFpuuuupupup_t)
 
 #endif // __wrappedvulkanTYPES_H_

@@ -1001,7 +1001,6 @@
 #() vFEpUp
 #() vFEpLi
 #() vFEpLp
-#() vFEppu
 #() vFEppp
 #() vFEppV
 #() vFEppA
@@ -1719,7 +1718,6 @@
 #() vFEippp
 #() vFEpipV
 #() vFEpipA
-#() vFEpuup
 #() vFEpuuV
 #() vFEpuuA
 #() vFEpupp
@@ -1932,7 +1930,6 @@
 #() iFEpipp
 #() iFEpipV
 #() iFEpipA
-#() iFEpupp
 #() iFEpLpp
 #() iFEpLpV
 #() iFEpLpA
@@ -2042,6 +2039,7 @@
 #() iFpuLpp
 #() iFpupui
 #() iFpupuu
+#() iFpupuU
 #() iFpupup
 #() iFpupLu
 #() iFpupLp
@@ -2404,7 +2402,6 @@
 #() vFEpippp
 #() vFEpuipV
 #() vFEpuipA
-#() vFEpuuuu
 #() vFEpuppp
 #() vFEpLipp
 #() vFEpLLpp
@@ -2579,7 +2576,6 @@
 #() iFEpippi
 #() iFEpIppp
 #() iFEpuipp
-#() iFEpupuU
 #() iFEpuppp
 #() iFEpLppp
 #() iFEppipp
@@ -2969,10 +2965,11 @@
 #() vFEiipupV
 #() vFEpuipuV
 #() vFEpuuipp
-#() vFEpuuuiu
 #() vFEpuLppp
 #() vFEpupppp
 #() vFEppippp
+#() vFEppupup
+#() vFEpppuup
 #() vFEpppLLp
 #() vFEpppLpp
 #() vFEppppup
@@ -3361,6 +3358,7 @@
 #() vFELupippp
 #() vFELpAippp
 #() vFEpuppppV
+#() vFEppupuup
 #() vFEppupppp
 #() vFEppLippp
 #() vFEppLpLpp
@@ -3412,6 +3410,7 @@
 #() vFpuuuuupp
 #() vFpuuULipp
 #() vFpudddddd
+#() vFpupuupup
 #() vFpuppippp
 #() vFpuppLLLL
 #() vFpliicppp
@@ -3426,7 +3425,6 @@
 #() vFppippppp
 #() vFppuuiiii
 #() vFppuupUUu
-#() vFppupuupu
 #() vFppuppiii
 #() vFppuppiiu
 #() vFpplpLplp
@@ -3607,10 +3605,10 @@
 #() iWEpuuuipp
 #() iWpuipuppp
 #() vFEpuuuippp
-#() vFEpupuupup
 #() vFEpuppippV
 #() vFEpuppippA
 #() vFEppuipppp
+#() vFEppupuupu
 #() vFEpppuippp
 #() vFEpppLLpLp
 #() vFEppppippp
@@ -3822,7 +3820,6 @@
 #() vFffffffffff
 #() vFpiuippppip
 #() vFpipipippip
-#() vFpuuuupupup
 #() vFpuupuuuuuu
 #() vFppiiiiiiii
 #() vFppiiiiupip
@@ -3899,6 +3896,7 @@
 #() iWEpuipupppp
 #() iWEpuuiiuipp
 #() iWEpuuuuiipp
+#() vFEpuuuupupup
 #() vFEppLpLpLLpp
 #() vFiiiiillliip
 #() vFiiiiilllilp
@@ -6212,6 +6210,7 @@ wrappedlibmonobdwgc:
   - mono_dl_fallback_unregister
   - mono_raise_exception
   - mono_set_find_plugin_callback
+  - mono_unity_install_memory_callbacks
   - mono_unity_install_unitytls_interface
   - mono_unity_jit_cleanup
   - mono_unity_set_vprintf_func
@@ -7514,26 +7513,22 @@ wrappedvorbisfile:
 - lFppiiiippp:
   - ov_read_filter
 wrappedvulkan:
-- vFp:
-  - vkCmdEndRenderPass
-  - vkCmdEndRendering
-- iFp:
-  - vkDeviceWaitIdle
-  - vkEndCommandBuffer
-  - vkQueueWaitIdle
 - vFpp:
-  - vkCmdBeginRendering
+  - vkCmdBlitImage2
+  - vkCmdBlitImage2KHR
+  - vkCmdCopyBufferToImage2
+  - vkCmdCopyBufferToImage2KHR
+  - vkCmdCopyImage2
+  - vkCmdCopyImage2KHR
+  - vkCmdPipelineBarrier2
+  - vkCmdPipelineBarrier2KHR
   - vkDestroyDevice
   - vkDestroyInstance
   - vkGetPhysicalDeviceMemoryProperties
   - vkGetPhysicalDeviceMemoryProperties2
   - vkGetPhysicalDeviceMemoryProperties2KHR
   - vkGetPhysicalDeviceProperties2
-- iFpu:
-  - vkResetCommandBuffer
 - iFpp:
-  - vkBeginCommandBuffer
-  - vkGetFenceStatus
   - vkQueuePresentKHR
 - pFpp:
   - vkGetDeviceProcAddr
@@ -7541,8 +7536,6 @@ wrappedvulkan:
 - vFpUp:
   - vkDestroyCudaFunctionNV
   - vkDestroyCudaModuleNV
-- vFppu:
-  - vkCmdBeginRenderPass
 - vFppp:
   - vkDestroyAccelerationStructureKHR
   - vkDestroyAccelerationStructureNV
@@ -7592,20 +7585,13 @@ wrappedvulkan:
   - vkDestroyVideoSessionKHR
   - vkDestroyVideoSessionParametersKHR
   - vkFreeMemory
-- iFpup:
-  - vkResetFences
 - iFppp:
-  - vkAcquireNextImage2KHR
   - vkCreateDeferredOperationKHR
   - vkCreateInstance
   - vkEnumerateInstanceExtensionProperties
   - vkGetPhysicalDeviceSurfaceCapabilities2KHR
   - vkGetPhysicalDeviceSurfaceCapabilitiesKHR
   - vkReleaseCapturedPipelineDataKHR
-- vFpuup:
-  - vkGetDeviceQueue
-- iFpupp:
-  - vkQueueSubmit
 - iFpppp:
   - vkAllocateMemory
   - vkCreateAccelerationStructureKHR
@@ -7665,24 +7651,22 @@ wrappedvulkan:
   - vkCreateXlibSurfaceKHR
   - vkEnumerateDeviceExtensionProperties
   - vkGetPhysicalDeviceSurfaceFormatsKHR
-  - vkGetSwapchainImagesKHR
   - vkRegisterDeviceEventEXT
 - uFpupp:
   - vkGetPhysicalDeviceSurfaceSupportKHR
   - vkGetPhysicalDeviceXcbPresentationSupportKHR
   - vkGetPhysicalDeviceXlibPresentationSupportKHR
-- vFpuuuu:
-  - vkCmdDraw
-- iFpupuU:
-  - vkWaitForFences
 - iFpuppp:
   - vkCreateShadersEXT
   - vkCreateSharedSwapchainsKHR
 - iFppppp:
   - vkCreateDisplayModeKHR
   - vkRegisterDisplayEventEXT
-- vFpuuuiu:
-  - vkCmdDrawIndexed
+- vFppupup:
+  - vkCmdClearColorImage
+  - vkCmdCopyImageToBuffer
+- vFpppuup:
+  - vkCmdCopyBufferToImage
 - iFpUuppp:
   - vkCreateExecutionGraphPipelinesAMDX
 - iFppuppp:
@@ -7691,11 +7675,15 @@ wrappedvulkan:
   - vkCreateRayTracingPipelinesNV
 - iFppUppp:
   - vkAcquireNextImageKHR
+- vFppupuup:
+  - vkCmdCopyImage
 - iFpppuppp:
   - vkCreateDataGraphPipelinesARM
   - vkCreateRayTracingPipelinesKHR
-- vFpupuupup:
-  - vkCmdBindDescriptorSets
+- vFppupuupu:
+  - vkCmdBlitImage
+- vFpuuuupupup:
+  - vkCmdPipelineBarrier
 wrappedwaylandclient:
 - vFp:
   - wl_log_set_handler_client

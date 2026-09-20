@@ -29,6 +29,7 @@ typedef void* (*pFpuppp_t)(void*, uint32_t, void*, void*, void*);
 	GO(mono_dl_fallback_unregister, vFp_t) \
 	GO(mono_raise_exception, vFp_t) \
 	GO(mono_set_find_plugin_callback, vFp_t) \
+	GO(mono_unity_install_memory_callbacks, vFp_t) \
 	GO(mono_unity_install_unitytls_interface, vFp_t) \
 	GO(mono_unity_jit_cleanup, vFp_t) \
 	GO(mono_unity_set_vprintf_func, vFp_t) \
