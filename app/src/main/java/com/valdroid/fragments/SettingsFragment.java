@@ -425,6 +425,20 @@ public class SettingsFragment extends Fragment {
             }
         });
 
+        // Graphics preset: written into the game's settings at launch (see ValheimInstanceSetup).
+        android.widget.RadioGroup rgGfx = view.findViewById(R.id.rg_gfx_preset);
+        switch (inst.getGraphicsPreset()) {
+            case com.valdroid.InstanceSettings.GFX_ULTRA: rgGfx.check(R.id.rb_gfx_ultra); break;
+            case com.valdroid.InstanceSettings.GFX_LOW:   rgGfx.check(R.id.rb_gfx_low);   break;
+            default:                                      rgGfx.check(R.id.rb_gfx_keep);  break;
+        }
+        rgGfx.setOnCheckedChangeListener((group, checkedId) -> {
+            int preset = (checkedId == R.id.rb_gfx_ultra) ? com.valdroid.InstanceSettings.GFX_ULTRA
+                       : (checkedId == R.id.rb_gfx_low)   ? com.valdroid.InstanceSettings.GFX_LOW
+                       : com.valdroid.InstanceSettings.GFX_KEEP;
+            inst.setGraphicsPreset(preset);
+        });
+
         // Texture compression tier: No / Low / Ultra low (see InstanceSettings.getTexTier).
         // Takes effect on the next launch.
         android.widget.RadioGroup rgTexq = view.findViewById(R.id.rg_texq);

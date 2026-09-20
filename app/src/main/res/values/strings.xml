@@ -305,4 +305,9 @@ In the cloud: %2$s
         <item>L3 — Shift (multi-select)</item>
         <item>R3 — Right stick press (unused)</item>
     </string-array>
+    <string name="gfx_preset_label">Graphics</string>
+    <string name="gfx_preset_keep">Don&#8217;t touch</string>
+    <string name="gfx_preset_low">Low</string>
+    <string name="gfx_preset_ultra">Very low</string>
+    <string name="gfx_preset_hint">Writes a set of in-game graphics settings before the game starts, tuned for emulation: no tessellation, no shadows, no draw-distance padding — those cost the most here. Low keeps the effects the GPU handles for free (antialiasing, bloom, sun shafts). Very low drops them too and renders the world at a lower internal resolution. “Don’t touch” leaves whatever you set in the game.</string>
 </resources>

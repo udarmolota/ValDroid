@@ -253,7 +253,7 @@ public class LauncherActivity extends AppCompatActivity {
         final java.util.Date now = new java.util.Date();
         final String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
                 .format(now);
-        final String reportName = "rimdroid_report_"
+        final String reportName = "valdroid_report_"
                 + new java.text.SimpleDateFormat("ddMMyyyy_HHmm", java.util.Locale.US).format(now)
                 + ".zip";
         final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL

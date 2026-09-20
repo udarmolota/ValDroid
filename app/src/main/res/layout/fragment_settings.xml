@@ -161,6 +161,48 @@
             style="@style/AppTheme.CardHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="@string/gfx_preset_label"
+            android:layout_marginBottom="6dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_gfx_preset"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/rb_gfx_keep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/gfx_preset_keep" />
+
+            <RadioButton
+                android:id="@+id/rb_gfx_low"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/gfx_preset_low" />
+
+            <RadioButton
+                android:id="@+id/rb_gfx_ultra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gfx_preset_ultra" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/gfx_preset_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="@string/texq_label"
             android:layout_marginBottom="6dp" />
 

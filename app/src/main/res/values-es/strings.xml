@@ -287,4 +287,9 @@ En la nube: %2$s
         <item>L3 — Shift (selección múltiple)</item>
         <item>R3 — Pulsar stick derecho (sin uso)</item>
     </string-array>
+    <string name="gfx_preset_label">Gráficos</string>
+    <string name="gfx_preset_keep">No tocar</string>
+    <string name="gfx_preset_low">Baja</string>
+    <string name="gfx_preset_ultra">Muy baja</string>
+    <string name="gfx_preset_hint">Escribe en el juego un conjunto de ajustes gráficos antes de iniciarlo, pensado para la emulación: sin teselación, sin sombras y sin distancia de dibujado extra, que es lo que más cuesta aquí. «Baja» mantiene los efectos que la GPU hace casi gratis. «Muy baja» también los quita y dibuja el mundo a menor resolución interna.</string>
 </resources>

@@ -150,6 +150,22 @@ public class InstanceSettings {
         p.edit().putInt(pfx + "tex_tier", tier).apply();
     }
 
+    /**
+     * Graphics preset written into the game's own settings before launch (see
+     * ValheimInstanceSetup.applyGraphicsPreset). Valheim's own presets are built for a PC: even
+     * "Very low" leaves on what costs the most under emulation (tessellation, shadows, draw
+     * distance). KEEP = do not touch the game's settings at all.
+     */
+    public static final int GFX_KEEP = 0, GFX_LOW = 1, GFX_ULTRA = 2;
+
+    public int getGraphicsPreset() {
+        return p.getInt(pfx + "gfx_preset", GFX_KEEP);
+    }
+
+    public void setGraphicsPreset(int preset) {
+        p.edit().putInt(pfx + "gfx_preset", preset).apply();
+    }
+
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
     public boolean isHapticFeedback() {
         return p.getBoolean(pfx + "haptic", global.isHapticFeedback());

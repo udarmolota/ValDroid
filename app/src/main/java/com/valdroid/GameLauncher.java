@@ -224,6 +224,16 @@ public class GameLauncher {
         // everywhere else, and it puts the game's own binary back if the address becomes available.
         UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
 
+        // Graphics preset (Settings -> Video): written into the game's own settings before it starts,
+        // so the player gets a profile that suits emulation instead of Valheim's PC-shaped presets.
+        try {
+            com.valdroid.ValheimInstanceSetup.applyGraphicsPreset(
+                    new java.io.File(gameInstance.getGamePath()),
+                    gameInstance.settings().getGraphicsPreset());
+        } catch (Throwable t) {
+            Log.w(TAG, "graphics preset failed", t);
+        }
+
         // --- Box64 tuning ---
         // BOX64_LOG: 0 normally (verbose tracing = gigabyte logs). Raise to 1-2
         // only for targeted call-sequence tracing.

@@ -173,6 +173,54 @@ public final class ValheimInstanceSetup {
     // --- PlayerPrefs -------------------------------------------------------------------------
 
     /**
+     * Write a graphics preset into the game's own settings, before it starts.
+     *
+     * The values come from a device run that held 40-55 FPS on an S25 (they are the keys Valheim
+     * stores in PlayerPrefs; the launcher's own render scale stays in charge of the window size).
+     * What matters under emulation is the number of draw calls and scene traversals, not fill rate:
+     * tessellation alone cost 15 FPS, and shadows traverse the whole scene a second time. So both
+     * presets kill those, and LOW keeps the effects that only cost the GPU, which has headroom
+     * (antialiasing, bloom, sun shafts, soft particles). ULTRA drops those too and renders the 3D
+     * scene at 360 lines instead of 480.
+     */
+    private static final String[] GFX_COMMON = {
+            // off in both presets: each of these multiplies the work the emulated engine does
+            "Tesselation=0", "ShadowQuality=0", "DistantShadows=0", "PointLightShadows=0",
+            "SSAO_2=0", "MotionBlur=0", "DOF=0", "ClothQuality=0", "Lights=0", "SimulationDistance=0",
+            // no waiting on the panel, no frame cap, and skip the intro film (it stutters badly here)
+            "VSync=0", "FPSLimit=361", "SkipIntroCinematic=1",
+    };
+    private static final String[] GFX_LOW = {
+            "AntiAliasing=1", "Bloom=1", "ChromaticAberration=1", "SunShafts=1", "SoftPart=1",
+            "PointLights=1", "ClutterQuality=1", "LodBias=1", "Target3DResolutionVertical=480",
+    };
+    private static final String[] GFX_ULTRA = {
+            "AntiAliasing=0", "Bloom=0", "ChromaticAberration=0", "SunShafts=0", "SoftPart=0",
+            "PointLights=0", "ClutterQuality=0", "LodBias=0", "Target3DResolutionVertical=360",
+    };
+
+    /** Applies {@link com.valdroid.InstanceSettings#getGraphicsPreset()}; KEEP writes nothing. */
+    public static void applyGraphicsPreset(File instanceDir, int preset) {
+        if (preset != com.valdroid.InstanceSettings.GFX_LOW
+                && preset != com.valdroid.InstanceSettings.GFX_ULTRA) return;
+        String[] tier = (preset == com.valdroid.InstanceSettings.GFX_ULTRA) ? GFX_ULTRA : GFX_LOW;
+        int written = 0;
+        for (String[] set : new String[][]{ GFX_COMMON, tier }) {
+            for (String kv : set) {
+                int eq = kv.indexOf('=');
+                try {
+                    setPlayerPrefInt(instanceDir, kv.substring(0, eq), Integer.parseInt(kv.substring(eq + 1)));
+                    written++;
+                } catch (Exception e) {
+                    Log.w(TAG, "graphics preset: " + kv + " failed: " + e);
+                }
+            }
+        }
+        Log.i(TAG, "graphics preset " + (preset == com.valdroid.InstanceSettings.GFX_ULTRA ? "ULTRA" : "LOW")
+                + ": " + written + " settings written");
+    }
+
+    /**
      * Unity's Linux PlayerPrefs live in {@code $XDG_CONFIG_HOME/unity3d/<Company>/<Product>/prefs}
      * (the launcher points XDG_CONFIG_HOME at the instance) as a small XML file. Under box64 Unity 6
      * resolves company/product as "unknown/unknown" (seen on device: Screenmanager keys land there),
