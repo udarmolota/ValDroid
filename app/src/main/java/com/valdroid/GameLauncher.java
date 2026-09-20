@@ -456,6 +456,14 @@ public class GameLauncher {
                 // escape hatch for A/B on any device.
                 Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
                 Os.setenv("RIMDROID_GLT_ETC2", "1", true);
+                // ...and the same treatment for the textures that arrive ALREADY uncompressed.
+                // Valheim's albedo ships as BC7, which nothing in this stack can sample, so Unity
+                // decompresses it in software itself and hands us SRGB8_ALPHA8 — four times the
+                // bytes the shipped BC7 used. Re-compressing those to ETC2 costs about two seconds
+                // of extra load (12.7s vs 10.4s measured on Adreno 830) and bought 28-32 -> 29-45
+                // fps at Medium settings, with no upload the encoder could not handle. It matters
+                // more, not less, on the phones this GL path exists for: Mali, 8GB, no Turnip.
+                Os.setenv("RIMDROID_GLT_ETC2_UNCOMP", "1", true);
                 // Threaded rendering, ON BY DEFAULT for MobileGlues (her call after playing it,
                 // 2026-08-15) — roughly double the frame rate on 1.6, and the loss of sharpness at
                 // low zoom turned out not to be noticeable in play.
@@ -482,6 +490,7 @@ public class GameLauncher {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
                 Os.unsetenv("RIMDROID_GLT_ETC2");
+                Os.unsetenv("RIMDROID_GLT_ETC2_UNCOMP");
                 Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }
