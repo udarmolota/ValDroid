@@ -644,6 +644,56 @@ static EGLBoolean rd_eglSwapBuffers(EGLDisplay d, EGLSurface s) {
     return g_glt_egl.swap ? g_glt_egl.swap(d, s) : eglSwapBuffers(d, s);
 }
 
+// ---- sRGB default framebuffer (2026-09-20) --------------------------------------------------
+// Valheim, like every modern Unity title, lights in LINEAR space and expects the final write to
+// be encoded to sRGB. An EGL window surface created with no attribute list defaults to
+// EGL_GL_COLORSPACE_LINEAR, i.e. no encode — the linear values reach the panel raw. On screen
+// that reads as crushed darks and screaming saturation (the character in brown leather goes
+// nearly black while the grass turns acid), which is exactly what the first MobileGlues session
+// looked like. The Vulkan path has its own presentation chain and is untouched by this.
+#ifndef EGL_GL_COLORSPACE_KHR
+#define EGL_GL_COLORSPACE_KHR       0x309D
+#endif
+#ifndef EGL_GL_COLORSPACE_SRGB_KHR
+#define EGL_GL_COLORSPACE_SRGB_KHR  0x3089
+#endif
+
+/**
+ * Whether to ask for an sRGB-encoding window surface. ON by default while a GL translator is
+ * active (MobileGlues / GL4ES), which is the path that showed the defect; VALDROID_EGL_SRGB
+ * forces it either way, so the before/after can be compared without rebuilding.
+ */
+static int rd_egl_want_srgb(void) {
+    static int cached = -1;
+    if (cached < 0) {
+        const char* e = getenv("VALDROID_EGL_SRGB");
+        if (e && e[0]) cached = (e[0] != '0');
+        else           cached = (getenv("RIMDROID_GLT") != NULL);
+    }
+    return cached;
+}
+
+/**
+ * Surface attributes for eglCreateWindowSurface: the sRGB colorspace pair when it is both wanted
+ * and supported, else NULL (EGL's own default). EGL_KHR_gl_colorspace is queried rather than
+ * assumed — passing an unknown attribute makes eglCreateWindowSurface fail outright, which would
+ * cost us the window instead of only the colour.
+ */
+static const EGLint* rd_egl_surface_attribs(EGLDisplay dpy) {
+    static const EGLint srgb[] = { EGL_GL_COLORSPACE_KHR, EGL_GL_COLORSPACE_SRGB_KHR, EGL_NONE };
+    static int logged = 0;
+    if (!rd_egl_want_srgb()) return NULL;
+    const char* exts = eglQueryString(dpy, EGL_EXTENSIONS);
+    int have = exts && strstr(exts, "EGL_KHR_gl_colorspace");
+    if (!logged) {
+        logged = 1;
+        LOGI("EGL: sRGB window surface %s (EGL_KHR_gl_colorspace %s)",
+             have ? "requested" : "NOT available — colours will stay linear",
+             have ? "present" : "missing");
+    }
+    return have ? srgb : NULL;
+}
+
 // Replace only the disposable EGL window surface after Android recreates the SurfaceView. All EGL
 // work stays on the game's render thread; doing it in SurfaceHolder.Callback would race the current
 // context. The caller supplies the context that must remain current, which matters in MULTICTX mode.
@@ -678,7 +728,8 @@ static bool rd_eglt_sync_window_surface(EGLContext context) {
     eglGetConfigAttrib(g_egl_display, g_egl_config, EGL_NATIVE_VISUAL_ID, &format);
     ANativeWindow_setBuffersGeometry(window, 0, 0, format);
 
-    EGLSurface replacement = eglCreateWindowSurface(g_egl_display, g_egl_config, window, NULL);
+    EGLSurface replacement = eglCreateWindowSurface(g_egl_display, g_egl_config, window,
+                                                    rd_egl_surface_attribs(g_egl_display));
     if (replacement == EGL_NO_SURFACE) {
         LOGE("EGLT: replacement eglCreateWindowSurface failed at generation %llu: 0x%x",
              (unsigned long long)generation, eglGetError());
@@ -1281,7 +1332,8 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
     initial_surface_generation = g_native_window_generation;
     pthread_mutex_unlock(&g_rimdroid_surface.mutex);
 
-    g_egl_surface = eglCreateWindowSurface(g_egl_display, config, nativeWindow, NULL);
+    g_egl_surface = eglCreateWindowSurface(g_egl_display, config, nativeWindow,
+                                           rd_egl_surface_attribs(g_egl_display));
     if (g_egl_surface == EGL_NO_SURFACE) {
         LOGE("EGL: eglCreateWindowSurface failed: 0x%x", eglGetError());
         return -1;
