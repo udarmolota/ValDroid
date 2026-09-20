@@ -409,9 +409,63 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         return name.endsWith(".fwl") || name.endsWith(".db") || name.endsWith(".fch");
     }
 
-    /** Which of the two local folders a save belongs in. */
+    /**
+     * The save name with Valheim's rolling-backup suffixes peeled off: "wetsnow.fch.old" ->
+     * "wetsnow.fch". The game writes a save as {@code X.new}, renames the live {@code X} to
+     * {@code X.old} and then {@code X.new} to {@code X}, so either suffix can sit on top of the
+     * real extension, and they can nest.
+     */
+    private static String baseSaveName(String name) {
+        String s = name;
+        for (;;) {
+            String low = s.toLowerCase(java.util.Locale.ROOT);
+            if (low.endsWith(".old") || low.endsWith(".new")) s = s.substring(0, s.length() - 4);
+            else return s;
+        }
+    }
+
+    /**
+     * Which of the two local folders a save belongs in.
+     *
+     * Route on the BASE name, not the raw one: a plain {@code endsWith(".fch")} sent every
+     * character backup to the worlds folder, because "wetsnow.fch.old" ends in ".old". Found on
+     * 2026-09-20 in a real cloud pull — wetsnow.fch.old had landed in worlds_local/, where it can
+     * no longer serve as the fallback Valheim reads when the live .fch is unreadable.
+     *
+     * Names carrying no save extension at all (Valheim's "favorite" / "recent" lists) keep the old
+     * behaviour and stay in the worlds folder: that is where this account's cloud copy held them,
+     * and relocating them on a guess would be worse than leaving them alone.
+     */
     public static String localDirFor(String name) {
-        return name.endsWith(".fch") ? CHARACTERS_DIR : WORLDS_DIR;
+        return baseSaveName(name).endsWith(".fch") ? CHARACTERS_DIR : WORLDS_DIR;
+    }
+
+    /**
+     * Move saves that an earlier {@link #localDirFor} filed under the wrong folder. Walks both
+     * folders and relocates anything whose name says it belongs in the other one. A file already
+     * present at the destination is left untouched — the point is to recover a stranded backup,
+     * never to clobber a live save.
+     *
+     * @return how many files were moved.
+     */
+    public static int migrateMisplaced(File savesDir) {
+        int moved = 0;
+        for (String sub : new String[]{ WORLDS_DIR, CHARACTERS_DIR }) {
+            for (File f : orEmpty(new File(savesDir, sub).listFiles())) {
+                if (!f.isFile()) continue;
+                String want = localDirFor(f.getName());
+                if (want.equals(sub)) continue;
+                File toDir = new File(savesDir, want);
+                if (!toDir.isDirectory() && !toDir.mkdirs()) continue;
+                File to = new File(toDir, f.getName());
+                if (to.exists()) continue;
+                if (f.renameTo(to)) {
+                    moved++;
+                    Log.i(TAG, "migrated misplaced save " + f.getName() + ": " + sub + " -> " + want);
+                }
+            }
+        }
+        return moved;
     }
 
     /** Cloud prefixes when the account has never synced this game from a PC yet. */

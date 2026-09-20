@@ -34,6 +34,7 @@
     <string name="cloud_saves_log_placed">Скопирован: %1$s</string>
     <string name="cloud_saves_log_kept">Оставлен свой: %1$s</string>
     <string name="cloud_saves_place_done">Готово: скопировано %1$d, оставлено без изменений %2$d.</string>
+    <string name="cloud_saves_migrated">Перенесено в правильную папку: %1$d.</string>
     <string name="cloud_saves_clash_title">%1$s уже есть</string>
     <string name="cloud_saves_clash_msg">На телефоне: %1$s
 В облаке: %2$s

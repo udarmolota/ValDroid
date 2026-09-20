@@ -37,6 +37,7 @@
     <string name="cloud_saves_log_placed">Copiada: %1$s</string>
     <string name="cloud_saves_log_kept">Se conservó la copia de este teléfono: %1$s</string>
     <string name="cloud_saves_place_done">Listo: %1$d copiadas, %2$d sin cambios.</string>
+    <string name="cloud_saves_migrated">Se movieron %1$d partidas a la carpeta correcta.</string>
     <string name="cloud_saves_clash_title">%1$s ya existe aquí</string>
     <string name="cloud_saves_clash_msg">En este teléfono: %1$s
 En la nube: %2$s

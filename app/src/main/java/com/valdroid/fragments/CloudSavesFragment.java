@@ -173,6 +173,12 @@ public class CloudSavesFragment extends Fragment {
             busy(false);
             return;
         }
+        // Repair earlier pulls before adding to them: character backups ("*.fch.old") used to be
+        // filed under worlds_local/, where Valheim cannot use them as the fallback for an
+        // unreadable live save. Cheap, idempotent, and it only moves files whose name is free at
+        // the destination.
+        int migrated = SteamCloudSpike.migrateMisplaced(savesDir);
+        if (migrated > 0) appendLog(getString(R.string.cloud_saves_migrated, migrated));
         // Worlds and characters go to different folders; destDirFor creates whichever is needed.
         GameInstance gi = chosenInstance();
         placeNext(pending, 0, savesDir,

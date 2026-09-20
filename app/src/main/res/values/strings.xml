@@ -35,6 +35,7 @@
     <string name="cloud_saves_log_placed">Copied in: %1$s</string>
     <string name="cloud_saves_log_kept">Kept the copy on this phone: %1$s</string>
     <string name="cloud_saves_place_done">Done: %1$d copied in, %2$d left as they were.</string>
+    <string name="cloud_saves_migrated">Moved %1$d save(s) into the right folder.</string>
     <string name="cloud_saves_clash_title">%1$s is already here</string>
     <string name="cloud_saves_clash_msg">On this phone: %1$s
 In the cloud: %2$s

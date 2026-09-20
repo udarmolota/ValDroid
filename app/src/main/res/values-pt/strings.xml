@@ -39,6 +39,7 @@
     <string name="cloud_saves_log_placed">Copiado: %1$s</string>
     <string name="cloud_saves_log_kept">Mantida a cópia deste celular: %1$s</string>
     <string name="cloud_saves_place_done">Pronto: %1$d copiados, %2$d sem alteração.</string>
+    <string name="cloud_saves_migrated">%1$d save(s) movidos para a pasta certa.</string>
     <string name="cloud_saves_clash_title">%1$s já existe aqui</string>
     <string name="cloud_saves_clash_msg">Neste celular: %1$s
 Na nuvem: %2$s
