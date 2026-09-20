@@ -138,9 +138,17 @@ public class LauncherPreferences {
 
     // --- Renderer ---
 
+    /**
+     * MobileGlues is the default since 2026-09-21. On the first device it could be measured on
+     * (Adreno 830) it renders Low at 69-103 fps where the Vulkan path managed 51-56 on Ultra low —
+     * a better settings tier AND roughly twice the frames. The reason is structural rather than
+     * device-specific: MobileGlues hands the work to the phone's own vendor GLES driver, while the
+     * Vulkan path goes through Turnip, and on Mali there is no Turnip at all. Zink ZFA stays as
+     * the fallback for anything MobileGlues cannot render.
+     */
     public Renderer getRenderer() {
-        String name = prefs.getString("renderer", Renderer.ZINK_ZFA.name());
-        try { return Renderer.valueOf(name); } catch (Exception e) { return Renderer.ZINK_ZFA; }
+        String name = prefs.getString("renderer", Renderer.MOBILEGLUES.name());
+        try { return Renderer.valueOf(name); } catch (Exception e) { return Renderer.MOBILEGLUES; }
     }
 
     public void setRenderer(Renderer renderer) {

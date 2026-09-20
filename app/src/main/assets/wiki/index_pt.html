@@ -239,8 +239,21 @@
 <section id="renderers">
     <h2>Drivers gráficos</h2>
     <p>
-        Valheim desenha pelo <b>Vulkan</b>, então o que importa é o driver Vulkan. Escolha nas
-        configurações da instância (engrenagem), cartão <b>Vídeo</b>.
+        O renderizador é escolhido nas configurações da instância (engrenagem), cartão
+        <b>Vídeo</b>. São dois.
+    </p>
+    <ul>
+        <li><b>MobileGlues</b> — o padrão. O jogo roda em OpenGL, e o MobileGlues traduz isso para
+            os gráficos do telefone em tempo real. O Vulkan não participa: quem trabalha é o driver
+            próprio da sua GPU. Em Snapdragon isso dá cerca do dobro dos quadros do caminho Vulkan,
+            e um nível de ajustes acima. Em GPUs Mali é a única opção que funciona, porque não
+            existe driver Vulkan aberto para elas.</li>
+        <li><b>Zink ZFA</b> — o jogo roda direto em <b>Vulkan</b>. Mais lento, mas é a reserva para
+            quando o MobileGlues desenha errado ou não inicia.</li>
+    </ul>
+    <p>
+        As configurações abaixo pertencem ao <b>Zink ZFA</b> — elas escolhem o driver Vulkan. No
+        MobileGlues não mudam nada.
     </p>
     <ul>
         <li>Ao criar uma instância, o ValDroid escolhe um driver para a sua GPU, e <b>Driver

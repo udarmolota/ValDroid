@@ -233,8 +233,20 @@
 <section id="renderers">
     <h2>Graphics drivers</h2>
     <p>
-        Valheim draws through <b>Vulkan</b>, and what matters is the Vulkan driver. Pick it in the
-        instance settings (gear icon), card <b>Video</b>.
+        The renderer is picked in the instance settings (gear icon), card <b>Video</b>. There are two.
+    </p>
+    <ul>
+        <li><b>MobileGlues</b> — the default. The game runs on OpenGL, which MobileGlues translates
+            to the phone's own graphics on the fly. No Vulkan is involved at all: your GPU's own
+            vendor driver does the work. On Snapdragon that is roughly twice the frame rate of the
+            Vulkan path, at one settings tier higher. On Mali GPUs it is the only option that
+            works, because no open Vulkan driver exists for them.</li>
+        <li><b>Zink ZFA</b> — the game runs on <b>Vulkan</b> directly. Slower, but it is the
+            fallback for anything MobileGlues renders wrong or refuses to start.</li>
+    </ul>
+    <p>
+        The settings below belong to <b>Zink ZFA</b> — they choose the Vulkan driver. On
+        MobileGlues they change nothing.
     </p>
     <ul>
         <li>When you create an instance, ValDroid picks a driver for your GPU, and

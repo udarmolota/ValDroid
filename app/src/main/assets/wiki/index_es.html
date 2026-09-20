@@ -241,8 +241,21 @@
 <section id="renderers">
     <h2>Controladores gráficos</h2>
     <p>
-        Valheim dibuja por <b>Vulkan</b>, así que lo importante es el controlador Vulkan. Se elige
-        en los ajustes de la instancia (engranaje), tarjeta <b>Vídeo</b>.
+        El renderizador se elige en los ajustes de la instancia (engranaje), tarjeta <b>Vídeo</b>.
+        Hay dos.
+    </p>
+    <ul>
+        <li><b>MobileGlues</b> — el predeterminado. El juego usa OpenGL y MobileGlues lo traduce al
+            vuelo a los gráficos del teléfono. Vulkan no interviene: trabaja el controlador propio
+            de tu GPU. En Snapdragon eso es aproximadamente el doble de fotogramas que por Vulkan,
+            y un nivel de ajustes más alto. En GPU Mali es la única opción que funciona, porque no
+            existe un controlador Vulkan abierto para ellas.</li>
+        <li><b>Zink ZFA</b> — el juego va por <b>Vulkan</b> directamente. Más lento, pero es el
+            recurso de reserva si MobileGlues dibuja mal o no arranca.</li>
+    </ul>
+    <p>
+        Los ajustes de abajo pertenecen a <b>Zink ZFA</b>: eligen el controlador Vulkan. Con
+        MobileGlues no cambian nada.
     </p>
     <ul>
         <li>Al crear una instancia, ValDroid elige un controlador para tu GPU, y <b>Controlador

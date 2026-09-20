@@ -35,7 +35,7 @@ public class InstanceSettings {
     public Renderer getRenderer() {
         String def = global.getRenderer().name();
         try { return Renderer.valueOf(p.getString(pfx + "renderer", def)); }
-        catch (Exception e) { return Renderer.ZINK_ZFA; }
+        catch (Exception e) { return Renderer.MOBILEGLUES; }
     }
 
     public void setRenderer(Renderer r) {
