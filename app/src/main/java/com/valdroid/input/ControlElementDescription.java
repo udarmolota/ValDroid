@@ -39,6 +39,7 @@ public class ControlElementDescription {
 
     public boolean isToggle;        // BUTTON: hold (false) vs toggle (true)
     public float   sensitivity;     // MOUSE_STICK cursor speed (0.25..8.0)
+    public float   stickSensitivity; // STICK output multiplier (0.25..2.0); 0 = not set, use the stick's default
 
     public ControlElementDescription() {
         // defaults for Gson / fields missing in older JSON

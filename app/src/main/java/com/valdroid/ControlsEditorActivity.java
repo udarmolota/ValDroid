@@ -195,6 +195,8 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
                     v -> m.setSensitivity(v / 100f));
         } else if (el instanceof AnalogStickElement) {
             AnalogStickElement a = (AnalogStickElement) el;
+            addSlider("Sensitivity", 25, 200, Math.round(a.getSensitivity() * 100), "%",
+                    v -> a.setSensitivity(v / 100f));
             addCheckbox("Right stick (camera)", a.isRightStick(), right -> {
                 a.setRightStick(right);
                 controls.invalidate();

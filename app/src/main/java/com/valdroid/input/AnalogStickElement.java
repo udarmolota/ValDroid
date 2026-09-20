@@ -16,7 +16,12 @@ public class AnalogStickElement extends ControlElement {
     private static final float OUTER_R = 160f, INNER_R = 90f;      // Zomdroid StickControlDrawable
     private static final int   DEFAULT_COLOR = 0xFFCCCCCC, OUTLINE_COLOR = 0x00282828, OUTLINE_ALPHA = 70;
 
+    /** Output multiplier. Below 1 the stick never reaches full deflection (slower camera), above 1 it
+     *  saturates earlier. The right stick turns the camera, where a thumb on glass overshoots easily. */
+    public static final float MIN_SENS = 0.25f, MAX_SENS = 2.0f, DEFAULT_LEFT = 1.0f, DEFAULT_RIGHT = 0.7f;
+
     private Binding stick;          // LEFT_JOYSTICK | RIGHT_JOYSTICK
+    private float sensitivity;
     private final int color;
     private int pointerId = -1;
     private float knobX, knobY;
@@ -30,6 +35,8 @@ public class AnalogStickElement extends ControlElement {
                 ? Binding.fromName(d.bindings[0], Binding.LEFT_JOYSTICK) : Binding.LEFT_JOYSTICK;
         this.stick = (b == Binding.RIGHT_JOYSTICK) ? Binding.RIGHT_JOYSTICK : Binding.LEFT_JOYSTICK;
         this.color = d.color != 0 ? d.color : DEFAULT_COLOR;
+        this.sensitivity = d.stickSensitivity > 0f ? clamp(d.stickSensitivity, MIN_SENS, MAX_SENS)
+                : (stick == Binding.RIGHT_JOYSTICK ? DEFAULT_RIGHT : DEFAULT_LEFT);
         fill.setStyle(Paint.Style.FILL);
         stroke.setStyle(Paint.Style.STROKE);
     }
@@ -88,7 +95,7 @@ public class AnalogStickElement extends ControlElement {
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len > max && len > 0.001f) { float k = max / len; dx *= k; dy *= k; }
         knobX = dx; knobY = dy;
-        float k = max > 0 ? (float) Math.sqrt(2) / max : 0f;
+        float k = max > 0 ? (float) Math.sqrt(2) / max * sensitivity : 0f;
         view.injectStick(stick, clamp(dx * k, -1f, 1f), clamp(dy * k, -1f, 1f));
     }
 
@@ -123,12 +130,16 @@ public class AnalogStickElement extends ControlElement {
         d.type = "STICK";
         d.bindings = new String[]{ stick.name() };
         d.color = color;
+        d.stickSensitivity = sensitivity;
         return baseDescribe(d);
     }
 
     @Override public String editorLabel() {
         return stick == Binding.RIGHT_JOYSTICK ? "Gamepad right stick" : "Gamepad left stick";
     }
+
+    public float getSensitivity() { return sensitivity; }
+    public void setSensitivity(float s) { sensitivity = clamp(s, MIN_SENS, MAX_SENS); }
 
     public boolean isRightStick() { return stick == Binding.RIGHT_JOYSTICK; }
     public void setRightStick(boolean right) {
