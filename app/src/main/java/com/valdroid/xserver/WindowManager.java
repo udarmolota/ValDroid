@@ -346,6 +346,21 @@ public class WindowManager extends XResourceManager {
         if (width <= 0) throw new BadValue(width);
         if (height <= 0) throw new BadValue(height);
 
+        // ValDroid: a screen-sized window IS the Android surface, which never changes size. Deny a
+        // client resize of it (a window manager may): when Valheim's resolution menu shrank the
+        // window, Unity recreated its swapchain at an extent the surface does not have and Turnip
+        // crashed. Denied without a notify, SDL keeps the real size and nothing is recreated; the
+        // resolution is chosen with the launcher's render scale instead.
+        short screenW = rootWindow.getWidth(), screenH = rootWindow.getHeight();
+        if (window != rootWindow && window.getWidth() == screenW && window.getHeight() == screenH
+                && (width != screenW || height != screenH)) {
+            android.util.Log.i("ValDroid/XServer", "ConfigureWindow resize denied win=0x"
+                    + Integer.toHexString(window.id) + " " + width + "x" + height
+                    + " (window is the " + screenW + "x" + screenH + " surface)");
+            x = window.getX(); y = window.getY();
+            width = screenW; height = screenH;
+        }
+
         Window parent = window.getParent();
         boolean overrideRedirect = window.attributes.isOverrideRedirect();
         if (!parent.hasEventListenerFor(Event.SUBSTRUCTURE_REDIRECT) || overrideRedirect) {

@@ -141,6 +141,15 @@ public class GameInstance {
             // Unity 6 tries OpenGLCore first; the GL window needs libGL.so.1, which DIRECT_VULKAN
             // deliberately leaves unloaded -> MainPlayerWindow fails -> null deref after the
             // Vulkan fallback. Pin Vulkan so the window is created for Vulkan from the start.
+            // Start at the size of the X screen (= the Android surface at the launcher's render
+            // scale), whatever resolution the game saved: a saved 16:9 mode in our 19.5:9 window is
+            // what drew black bars left and right, and the window itself cannot be resized.
+            com.valdroid.xserver.XServer xs = com.valdroid.xserver.XServerRunner.getXServer();
+            if (xs != null) {
+                return new String[]{ "-force-vulkan",
+                        "-screen-width", String.valueOf(xs.screenInfo.width),
+                        "-screen-height", String.valueOf(xs.screenInfo.height) };
+            }
             return new String[]{ "-force-vulkan" };
         }
         // 1.6/X11+Vulkan render mode — see the rd_x11 block below. Threaded rendering is the
