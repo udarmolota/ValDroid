@@ -111,7 +111,7 @@ public class GameLauncher {
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
-                    ? "ON (ARM64 Mono, Burst off) " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
+                    ? "ON (ARM64 Mono, Burst " + ("1".equals(Os.getenv("RIMDROID_NO_BURST")) ? "off" : "on") + ") " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")

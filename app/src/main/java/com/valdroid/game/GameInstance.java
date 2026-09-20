@@ -111,9 +111,13 @@ public class GameInstance {
         // to the managed implementations. The two settings only make sense together.
         // RIMDROID_NO_BURST=1 in the extra env field turns Burst off on the emulated x86 Mono as well, so the
         // two runtimes can be compared on equal terms (diagnostic only).
-        String nativeMono = android.system.Os.getenv("RIMDROID_NATIVE_MONO_PATH");
-        boolean burstOff = (nativeMono != null && !nativeMono.isEmpty())
-                || "1".equals(android.system.Os.getenv("RIMDROID_NO_BURST"));
+        // ValDroid: Burst stays ON with native Mono. In Valheim Burst is MagicaCloth2's cloth jobs plus
+        // Unity.Collections; jobs are invoked by the (emulated x86) engine, so x86 Burst code is
+        // called from x86 code and the ARM64 runtime never jumps into it. Without Burst those jobs
+        // run as plain managed code, an order of magnitude slower, and the main thread waits for
+        // them every frame. Only a managed *direct call* of a Burst function pointer would be unsafe;
+        // RIMDROID_NO_BURST=1 in the extra env field is the way back if one shows up.
+        boolean burstOff = "1".equals(android.system.Os.getenv("RIMDROID_NO_BURST"));
         if (!burstOff) return args;
         String[] withBurstOff = java.util.Arrays.copyOf(args, args.length + 1);
         withBurstOff[args.length] = "--burst-disable-compilation";
