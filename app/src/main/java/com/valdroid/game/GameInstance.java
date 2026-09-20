@@ -102,9 +102,31 @@ public class GameInstance {
         return join(paths, ":");
     }
 
+    /**
+     * Unity command-line switches from the launcher's Extra env field, so they can be A/B tested on a
+     * release build without a rebuild:
+     *   VALDROID_JOB_WORKERS=3            -> -job-worker-count 3 (job workers run emulated engine code;
+     *                                        fewer of them means less heat and less fighting over the big cores)
+     *   VALDROID_GAME_ARGS=-force-gfx-jobs,native   -> appended as they are, comma-separated
+     */
+    private static String[] withTestArgs(String[] base) {
+        java.util.List<String> out = new java.util.ArrayList<>(java.util.Arrays.asList(base));
+        String workers = android.system.Os.getenv("VALDROID_JOB_WORKERS");
+        if (workers != null && workers.matches("\\d{1,2}")) {
+            out.add("-job-worker-count");
+            out.add(workers);
+        }
+        String extra = android.system.Os.getenv("VALDROID_GAME_ARGS");
+        if (extra != null) {
+            for (String a : extra.split(",")) if (!a.trim().isEmpty()) out.add(a.trim());
+        }
+        if (out.size() != base.length) android.util.Log.i("ValDroid", "getArgs: test args -> " + out);
+        return out.toArray(new String[0]);
+    }
+
     /** Args passed to RimWorldLinux binary */
     public String[] getArgs() {
-        String[] args = getBaseArgs();
+        String[] args = withTestArgs(getBaseArgs());
         // Native ARM64 Mono (RIMDROID_NATIVE_MONO_PATH, set by the per-instance switch, see NativeMono):
         // Burst direct calls hand managed code raw pointers into the
         // x86_64 lib_burst_generated.so, which ARM64 JIT code cannot execute. Unity then falls back
