@@ -977,35 +977,47 @@ EXPORT void my_vkCmdClearColorImage(x64emu_t* emu, void* cmd, void* image, uint3
  * count moves. Copied only when a shrunk image is in the list; the common case pays one lookup per
  * image barrier. VkImageMemoryBarrier: 72 bytes, image@40, baseMip@52, levelCount@56.
  * VkImageMemoryBarrier2: 96 bytes, image@64, baseMip@76, levelCount@80. */
-static char* vd_ts_fix_barriers(const char* in, uint32_t count, size_t stride, size_t imgoff, size_t baseoff)
+static int vd_ts_barriers_touch(const char* in, uint32_t count, size_t stride, size_t imgoff)
 {
-    if(!vd_ts_live || !count || !in) return NULL;
-    char* out = NULL;
+    if(!vd_ts_live || !count || !in) return 0;
+    for(uint32_t i = 0; i < count; ++i)
+        if(vd_ts_get(*(void* const*)(in + i*stride + imgoff))) return 1;
+    return 0;
+}
+/* `out` is the caller's copy of the barrier array (alloca must live in the frame that makes the host call). */
+static void vd_ts_barriers_apply(char* out, uint32_t count, size_t stride, size_t imgoff, size_t baseoff)
+{
     for(uint32_t i = 0; i < count; ++i) {
-        int s = vd_ts_get(*(void* const*)(in + i*stride + imgoff));
-        if(!s) continue;
-        if(!out) { out = alloca(count * stride); memcpy(out, in, count * stride); }
-        vd_ts_range((uint32_t*)(out + i*stride + baseoff), (uint32_t*)(out + i*stride + baseoff + 4), s);
+        int s = vd_ts_get(*(void**)(out + i*stride + imgoff));
+        if(s) vd_ts_range((uint32_t*)(out + i*stride + baseoff), (uint32_t*)(out + i*stride + baseoff + 4), s);
     }
-    return out;
 }
 EXPORT void my_vkCmdPipelineBarrier(x64emu_t* emu, void* cmd, uint32_t srcStage, uint32_t dstStage, uint32_t dep,
                                     uint32_t memCount, void* pMem, uint32_t bufCount, void* pBuf, uint32_t imgCount, void* pImg)
 {
     vFpuuuupupup_t fnc = getBridgeFnc2((void*)R_RIP);
     if(!fnc) fnc=my->vkCmdPipelineBarrier;
-    char* fixed = vd_ts_fix_barriers(pImg, imgCount, 72, 40, 52);
-    fnc(cmd, srcStage, dstStage, dep, memCount, pMem, bufCount, pBuf, imgCount, fixed ? fixed : pImg);
+    if(vd_ts_barriers_touch(pImg, imgCount, 72, 40)) {
+        char* fixed = alloca((size_t)imgCount * 72);
+        memcpy(fixed, pImg, (size_t)imgCount * 72);
+        vd_ts_barriers_apply(fixed, imgCount, 72, 40, 52);
+        pImg = fixed;
+    }
+    fnc(cmd, srcStage, dstStage, dep, memCount, pMem, bufCount, pBuf, imgCount, pImg);
 }
 /* VkDependencyInfo: 64 bytes, imageMemoryBarrierCount@48, pImageMemoryBarriers@56. */
 static void vd_ts_barrier2(vFpp_t fnc, void* cmd, void* pDep)
 {
-    char* fixed = pDep ? vd_ts_fix_barriers(*(const char**)((char*)pDep + 56), *(uint32_t*)((char*)pDep + 48), 96, 64, 76) : NULL;
-    if(!fixed) { fnc(cmd, pDep); return; }
+    const char* in = pDep ? *(const char**)((char*)pDep + 56) : NULL;
+    uint32_t count = pDep ? *(uint32_t*)((char*)pDep + 48) : 0;
+    if(!vd_ts_barriers_touch(in, count, 96, 64)) { fnc(cmd, pDep); return; }
+    char* fixed = alloca((size_t)count * 96);
+    memcpy(fixed, in, (size_t)count * 96);
+    vd_ts_barriers_apply(fixed, count, 96, 64, 76);
     char dep[64];
     memcpy(dep, pDep, sizeof(dep));
     *(void**)(dep + 56) = fixed;
-    fnc(cmd, dep);
+    fnc(cmd, dep);   // host call made from this frame, so `fixed` and `dep` are alive
 }
 EXPORT void my_vkCmdPipelineBarrier2(x64emu_t* emu, void* cmd, void* pDep)
 {
