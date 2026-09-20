@@ -412,6 +412,57 @@ static void rd_tex_account(uint32_t ifmt, int32_t levels, int32_t w, int32_t h) 
  * not a bool, so a deeper low-memory tier is one env change away; today only 0/1 ship (shift 2 is
  * dormant until RIMDROID_TEX_SHRINK=2 is set explicitly). 64KB of .bss. */
 static uint8_t rd_shrink_shift[RD_SHRINK_MAX_ID];
+/* Per-texture "this allocation was re-declared as ETC2" flag — see the rd_ue_* block below. */
+static uint8_t rd_ue_mark[RD_SHRINK_MAX_ID];
+
+// ---- ETC2 for the ALREADY-UNCOMPRESSED assets (2026-09-21) ------------------------------------
+// The transcode above only fires on S3TC, and that leaves the fattest textures untouched. Valheim
+// ships its albedo as BC7, which no GLES driver and no translator understands — so Unity detects
+// that and decompresses it ITSELF, in software ("RGBA Compressed BC7 ... decompressing texture",
+// 588 times in one session). What reaches us is then plain SRGB8_ALPHA8: 64 bytes per 4x4 block
+// where the shipped BC7 used 16. A 2048-square albedo costs ~22MB of texture memory instead of
+// ~5.5MB, and on the phones this whole GL path exists for (Mali, 8GB, no Turnip) that is the
+// difference between running and not.
+//
+// The encoder already takes exactly this pixel format — RGBA8 is what it consumes after the DXT
+// decode — so the work is only in re-declaring the allocation and routing the uploads.
+//
+// SAFETY, because getting this wrong costs the whole frame, not one texture:
+//   - immutable 2D storage only, levels >= 2. Render targets and Unity's dynamic UI/font atlases
+//     are levels == 1 and are never touched. A mipped 2D texture that receives explicit per-level
+//     sub-uploads is an asset, not a surface.
+//   - a size floor, because encoding is not free and small textures are not the problem.
+//   - once an allocation is declared ETC2 it is immutable: every later upload into it MUST be
+//     encodable. An upload that is not (odd pixel format, partial rectangle) cannot be recovered
+//     from, so those cases are logged loudly rather than silently mangled.
+//   - glGenerateMipmap is illegal on a compressed texture; the shim skips marked ones.
+// Off by default while it is unproven: RIMDROID_GLT_ETC2_UNCOMP=1 turns it on, and
+// RIMDROID_GLT_ETC2_UNCOMP_MIN overrides the size floor.
+// RimDroid-fork-only shim — never send upstream (box64's AGENTS.md forbids AI-authored PRs).
+static int rd_ue_on(void) {
+    static int on = -1;
+    if (on < 0) {
+        const char* e = getenv("RIMDROID_GLT_ETC2_UNCOMP");
+        on = (e && e[0] == '1') ? 1 : 0;
+        if (on) { printf_log(LOG_NONE, "RIMDROID GLT ETC2-UNCOMP enabled (re-compress the BC7 leftovers)\n"); fflush(NULL); }
+    }
+    return on;
+}
+static int32_t rd_ue_min(void) {
+    static int32_t m = -1;
+    if (m < 0) { const char* e = getenv("RIMDROID_GLT_ETC2_UNCOMP_MIN"); m = (e && e[0]) ? atoi(e) : 512;
+                 if (m < 64) m = 64; }
+    return m;
+}
+/* The ETC2 internal format for an uncompressed one we are willing to convert, or 0 for "leave it". */
+static uint32_t rd_ue_etc2_ifmt(uint32_t ifmt) {
+    if (ifmt == 0x8C43u) return 0x9279u;   /* SRGB8_ALPHA8 -> SRGB8_ALPHA8_ETC2_EAC */
+    if (ifmt == 0x8058u) return 0x9278u;   /* RGBA8        -> RGBA8_ETC2_EAC        */
+    return 0;
+}
+static int rd_ue_get(uint32_t id) { return (id && id < RD_SHRINK_MAX_ID) ? rd_ue_mark[id] : 0; }
+static void rd_ue_set(uint32_t id, int v) { if (id && id < RD_SHRINK_MAX_ID) rd_ue_mark[id] = (uint8_t)v; }
+static uint64_t rd_ue_n = 0, rd_ue_saved = 0;
 /* GL texture bindings are PER TEXTURE UNIT (glActiveTexture selects the unit; glBindTexture binds
  * into it). A single "last bound" scalar goes stale the moment Unity binds sampling textures on
  * other units between an upload's bind and its glTexSubImage2D — and a stale id here means
@@ -726,7 +777,7 @@ static void rd_glDeleteTextures(int32_t n, const uint32_t* ids) {
                            ids[i], rd_shrink_get(ids[i]), ifmt, w, h); fflush(NULL);
             }
         }
-        rd_t16_on_delete(ids[i]); rd_shrink_set(ids[i], 0);  /* names get reused */
+        rd_t16_on_delete(ids[i]); rd_shrink_set(ids[i], 0); rd_ue_set(ids[i], 0);  /* names get reused */
     }
     if (!p_rd_real_glDeleteTextures)
         p_rd_real_glDeleteTextures = (void(*)(int32_t,const uint32_t*))rd_zfa_gl("glDeleteTextures");
@@ -746,6 +797,24 @@ static void rd_glTexStorage2D(uint32_t target, int32_t levels, uint32_t ifmt, in
     // else RGBA8/SRGB8A8. Placed before telemetry/shrink so both account the real allocation.
     if (rd_s3tc_decode_on() && rd_s3tc_fmt(ifmt))
         ifmt = rd_etc2_on() ? rd_s3tc_etc2_ifmt(ifmt) : rd_s3tc_rgba_ifmt(ifmt);
+    // ETC2 for the BC7 leftovers: re-declare a big mipped uncompressed asset as ETC2 and let the
+    // sub-uploads below encode into it. See the rd_ue_* block for why this is narrow on purpose.
+    rd_ue_set(rd_cur_tex2d(), 0);
+    if (rd_ue_on() && target == RD_GL_TEXTURE_2D && levels >= 2
+            && (w >= rd_ue_min() || h >= rd_ue_min())) {
+        uint32_t e = rd_ue_etc2_ifmt(ifmt);
+        if (e && rd_cur_tex2d() && rd_cur_tex2d() < RD_SHRINK_MAX_ID) {
+            rd_ue_n++;
+            /* full mip chain, 4 bytes/px -> 1 byte/px: three quarters of it goes away */
+            rd_ue_saved += (uint64_t)w * h * 4 / 3 * 3 / 4;
+            if (rd_ue_n <= 8 || (rd_ue_n & 63) == 0)
+                { printf_log(LOG_NONE, "RIMDROID GLT ETC2-UNCOMP tex=%u 0x%x->0x%x %dx%d lvls=%d (n=%llu ~saved=%lluMB)\n",
+                             rd_cur_tex2d(), ifmt, e, w, h, levels, (unsigned long long)rd_ue_n,
+                             (unsigned long long)(rd_ue_saved >> 20)); fflush(NULL); }
+            rd_ue_set(rd_cur_tex2d(), (e == 0x9279u) ? 1 : 2);   /* 1 = sRGB variant, 2 = linear */
+            ifmt = e;
+        }
+    }
     // T16 telemetry: record big uncompressed allocations with ORIGINAL dims (before any shrink).
     if (target == RD_GL_TEXTURE_2D) rd_t16_alloc(rd_cur_tex2d(), ifmt, levels, w, h);
     // Texture shrink: a mipped 2D allocation loses its top level (see block comment above).
@@ -1051,6 +1120,7 @@ static uint32_t rd_s3tc_etc2_ifmt(uint32_t f) {
 #include "rd_etc2.h"
 static uint64_t rd_etc2_encoded_n = 0;
 
+
 static const void* rd_upload_bounce(int32_t w, int32_t h, uint32_t fmt, uint32_t type, const void* px) {
     if (!px || w <= 0 || h <= 0) return px;
     int bpp = rd_upload_bpp(fmt, type);
@@ -1188,6 +1258,36 @@ static void rd_glTexSubImage2D(uint32_t target, int32_t level, int32_t xo, int32
     { int sh = (target == RD_GL_TEXTURE_2D) ? rd_shrink_get(rd_cur_tex2d()) : 0;
       if (sh) { if (level < sh) { rd_shrink_dropped++; rd_upload_exit(rd_up_tid); return; } level -= sh; rd_shrink_feed(rd_cur_tex2d()); } }
     if (rd_t16_hi && target == RD_GL_TEXTURE_2D) rd_t16_mark(rd_cur_tex2d(), RD_T16_F_SUB, "SUB-UPLOAD");
+    // ETC2-UNCOMP: this texture's storage was re-declared as ETC2 in rd_glTexStorage2D, so the
+    // uncompressed pixels Unity hands us here have to be encoded on the way in. The allocation is
+    // immutable — an upload we cannot encode has nowhere to go, so those are reported rather than
+    // quietly dropped: a loud line beats a texture that samples as garbage.
+    { int m = (target == RD_GL_TEXTURE_2D) ? rd_ue_get(rd_cur_tex2d()) : 0;
+      if (m && px && w > 0 && h > 0) {
+        if (fmt == 0x1908u /*GL_RGBA*/ && type == 0x1401u /*GL_UNSIGNED_BYTE*/ && xo == 0 && yo == 0) {
+            size_t esz = 0;
+            uint32_t efmt = (m == 1) ? 0x9279u : 0x9278u;
+            const void* enc = rd_etc2_encode(efmt, w, h, (const uint8_t*)px, &esz);
+            if (enc && p_rd_real_glCompressedTexSubImage2D) {
+                rd_etc2_encoded_n++;
+                if (rd_etc2_encoded_n <= 8 || (rd_etc2_encoded_n & 511) == 0)
+                    { printf_log(LOG_NONE, "RIMDROID GLT ETC2-UNCOMP upload tex=%u lvl=%d %dx%d ->0x%x sz=%zu (encode total=%llums)\n",
+                                 rd_cur_tex2d(), level, w, h, efmt, esz,
+                                 (unsigned long long)rd_etc2_total_ms()); fflush(NULL); }
+                rd_sub_account((uint64_t)w * h * 4);
+                p_rd_real_glCompressedTexSubImage2D(target, level, 0, 0, w, h, efmt, (int32_t)esz, enc);
+                rd_upload_exit(rd_up_tid);
+                return;
+            }
+        }
+        static int complained = 0;
+        if (complained < 16) {
+            complained++;
+            printf_log(LOG_NONE, "RIMDROID GLT ETC2-UNCOMP UNENCODABLE tex=%u lvl=%d %d,%d %dx%d fmt=0x%x type=0x%x — storage is ETC2, this upload cannot land\n",
+                       rd_cur_tex2d(), level, xo, yo, w, h, fmt, type); fflush(NULL);
+        }
+      }
+    }
     if (w > 0 && h > 0) {
         if (rd_sublog_n < 4) { rd_sublog_n++; printf_log(LOG_NONE, "RIMDROID GLSANITY glTexSubImage2D level=%d %dx%d fmt=0x%x\n", level, w, h, fmt); fflush(NULL); }
         RD_OPLOG("RIMDROID OP#%llu TexSubImage2D lvl=%d %d,%d %dx%d fmt=0x%x\n", (unsigned long long)rd_gl_op_seq, level, xo, yo, w, h, fmt);
@@ -1432,6 +1532,14 @@ static void rd_glGenerateMipmap(uint32_t target) {
             static int n = 0;
             if (n < 16) { n++; printf_log(LOG_NONE, "RIMDROID TEXSHRINK ORPHAN MIPGEN tex=%u shift=%d — all writes were dropped, content undefined\n", id, sh); fflush(NULL); }
         }
+    }
+    // Mip generation is illegal on a compressed texture, and ETC2-UNCOMP made some of them
+    // compressed behind Unity's back. Skipping the call is the only correct answer: it would be a
+    // GL error otherwise, and the asset's own mip chain is uploaded level by level anyway.
+    if (target == RD_GL_TEXTURE_2D && rd_ue_get(rd_cur_tex2d())) {
+        static int n = 0;
+        if (n < 8) { n++; printf_log(LOG_NONE, "RIMDROID GLT ETC2-UNCOMP skipped glGenerateMipmap on tex=%u (compressed storage)\n", rd_cur_tex2d()); fflush(NULL); }
+        return;
     }
     if (!p_rd_real_glGenerateMipmap)
         p_rd_real_glGenerateMipmap = (void(*)(uint32_t))rd_zfa_gl("glGenerateMipmap");
