@@ -19,6 +19,7 @@ typedef void (*vFpL_t)(void*, uintptr_t);
 typedef void (*vFpp_t)(void*, void*);
 typedef int32_t (*iFpp_t)(void*, void*);
 typedef void* (*pFpi_t)(void*, int32_t);
+typedef void* (*pFpp_t)(void*, void*);
 typedef void (*vFipp_t)(int32_t, void*, void*);
 typedef void (*vFpLi_t)(void*, uintptr_t, int32_t);
 typedef void (*vFppp_t)(void*, void*, void*);
@@ -28,7 +29,10 @@ typedef void* (*pFpii_t)(void*, int32_t, int32_t);
 typedef void* (*pFpip_t)(void*, int32_t, void*);
 typedef void (*vFpLip_t)(void*, uintptr_t, int32_t, void*);
 typedef int32_t (*iFppip_t)(void*, void*, int32_t, void*);
+typedef uintptr_t (*LFppLp_t)(void*, void*, uintptr_t, void*);
+typedef void* (*pFpipp_t)(void*, int32_t, void*, void*);
 typedef void* (*pFpppi_t)(void*, void*, void*, int32_t);
+typedef void* (*pFppipi_t)(void*, void*, int32_t, void*, int32_t);
 typedef void* (*pFpppip_t)(void*, void*, void*, int32_t, void*);
 
 #define SUPER() ADDED_FUNCTIONS() \
@@ -39,6 +43,7 @@ typedef void* (*pFpppip_t)(void*, void*, void*, int32_t, void*);
 	GO(glGetVkProcAddrNV, pFp_t) \
 	GO(glXGetProcAddress, pFp_t) \
 	GO(glXGetProcAddressARB, pFp_t) \
+	GO(glXDestroyWindow, vFpL_t) \
 	GO(glXSwapBuffers, vFpL_t) \
 	GO(glDebugMessageCallback, vFpp_t) \
 	GO(glDebugMessageCallbackAMD, vFpp_t) \
@@ -48,6 +53,7 @@ typedef void* (*pFpppip_t)(void*, void*, void*, int32_t, void*);
 	GO(eglDebugMessageControlKHR, iFpp_t) \
 	GO(glXGetClientString, pFpi_t) \
 	GO(glXQueryExtensionsString, pFpi_t) \
+	GO(glXGetVisualFromFBConfig, pFpp_t) \
 	GO(glProgramCallbackMESA, vFipp_t) \
 	GO(glXSwapIntervalEXT, vFpLi_t) \
 	GO(eglSetBlobCacheFuncsANDROID, vFppp_t) \
@@ -56,9 +62,14 @@ typedef void* (*pFpppip_t)(void*, void*, void*, int32_t, void*);
 	GO(glXQueryVersion, iFppp_t) \
 	GO(glXQueryServerString, pFpii_t) \
 	GO(glXChooseVisual, pFpip_t) \
+	GO(glXGetFBConfigs, pFpip_t) \
 	GO(glXQueryDrawable, vFpLip_t) \
 	GO(glXGetConfig, iFppip_t) \
+	GO(glXGetFBConfigAttrib, iFppip_t) \
+	GO(glXCreateWindow, LFppLp_t) \
+	GO(glXChooseFBConfig, pFpipp_t) \
 	GO(glXCreateContext, pFpppi_t) \
+	GO(glXCreateNewContext, pFppipi_t) \
 	GO(glXCreateContextAttribsARB, pFpppip_t)
 
 #endif // __wrappedlibglTYPES_H_

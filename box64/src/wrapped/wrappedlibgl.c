@@ -161,16 +161,24 @@ typedef struct { void* visual; unsigned long visualid; int screen; int depth;
                  int c_class; unsigned long red_mask, green_mask, blue_mask;
                  int colormap_size; int bits_per_rgb; } rd_XVisualInfo;
 
+// One freshly allocated dummy visual. The caller owns it (Xlib contract: XFree), which is why
+// every call allocates instead of handing out one shared static.
+static rd_XVisualInfo* rd_glx_dummy_visual(int screen)
+{
+    rd_XVisualInfo* v = (rd_XVisualInfo*)calloc(1, sizeof(rd_XVisualInfo));
+    if (v) { v->visualid = 0x21; v->screen = screen; v->depth = 24; v->c_class = 4 /*TrueColor*/;
+             v->red_mask = 0xff0000; v->green_mask = 0x00ff00; v->blue_mask = 0x0000ff;
+             v->colormap_size = 256; v->bits_per_rgb = 8; }
+    return v;
+}
+
 EXPORT void* my_glXChooseVisual(x64emu_t* emu, void* dpy, int screen, void* attribList)
 {
     (void)attribList;
     printf_log(LOG_NONE, "RIMDROID glXChooseVisual ENTER screen=%d\n", screen); fflush(NULL);
     if (!rd_bridge_active()) return my->glXChooseVisual ? my->glXChooseVisual(dpy, screen, attribList) : NULL;
     g_glx_display = dpy;
-    rd_XVisualInfo* v = (rd_XVisualInfo*)calloc(1, sizeof(rd_XVisualInfo));
-    if (v) { v->visualid = 0x21; v->screen = screen; v->depth = 24; v->c_class = 4 /*TrueColor*/;
-             v->red_mask = 0xff0000; v->green_mask = 0x00ff00; v->blue_mask = 0x0000ff;
-             v->colormap_size = 256; v->bits_per_rgb = 8; }
+    rd_XVisualInfo* v = rd_glx_dummy_visual(screen);
     static int n=0; if(n<2){n++; printf_log(LOG_NONE, "RIMDROID glXChooseVisual -> dummy TrueColor24 %p (ZFA)\n", v);}
     return v;
 }
@@ -206,7 +214,27 @@ EXPORT void* my_glXCreateContext(x64emu_t* emu, void* dpy, void* vis, void* shar
 EXPORT void* my_glXCreateContextAttribsARB(x64emu_t* emu, void* dpy, void* config, void* share, int direct, void* attribs)
 {
     if (!rd_bridge_active()) return my->glXCreateContextAttribsARB ? my->glXCreateContextAttribsARB(dpy, config, share, direct, attribs) : NULL;
-    (void)config; (void)share; (void)direct; (void)attribs;
+    (void)config; (void)share; (void)direct;
+    // We hand back the one bridged context whatever is asked for, but SAY what was asked: the
+    // major/minor/profile Unity wants here is the single most useful line in the log when the
+    // translator underneath then refuses to behave like that version.
+    if (attribs) {
+        int major = 0, minor = 0, profile = 0, flags = 0;
+        for (const int* a = (const int*)attribs; a[0]; a += 2) {
+            switch (a[0]) {
+                case 0x2091: major   = a[1]; break;  // GLX_CONTEXT_MAJOR_VERSION_ARB
+                case 0x2092: minor   = a[1]; break;  // GLX_CONTEXT_MINOR_VERSION_ARB
+                case 0x2094: flags   = a[1]; break;  // GLX_CONTEXT_FLAGS_ARB
+                case 0x9126: profile = a[1]; break;  // GLX_CONTEXT_PROFILE_MASK_ARB
+                default: break;
+            }
+        }
+        printf_log(LOG_NONE, "RIMDROID glXCreateContextAttribsARB asked for GL %d.%d %s (flags=0x%x)\n",
+                   major, minor,
+                   (profile & 0x2) ? "compatibility" : (profile & 0x1) ? "core" : "(no profile bit)",
+                   flags);
+        fflush(NULL);
+    }
     return rd_glx_make_context(dpy, NULL);
 }
 EXPORT void my_glXDestroyContext(x64emu_t* emu, void* dpy, void* ctx)
@@ -374,12 +402,23 @@ EXPORT int my_glXQueryExtension(x64emu_t* emu, void* dpy, void* errorBase, void*
     if (eventBase) *(int*)eventBase = 0;
     return 1;
 }
+// The GLX extensions we claim on the bridge. Returning "" here was what killed Unity 6 /
+// Valheim under -force-glcore (2026-09-20): a modern Unity creates a throwaway legacy context,
+// reads this string, and ONLY if it names GLX_ARB_create_context_profile does it go on to
+// resolve glXChooseFBConfig + glXCreateContextAttribsARB and ask for a core context. With an
+// empty string it resolved six legacy entry points, gave up, logged "Unable to find a supported
+// OpenGL Core profile" and called exit(). We do implement the attribs path, so say so.
+// Keep this list SHORT: every name added is a code path Unity may then walk down.
+#define RD_GLX_EXTENSIONS \
+    "GLX_ARB_create_context GLX_ARB_create_context_profile GLX_ARB_get_proc_address " \
+    "GLX_EXT_swap_control GLX_SGI_swap_control"
+
 EXPORT void* my_glXQueryExtensionsString(x64emu_t* emu, void* dpy, int screen)
 {
     printf_log(LOG_NONE, "RIMDROID glXQueryExtensionsString ENTER\n"); fflush(NULL);
     if (!rd_bridge_active()) return my->glXQueryExtensionsString ? my->glXQueryExtensionsString(dpy, screen) : (void*)"";
     (void)dpy; (void)screen;
-    return (void*)"";
+    return (void*)RD_GLX_EXTENSIONS;
 }
 // GLX name tokens: GLX_VENDOR=1, GLX_VERSION=2, GLX_EXTENSIONS=3.
 EXPORT void* my_glXGetClientString(x64emu_t* emu, void* dpy, int name)
@@ -389,7 +428,7 @@ EXPORT void* my_glXGetClientString(x64emu_t* emu, void* dpy, int name)
     (void)dpy;
     if (name == 2) return (void*)"1.4";        // GLX_VERSION
     if (name == 1) return (void*)"RimDroid";   // GLX_VENDOR
-    return (void*)"";                          // GLX_EXTENSIONS / other
+    return (void*)RD_GLX_EXTENSIONS;           // GLX_EXTENSIONS / other
 }
 EXPORT void* my_glXQueryServerString(x64emu_t* emu, void* dpy, int screen, int name)
 {
@@ -398,7 +437,7 @@ EXPORT void* my_glXQueryServerString(x64emu_t* emu, void* dpy, int screen, int n
     (void)dpy; (void)screen;
     if (name == 2) return (void*)"1.4";        // GLX_VERSION
     if (name == 1) return (void*)"RimDroid";   // GLX_VENDOR
-    return (void*)"";                          // GLX_EXTENSIONS / other
+    return (void*)RD_GLX_EXTENSIONS;           // GLX_EXTENSIONS / other
 }
 EXPORT void my_glXQueryDrawable(x64emu_t* emu, void* dpy, uintptr_t drawable, int attribute, void* value)
 {
@@ -422,6 +461,107 @@ EXPORT int my_glXGetConfig(x64emu_t* emu, void* dpy, void* vis, int attrib, void
         default: *v = 1;  break;
     }
     return 0;
+}
+
+// ---- FBConfig family: the road to a core-profile context ------------------------------------
+// Unity's X11 GL backend does not call glXCreateContextAttribsARB with a visual — it wants an
+// FBConfig first (glXChooseFBConfig / glXGetFBConfigs, then glXGetFBConfigAttrib to inspect it,
+// optionally glXGetVisualFromFBConfig for the window). We bypass real GLX entirely, so one
+// opaque sentinel config is enough: nothing downstream dereferences it, it only has to be
+// non-NULL and survive a round trip. These used to be plain GO entries pointing at a native
+// libGL that does not exist on Android.
+static int rd_glx_fbconfig_sentinel = 0;
+#define RD_GLX_FBCONFIG ((void*)&rd_glx_fbconfig_sentinel)
+
+// A one-element GLXFBConfig array. Xlib contract again: the caller XFrees it.
+static void* rd_glx_fbconfig_list(void* nelements)
+{
+    void** list = (void**)calloc(1, sizeof(void*));
+    if (list) list[0] = RD_GLX_FBCONFIG;
+    if (nelements) *(int*)nelements = list ? 1 : 0;
+    return list;
+}
+
+EXPORT void* my_glXChooseFBConfig(x64emu_t* emu, void* dpy, int screen, void* attribList, void* nelements)
+{
+    if (!rd_bridge_active())
+        return my->glXChooseFBConfig ? my->glXChooseFBConfig(dpy, screen, attribList, nelements) : NULL;
+    (void)attribList;
+    g_glx_display = dpy;
+    static int n=0; if(n<2){n++; printf_log(LOG_NONE, "RIMDROID glXChooseFBConfig screen=%d -> 1 dummy config\n", screen); fflush(NULL);}
+    return rd_glx_fbconfig_list(nelements);
+}
+EXPORT void* my_glXGetFBConfigs(x64emu_t* emu, void* dpy, int screen, void* nelements)
+{
+    if (!rd_bridge_active())
+        return my->glXGetFBConfigs ? my->glXGetFBConfigs(dpy, screen, nelements) : NULL;
+    g_glx_display = dpy;
+    static int n=0; if(n<2){n++; printf_log(LOG_NONE, "RIMDROID glXGetFBConfigs screen=%d -> 1 dummy config\n", screen); fflush(NULL);}
+    return rd_glx_fbconfig_list(nelements);
+}
+EXPORT void* my_glXGetVisualFromFBConfig(x64emu_t* emu, void* dpy, void* config)
+{
+    if (!rd_bridge_active())
+        return my->glXGetVisualFromFBConfig ? my->glXGetVisualFromFBConfig(dpy, config) : NULL;
+    (void)config;
+    static int n=0; if(n<2){n++; printf_log(LOG_NONE, "RIMDROID glXGetVisualFromFBConfig -> dummy TrueColor24\n"); fflush(NULL);}
+    return rd_glx_dummy_visual(0);
+}
+// Describe the dummy config: a plain double-buffered RGBA window config, 8/8/8/8 + 24 depth +
+// 8 stencil, no multisampling. Returning 0 means Success in GLX.
+EXPORT int my_glXGetFBConfigAttrib(x64emu_t* emu, void* dpy, void* config, int attribute, void* value)
+{
+    if (!rd_bridge_active())
+        return my->glXGetFBConfigAttrib ? my->glXGetFBConfigAttrib(dpy, config, attribute, value) : 1;
+    (void)dpy; (void)config;
+    if (!value) return 1;   // GLX_BAD_VALUE-ish; never write through a null
+    int* v = (int*)value;
+    switch (attribute) {
+        case 0x8013: *v = 1;          break; // GLX_FBCONFIG_ID
+        case 0x800B: *v = 0x21;       break; // GLX_VISUAL_ID   (matches our dummy visual)
+        case 2:      *v = 32;         break; // GLX_BUFFER_SIZE
+        case 3:      *v = 0;          break; // GLX_LEVEL
+        case 5:      *v = 1;          break; // GLX_DOUBLEBUFFER
+        case 6:      *v = 0;          break; // GLX_STEREO
+        case 7:      *v = 0;          break; // GLX_AUX_BUFFERS
+        case 8: case 9: case 10: case 11: *v = 8; break; // GLX_{RED,GREEN,BLUE,ALPHA}_SIZE
+        case 12:     *v = 24;         break; // GLX_DEPTH_SIZE
+        case 13:     *v = 8;          break; // GLX_STENCIL_SIZE
+        case 14: case 15: case 16: case 17: *v = 0; break; // GLX_ACCUM_*_SIZE
+        case 0x20:   *v = 0x8000;     break; // GLX_CONFIG_CAVEAT   -> GLX_NONE
+        case 0x22:   *v = 0x8002;     break; // GLX_X_VISUAL_TYPE   -> GLX_TRUE_COLOR
+        case 0x23:   *v = 0x8000;     break; // GLX_TRANSPARENT_TYPE-> GLX_NONE
+        case 0x8010: *v = 0x00000001; break; // GLX_DRAWABLE_TYPE   -> GLX_WINDOW_BIT
+        case 0x8011: *v = 0x00000001; break; // GLX_RENDER_TYPE     -> GLX_RGBA_BIT
+        case 0x8012: *v = 1;          break; // GLX_X_RENDERABLE    -> True
+        case 100000: case 100001: *v = 0; break; // GLX_SAMPLE_BUFFERS / GLX_SAMPLES
+        default:     *v = 0;          break;
+    }
+    return 0;
+}
+// GLXWindow is just the X window here: we present through the translator's own surface, so
+// there is nothing extra to create and nothing to tear down.
+EXPORT uintptr_t my_glXCreateWindow(x64emu_t* emu, void* dpy, void* config, uintptr_t win, void* attribList)
+{
+    if (!rd_bridge_active())
+        return my->glXCreateWindow ? my->glXCreateWindow(dpy, config, win, attribList) : 0;
+    (void)config; (void)attribList;
+    g_glx_display = dpy;
+    printf_log(LOG_NONE, "RIMDROID glXCreateWindow(win=0x%lx) -> identity\n", (unsigned long)win); fflush(NULL);
+    return win;
+}
+EXPORT void my_glXDestroyWindow(x64emu_t* emu, void* dpy, uintptr_t win)
+{
+    if (!rd_bridge_active()) { if (my->glXDestroyWindow) my->glXDestroyWindow(dpy, win); return; }
+    (void)dpy; (void)win;   // no-op: we never created anything
+}
+// The FBConfig-era context entry point. Same single bridged context as every other route.
+EXPORT void* my_glXCreateNewContext(x64emu_t* emu, void* dpy, void* config, int render_type, void* share, int direct)
+{
+    if (!rd_bridge_active())
+        return my->glXCreateNewContext ? my->glXCreateNewContext(dpy, config, render_type, share, direct) : NULL;
+    (void)config; (void)render_type; (void)share; (void)direct;
+    return rd_glx_make_context(dpy, NULL);
 }
 
 EXPORT void* my_glXGetProcAddress(x64emu_t* emu, void* name)

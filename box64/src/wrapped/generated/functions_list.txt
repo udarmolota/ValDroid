@@ -2239,6 +2239,7 @@
 #() LFELppu
 #() LFEpLpV
 #() LFEppLL
+#() LFEppLp
 #() LFEpppp
 #() LFuuuuu
 #() LFLpppl
@@ -2868,6 +2869,7 @@
 #() pFEpuppp
 #() pFEpLLiN
 #() pFEppiip
+#() pFEppipi
 #() pFEppupi
 #() pFEppLLp
 #() pFEpppip
@@ -5953,6 +5955,7 @@ wrappedlibgl:
   - glXGetProcAddress
   - glXGetProcAddressARB
 - vFpL:
+  - glXDestroyWindow
   - glXSwapBuffers
 - vFpp:
   - glDebugMessageCallback
@@ -5965,6 +5968,8 @@ wrappedlibgl:
 - pFpi:
   - glXGetClientString
   - glXQueryExtensionsString
+- pFpp:
+  - glXGetVisualFromFBConfig
 - vFipp:
   - glProgramCallbackMESA
 - vFpLi:
@@ -5980,12 +5985,20 @@ wrappedlibgl:
   - glXQueryServerString
 - pFpip:
   - glXChooseVisual
+  - glXGetFBConfigs
 - vFpLip:
   - glXQueryDrawable
 - iFppip:
   - glXGetConfig
+  - glXGetFBConfigAttrib
+- LFppLp:
+  - glXCreateWindow
+- pFpipp:
+  - glXChooseFBConfig
 - pFpppi:
   - glXCreateContext
+- pFppipi:
+  - glXCreateNewContext
 - pFpppip:
   - glXCreateContextAttribsARB
 wrappedlibglu:
