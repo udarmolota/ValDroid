@@ -853,7 +853,13 @@ public class GameLauncher {
             // ZFA/GL renderer bind its own Kopper swapchain to the same ANativeWindow first.
             // EXCEPTION — the rd_force_gles pivot: we WANT ZFA to bind its swapchain, because
             // Unity 1.6 renders via GLX->ZFA (not direct Vulkan). So skip DIRECT_VULKAN then.
-            if (!forceGlesZfa) {
+            // A GL translator was chosen (renderer = MobileGlues, or RIMDROID_GLT in the extra env):
+            // then Unity must render through GL, not Vulkan. That route matters for GPUs without BC
+            // texture support — Mali and friends cannot sample Valheim's BC1/BC3/BC7 textures at all,
+            // while the translator path transcodes them to ETC2 on the way in (and that transcode was
+            // measured FASTER than BC even on Adreno).
+            boolean glTranslatorActive = Os.getenv("RIMDROID_GLT") != null;
+            if (!forceGlesZfa && !glTranslatorActive) {
                 Os.setenv("RIMDROID_DIRECT_VULKAN", "1", true);
                 // Unity 6 creates its window with SDL_WINDOW_OPENGL even for Vulkan, so SDL must be
                 // able to load libGL.so.1. Hand box64 the null-GLX stub instead of ZFA: it satisfies
@@ -867,7 +873,16 @@ public class GameLauncher {
                 Os.setenv("VALDROID_VK_IGNORE_SUBOPTIMAL", "1", true);
             } else {
                 Os.unsetenv("RIMDROID_DIRECT_VULKAN");
-                android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
+                Os.unsetenv("VALDROID_VK_FORCE_IDENTITY_TRANSFORM");
+                Os.unsetenv("VALDROID_VK_IGNORE_SUBOPTIMAL");
+                if (glTranslatorActive) {
+                    // Unity picks its graphics API by itself and prefers Vulkan; with a translator in
+                    // place we want the GL one. The native side appends this to the command line.
+                    Os.setenv("VALDROID_GAME_ARGS", "-force-glcore", true);
+                    android.util.Log.i("ValDroid", "GameLauncher: GL translator active -> DIRECT_VULKAN OFF, -force-glcore");
+                } else {
+                    android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
+                }
             }
             // Match the X screen to the actual Android buffer size (fallback 1280x720 if the
             // surface isn't up yet) — Unity requests fullscreen at "desktop" size, and any
