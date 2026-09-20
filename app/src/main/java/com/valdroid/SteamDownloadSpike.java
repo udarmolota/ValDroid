@@ -148,6 +148,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private volatile boolean downloadInProgress;   // a DepotDownloader is actively running
     private volatile boolean downloadCompleted;    // succeeded — stop everything
     private volatile Throwable lastError;          // set by onDownloadFailed; checked after awaitCompletion
+    /** Steam build id of the manifest being downloaded (0 when a manifest id was pinned by hand). */
+    private volatile long buildId;
     private int downloadAttempts;
     private int authAttempts;                      // initial-sign-in attempts (drops during approval)
 
@@ -531,7 +533,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
 
         long gid = (manifestId > 0) ? manifestId : resolveManifestGid();
         if (gid == 0L) { done("Could not resolve a build to download."); running = false; return; }
-        progress("Depot " + LINUX_DEPOT + ", manifest " + Long.toUnsignedString(gid));
+        progress("Depot " + LINUX_DEPOT + ", manifest " + Long.toUnsignedString(gid)
+                + (buildId > 0 ? (", build " + buildId) : ""));
 
         byte[] depotKey = getDepotKey(apps, LINUX_DEPOT, APP_ID);
         if (depotKey == null) { done("No depot key — is Valheim owned on this account?"); running = false; return; }
@@ -661,7 +664,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         try { steamUser.logOff(); } catch (Throwable ignored) {}
     }
 
-    /** The public branch's manifest for our Linux depot, from PICS. */
+    /** The public branch's manifest for our Linux depot, from PICS; also records its build id. */
     private long resolveManifestGid() {
         try {
             SteamApps apps = steamClient.getHandler(SteamApps.class);
@@ -679,6 +682,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 PICSProductInfo info = cb.getApps().get(APP_ID);
                 if (info == null) continue;
                 KeyValue depots = info.getKeyValues().get("depots");
+                buildId = depots.get("branches").get("public").get("buildid").asLong(0L);
                 KeyValue depot = depots.get(String.valueOf(LINUX_DEPOT));
                 String gid = depot.get("manifests").get("public").get("gid").asString();
                 if (gid != null && !gid.isEmpty()) return Long.parseUnsignedLong(gid);
@@ -857,26 +861,30 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             AppStorage storage = AppStorage.requireSingleton();
             String versionTag = readVersionTag(instanceDir);
             File zip = new File(storage.getDownloadsDir(), "Valheim_" + versionTag + ".zip");
-            progress("Backing up install to " + zip.getAbsolutePath() + "...");
+            // Several GB of game go into one archive here. It is the slowest part of the whole
+            // install and it happens AFTER the progress bar has reached 100%, which is exactly where
+            // people think the app has hung and close it. Say what is happening, and how long.
+            progress("Download finished. Packing a backup copy (a few GB — this takes a few minutes; "
+                    + "keep the app open): " + zip.getAbsolutePath());
             ZipUtil.zipDir(instanceDir, zip);
-            progress("Backup saved: " + zip.getName());
+            progress("Backup saved: " + zip.getName() + " ("
+                    + (zip.length() / (1024 * 1024)) + " MB). You can delete it from the Downloads "
+                    + "folder if you need the space.");
         } catch (Throwable t) {
             Log.e(TAG, "backupInstanceZip failed (non-fatal)", t);
             progress("Backup copy skipped: " + describe(t));
         }
     }
 
-    /** Version.txt's own content (e.g. "0.220.3") if readable, else a neutral tag. */
+    /**
+     * What to call the backup archive. Valheim keeps its own version number inside compiled code, so
+     * the honest identifier is Steam's: the build id of the branch we downloaded, or the manifest id
+     * when the player pinned one by hand. "unknown" only if neither is known.
+     */
     private String readVersionTag(File instanceDir) {
-        File versionFile = new File(instanceDir, "Version.txt");
-        if (versionFile.isFile()) {
-            try {
-                String raw = new String(java.nio.file.Files.readAllBytes(versionFile.toPath()),
-                        java.nio.charset.StandardCharsets.UTF_8).trim();
-                if (!raw.isEmpty()) return sanitizeName(raw);
-            } catch (java.io.IOException ignored) {}
-        }
-        return "latest";
+        if (buildId > 0) return "build" + buildId;
+        if (manifestId > 0) return "manifest" + Long.toUnsignedString(manifestId);
+        return "unknown";
     }
 
     /** Exception class + message + first useful cause/frame — getMessage() alone is often null. */

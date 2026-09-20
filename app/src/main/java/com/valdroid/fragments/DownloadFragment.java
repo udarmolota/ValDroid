@@ -151,6 +151,9 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         SteamDownloadState st = SteamDownloadState.get();
         SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
                 /* manifestOnly */ false, manifestId, st);
+        // The backup archive is packed after the bar hits 100%, and that step is long enough that
+        // people close the app thinking it hung. Say so before they start waiting.
+        st.onProgress(getString(R.string.download_backup_note));
         st.begin(appCtx, name);          // adviseInstance = name → auto-set GPU driver on success
         st.setActive(dl);
         beginUi();
