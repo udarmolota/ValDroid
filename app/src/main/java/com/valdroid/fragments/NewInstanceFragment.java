@@ -140,7 +140,7 @@ public class NewInstanceFragment extends Fragment {
             etInstanceName.setText(freeDefaultName());
         }
 
-        // A RimWorld .zip, or a zip wrapping GOG .sh installers (base + DLC) — GogInstallerExtractor
+        // The game's Linux .zip.
         // sniffs the content and unpacks the .sh files found inside.
         btnPickZip.setOnClickListener(v -> zipPicker.launch(com.valdroid.C.mime.GAME_ARCHIVE));
 

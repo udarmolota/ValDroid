@@ -82,8 +82,6 @@ public class LauncherFragment extends Fragment {
                 .navigate(R.id.action_open_wiki, WikiFragment.section("quick-start")));
         view.findViewById(R.id.btn_empty_steam).setOnClickListener(v -> Navigation.findNavController(v)
                 .navigate(R.id.action_download_game));
-        view.findViewById(R.id.btn_empty_gog).setOnClickListener(v -> Navigation.findNavController(v)
-                .navigate(R.id.action_gog_login));
         btnClearLog        = view.findViewById(R.id.btn_clear_log);
         tvLog              = view.findViewById(R.id.tv_log);
         scrollLog          = view.findViewById(R.id.scroll_log);
@@ -330,27 +328,6 @@ public class LauncherFragment extends Fragment {
                     .setPositiveButton(android.R.string.ok, null)
                     .setNeutralButton(R.string.nav_wiki, (d, w) -> Navigation.findNavController(requireView())
                             .navigate(R.id.action_open_wiki, WikiFragment.section("get-game")))
-                    .show();
-            return;
-        }
-        // Native ARM64 Mono is on by default for 1.6. If the last launches with it crashed early twice in a
-        // row, offer to go back to the emulated runtime before starting again (see NativeMono).
-        com.valdroid.InstanceSettings instSettings = gi.settings();
-        int nativeMonoFailures = com.valdroid.game.NativeMono.settlePreviousLaunch(requireContext(), instSettings);
-        if (nativeMonoFailures >= com.valdroid.game.NativeMono.FAILURES_TO_ASK
-                && instSettings.isNativeMono() && com.valdroid.game.NativeMono.isSupported(gi)) {
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(R.string.native_mono_crash_title)
-                    .setMessage(R.string.native_mono_crash_msg)
-                    .setPositiveButton(R.string.native_mono_crash_off, (d, w) -> {
-                        instSettings.setNativeMono(false);
-                        instSettings.setNativeMonoFailures(0);
-                        startGame(gi);
-                    })
-                    .setNegativeButton(R.string.native_mono_crash_keep, (d, w) -> {
-                        instSettings.setNativeMonoFailures(0);
-                        startGame(gi);
-                    })
                     .show();
             return;
         }

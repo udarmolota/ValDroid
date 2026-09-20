@@ -36,7 +36,7 @@ public class C {
         /** SAF filter for installing a game / DLC / mod: ZIP only, deliberately. A bare GOG {@code .sh}
          *  installer is NOT offered — its reported type varies wildly by document provider and most
          *  file explorers won't hand one over at all, so the supported workflow is to WRAP the .sh in
-         *  a zip (GogInstallerExtractor unpacks .sh files found inside). octet-stream is included
+         *  a zip. octet-stream is included
          *  because some providers report zips as that. */
         public static final String[] GAME_ARCHIVE = {
             "application/zip", "application/x-zip-compressed", "application/octet-stream",

@@ -46,7 +46,6 @@
         <a href="#get-game">Getting the game</a>
         <ol>
             <li><a href="#steam-in-app">From Steam, in the app</a></li>
-            <li><a href="#gog">From GOG</a></li>
             <li><a href="#zip-archive">From a .zip archive</a></li>
         </ol>
     </li>
@@ -72,10 +71,10 @@
         The game itself is not included.
     </p>
     <ol>
-        <li>You need to own <b>RimWorld</b> on <b>Steam</b> or <b>GOG</b>. RimDroid runs the
+        <li>You need to own <b>RimWorld</b> on <b>Steam</b>. RimDroid runs the
             <b>Linux</b> version of the game, <b>RimWorld 1.5</b> or <b>1.6</b>.</li>
         <li>Get the game into the app. With Steam, open the side menu and tap
-            <b>Steam Downloads</b>: the game downloads straight into a ready instance. For GOG and
+            <b>Steam Downloads</b>: the game downloads straight into a ready instance. For
             the other ways, see <a href="#get-game">Getting the game</a>.</li>
         <li>An <b>instance</b> is one installed copy of the game. Each one has its own card on the
             main screen and its own settings behind the <b>gear icon</b>. You can keep several, for
@@ -121,36 +120,8 @@
         </p>
     </section>
 
-    <section id="gog">
-        <h3>2. From GOG</h3>
-        <ol>
-            <li>Open the side menu and tap <b>Sign in to GOG</b>. Sign in with your GOG e-mail and
-                password on GOG's own page: RimDroid never sees your password.</li>
-            <li>Signing in through a linked account, such as Google, does not work inside an app.
-                If that is how you normally log in, set a GOG password first: gog.com → Sign in →
-                Password reset.</li>
-            <li>Tap <b>Check library</b>. RimWorld appears as a card, with its DLC below it.</li>
-            <li>Tap <b>Download</b> on the game and on every DLC you want. The files download one
-                after another into the public <b>Download/RimDroid</b> folder; allow <b>All files
-                access</b> when asked. You can switch to other apps meanwhile. If a download stops,
-                tap the button again to continue.</li>
-            <li>Once the game is downloaded, its button becomes <b>Create an instance</b>. The new
-                instance gets the game together with every DLC you have already downloaded.</li>
-        </ol>
-        <details>
-            <summary>On a PC</summary>
-            <div class="details-content">
-                <p>In your library on gog.com, download the <b>Linux</b> installers (.sh files) of
-                    RimWorld and of the DLC you own. Pack them all into one <b>.zip</b> archive,
-                    copy it to the phone and add it as described in
-                    <a href="#zip-archive">From a .zip archive</a>. The .zip is needed because file
-                    managers do not reliably hand a bare .sh file to apps.</p>
-            </div>
-        </details>
-    </section>
-
     <section id="zip-archive">
-        <h3>3. From a .zip archive</h3>
+        <h3>2. From a .zip archive</h3>
         <p>
             Open the side menu and tap <b>Add game instance</b>, or the <b>+</b> at the top of the
             main screen. Enter a name, tap <b>Pick ZIP file</b>, choose the archive and tap
@@ -158,8 +129,7 @@
         </p>
         <ul>
             <li>The .zip can hold the RimWorld <b>Linux</b> build, the one with the
-                <code>RimWorldLinux</code> file (a folder around it is fine, RimDroid finds it), or
-                GOG's <b>.sh</b> installers of the game and its DLC.</li>
+                <code>RimWorldLinux</code> file (a folder around it is fine, RimDroid finds it).</li>
             <li>Keep the name short: Latin letters and digits, up to 40 characters.</li>
             <li>Keeping the .zip is not required, but it is handy later to reinstall or to create
                 another instance of the same version.</li>
@@ -175,12 +145,8 @@
         <li><b>From Steam:</b> in <b>Steam Downloads</b>, tab <b>DLC</b>, tick the DLC your account
             owns and tap <b>Download selected DLC</b>. Each one is saved as a .zip in
             <b>Download/RimDroid</b>.</li>
-        <li><b>From GOG:</b> download it from its card in <b>Sign in to GOG</b>, then tap
-            <b>Install</b> on the same card. A DLC downloaded before you create the instance is
-            included in it automatically.</li>
         <li><b>To install a DLC file</b>, open the side menu, tap <b>Install mod / DLC</b>, choose
-            the file and the instance, open the <b>DLC</b> tab and tap <b>Install</b>. GOG
-            installers are recognised by themselves.</li>
+            the file and the instance, open the <b>DLC</b> tab and tap <b>Install</b>.</li>
         <li>A DLC must match the game version of the instance: a DLC for 1.6 goes into a 1.6
             instance. That is why the install screen always asks you to choose the instance.</li>
     </ul>

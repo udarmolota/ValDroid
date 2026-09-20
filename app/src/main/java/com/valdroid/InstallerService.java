@@ -136,35 +136,22 @@ public class InstallerService extends Service {
                     + "(or delete it first).");
         }
 
-        // Two input shapes:
-        //  (1) GOG DRM-free installer(s): a single .sh, or a .zip bundling the base game + DLC .sh
-        //      installers. Extracted by GogInstallerExtractor (strips the data/noarch/game/ prefix,
-        //      merges DLC into Data/), yielding RimWorldLinux at the instance root directly.
-        //  (2) our normal RimWorld .zip: RimWorldLinux somewhere inside → extract + re-root.
-        boolean gog = false; // Valheim milestone 1 accepts the Linux game ZIP only.
-        if (gog) {
-            broadcastProgress("Extracting GOG installer(s)...");
-            GogInstallerExtractor.extract(zipFile, instanceDir,
-                    new File(storage.getCachePath()), this::broadcastProgress);
-        } else {
-            // Validate the archive BEFORE creating any folders (Zomdroid-style): it must contain the
-            // RimWorldLinux binary somewhere. Otherwise we'd extract a non-RimWorld archive and leave
-            // an orphaned instance folder that the launcher silently hides (fails isInstalled()).
-            broadcastProgress("Checking archive...");
-            if (!zipContainsEntry(zipFile, GameDescriptor.VALHEIM.executable())) {
-                throw new Exception(GameDescriptor.VALHEIM.executable()
-                        + " not found — this is not a Valheim Linux archive.");
-            }
-            instanceDir.mkdirs();
-            broadcastProgress("Extracting instance...");
-            extractZip(zipFile, instanceDir);
+        // Validate the archive BEFORE creating any folders (Zomdroid-style): it must contain the
+        // game binary somewhere. Otherwise we'd extract some other archive and leave an orphaned
+        // instance folder that the launcher silently hides (fails isInstalled()).
+        broadcastProgress("Checking archive...");
+        if (!zipContainsEntry(zipFile, GameDescriptor.VALHEIM.executable())) {
+            throw new Exception(GameDescriptor.VALHEIM.executable()
+                    + " not found — this is not a Valheim Linux archive.");
         }
+        instanceDir.mkdirs();
+        broadcastProgress("Extracting instance...");
+        extractZip(zipFile, instanceDir);
 
-        // Re-root: the game files may sit inside a wrapper folder (e.g. "game/RimWorldLinux") at any
-        // depth. Find RimWorldLinux and lift its folder's contents to the instance top, dropping the
-        // wrappers, so isInstalled() (which checks the root) passes. If it's somehow missing after
-        // extraction, delete the whole instance dir — never leave an orphaned, hidden instance.
-        // (GOG extraction already lands RimWorldLinux at the root, so this is a no-op there.)
+        // Re-root: the game files may sit inside a wrapper folder at any depth. Find the binary and
+        // lift its folder's contents to the instance top, dropping the wrappers, so isInstalled()
+        // (which checks the root) passes. If it's somehow missing after extraction, delete the whole
+        // instance dir — never leave an orphaned, hidden instance.
         File bin = new File(instanceDir, GameDescriptor.VALHEIM.executable());
         if (!bin.exists()) {
             File found = findFile(instanceDir, GameDescriptor.VALHEIM.executable());
@@ -181,27 +168,6 @@ public class InstallerService extends Service {
             bin = new File(instanceDir, GameDescriptor.VALHEIM.executable());
         }
         bin.setExecutable(true);
-
-        // Expansion installers handed over with the game (the GOG downloader sends every expansion
-        // already on the phone). Their payload is game-relative — Data/<Expansion> — so they go into
-        // the instance root now that the game is in place, just as the install screen adds one to an
-        // existing instance. A broken one fails the whole install and removes the instance: a
-        // half-extracted expansion folder would break the game in ways far harder to trace.
-        if (extraInstallers != null) {
-            for (String path : extraInstallers) {
-                File dlc = new File(path);
-                try {
-                    if (!dlc.isFile()) throw new IOException("file not found");
-                    broadcastProgress("Adding " + dlc.getName() + "...");
-                    GogInstallerExtractor.extract(dlc, instanceDir,
-                            new File(storage.getCachePath()), this::broadcastProgress);
-                } catch (Exception e) {
-                    deleteDir(instanceDir);
-                    throw new Exception("Could not add " + dlc.getName() + ": " + e.getMessage()
-                            + ". Nothing was installed.");
-                }
-            }
-        }
 
         // Valheim needs a working Steam: Goldberg shim + steam_settings + PlayFab auto-login off.
         // A failed shim download does not fail the install; the warning is passed on below.

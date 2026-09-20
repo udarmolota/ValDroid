@@ -117,15 +117,6 @@ public final class ContentInstaller {
                 main.post(() -> Toast.makeText(act, "Read failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 return;
             }
-            // A GOG .sh installer is NOT a mod zip: it has no About/About.xml (ModImporter would fail
-            // with "missing About/About.xml"), and its payload is already game-root-relative — a DLC
-            // installer carries a ready-made Data/<Expansion>. So extract it into the instance ROOT
-            // and let its own layout place the content; the Mod/DLC choice doesn't apply.
-            if (GogInstallerExtractor.looksLikeGogBundle(cache)) {
-                installGogInstaller(act, cache, instance, main);
-                return;
-            }
-
             ModImporter.Result r = ModImporter.importZip(cache, destDir, fallback);
             //noinspection ResultOfMethodCallIgnored
             cache.delete();
@@ -144,32 +135,6 @@ public final class ContentInstaller {
         }, "rd-content-install").start();
     }
 
-    /** Install a GOG installer (a single {@code .sh}, or a zip bundling installers) into
-     *  {@code instance}: extract into the game root — its payload is game-relative, so a DLC's
-     *  Data/&lt;Expansion&gt; lands where RimWorld expects it — and report the folders that appeared.
-     *  Runs on the caller's worker thread. */
-    private static void installGogInstaller(Activity act, File src, GameInstance instance, Handler main) {
-        File gameRoot = new File(instance.getGamePath());
-        File dataDir  = new File(gameRoot, "Data");
-        try {
-            java.util.Set<String> before = listNames(dataDir);
-            GogInstallerExtractor.extract(src, gameRoot, act.getCacheDir(), m -> Log.i(TAG, m));
-            java.util.Set<String> added = listNames(dataDir);
-            added.removeAll(before);
-            String what = added.isEmpty()
-                    ? "existing files updated (no new expansion folder)"
-                    : String.join(", ", added);
-            alert(act, main, "Installed: " + what + " → Data of " + instance.getName());
-        } catch (Exception e) {
-            Log.e(TAG, "GOG install failed", e);
-            alert(act, main, "Install failed: " + e.getMessage());
-        } finally {
-            //noinspection ResultOfMethodCallIgnored
-            src.delete();
-        }
-    }
-
-    /** Names directly inside {@code dir} (empty if absent) — used to diff what an installer added. */
     private static java.util.Set<String> listNames(File dir) {
         java.util.Set<String> names = new java.util.TreeSet<>();
         String[] list = dir.list();

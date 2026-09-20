@@ -27,10 +27,6 @@
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
             android:title="@string/nav_cloud_saves" />
-        <item
-            android:id="@+id/action_gog_login"
-            android:icon="@drawable/ic_gog"
-            android:title="@string/nav_gog_login" />
     </group>
 
     <!-- 3) Settings + data transfer (saves / settings / controls layout) -->

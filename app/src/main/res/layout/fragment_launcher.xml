@@ -74,12 +74,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/launcher_empty_steam" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_empty_gog"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/launcher_empty_gog" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

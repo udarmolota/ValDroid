@@ -46,7 +46,6 @@
         <a href="#get-game">Cómo conseguir el juego</a>
         <ol>
             <li><a href="#steam-in-app">Desde Steam, dentro de la app</a></li>
-            <li><a href="#gog">Desde GOG</a></li>
             <li><a href="#zip-archive">Desde un archivo .zip</a></li>
         </ol>
     </li>
@@ -72,11 +71,11 @@
         El juego no está incluido.
     </p>
     <ol>
-        <li>Necesitas tener <b>RimWorld</b> en <b>Steam</b> o <b>GOG</b>. RimDroid ejecuta la
+        <li>Necesitas tener <b>RimWorld</b> en <b>Steam</b>. RimDroid ejecuta la
             versión de <b>Linux</b> del juego, <b>RimWorld 1.5</b> o <b>1.6</b>.</li>
         <li>Pon el juego en la app. Con Steam, abre el menú lateral y toca
             <b>Descargas de Steam</b>: el juego se descarga directamente en una instancia lista.
-            Para GOG y las demás opciones, mira <a href="#get-game">Cómo conseguir el juego</a>.</li>
+            Para las demás opciones, mira <a href="#get-game">Cómo conseguir el juego</a>.</li>
         <li>Una <b>instancia</b> es una copia instalada del juego. Cada una tiene su propia tarjeta
             en la pantalla principal y sus propios ajustes en el <b>icono de engranaje</b>. Puedes
             tener varias, por ejemplo 1.5 y 1.6 lado a lado.</li>
@@ -124,41 +123,8 @@
         </p>
     </section>
 
-    <section id="gog">
-        <h3>2. Desde GOG</h3>
-        <ol>
-            <li>Abre el menú lateral y toca <b>Iniciar sesión en GOG</b>. Inicia sesión con tu
-                correo y contraseña de GOG en la propia página de GOG: RimDroid nunca ve tu
-                contraseña.</li>
-            <li>El inicio de sesión con una cuenta vinculada, como Google, no funciona dentro de una
-                app. Si sueles entrar así, primero crea una contraseña de GOG: gog.com → Sign in →
-                Password reset.</li>
-            <li>Toca <b>Comprobar biblioteca</b>. RimWorld aparece como una tarjeta, con sus DLC
-                debajo.</li>
-            <li>Toca <b>Descargar</b> en el juego y en cada DLC que quieras. Los archivos se
-                descargan uno tras otro en la carpeta pública <b>Download/RimDroid</b>; permite el
-                <b>acceso a todos los archivos</b> cuando se te pida. Mientras tanto puedes cambiar
-                a otras apps. Si una descarga se detiene, toca el botón otra vez para
-                continuar.</li>
-            <li>Cuando el juego termina de descargarse, su botón cambia a <b>Crear una
-                instancia</b>. La nueva instancia recibe el juego junto con todos los DLC que ya
-                descargaste.</li>
-        </ol>
-        <details>
-            <summary>En una PC</summary>
-            <div class="details-content">
-                <p>En tu biblioteca de gog.com, descarga los instaladores de <b>Linux</b> (archivos
-                    .sh) de RimWorld y de los DLC que tengas. Ponlos todos en un solo archivo
-                    <b>.zip</b>, cópialo al teléfono y agrégalo como se explica en
-                    <a href="#zip-archive">Desde un archivo .zip</a>. El .zip hace falta porque los
-                    administradores de archivos no siempre le pasan bien un archivo .sh suelto a las
-                    apps.</p>
-            </div>
-        </details>
-    </section>
-
     <section id="zip-archive">
-        <h3>3. Desde un archivo .zip</h3>
+        <h3>2. Desde un archivo .zip</h3>
         <p>
             Abre el menú lateral y toca <b>Añadir instancia del juego</b>, o el <b>+</b> en la parte
             superior de la pantalla principal. Escribe un nombre, toca <b>Elegir archivo ZIP</b>,
@@ -167,7 +133,7 @@
         <ul>
             <li>El .zip puede contener la versión de <b>Linux</b> de RimWorld, la que tiene el
                 archivo <code>RimWorldLinux</code> (puede estar dentro de una carpeta, RimDroid lo
-                encuentra), o los instaladores <b>.sh</b> de GOG del juego y sus DLC.</li>
+                encuentra).</li>
             <li>Usa un nombre corto: letras latinas y números, hasta 40 caracteres.</li>
             <li>No hace falta conservar el .zip, pero sirve más adelante para reinstalar o para
                 crear otra instancia de la misma versión.</li>
@@ -183,12 +149,9 @@
         <li><b>Desde Steam:</b> en <b>Descargas de Steam</b>, pestaña <b>DLC</b>, marca los DLC que
             tiene tu cuenta y toca <b>Descargar los DLC seleccionados</b>. Cada uno se guarda como
             un .zip en <b>Download/RimDroid</b>.</li>
-        <li><b>Desde GOG:</b> descárgalo desde su tarjeta en <b>Iniciar sesión en GOG</b> y luego
-            toca <b>Instalar</b> en la misma tarjeta. Un DLC descargado antes de crear la instancia
-            se incluye en ella automáticamente.</li>
         <li><b>Para instalar un archivo de DLC</b>, abre el menú lateral, toca <b>Instalar mod /
             DLC</b>, elige el archivo y la instancia, abre la pestaña <b>DLC</b> y toca
-            <b>Instalar</b>. Los instaladores de GOG se reconocen solos.</li>
+            <b>Instalar</b>.</li>
         <li>Un DLC debe coincidir con la versión del juego de la instancia: un DLC para 1.6 va en
             una instancia 1.6. Por eso la pantalla de instalación siempre te pide elegir la
             instancia.</li>

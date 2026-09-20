@@ -45,11 +45,6 @@
         android:label="@string/nav_custom_driver" />
 
     <fragment
-        android:id="@+id/gog_login_fragment"
-        android:name="com.valdroid.fragments.GogLoginFragment"
-        android:label="@string/nav_gog_login" />
-
-    <fragment
         android:id="@+id/wiki_fragment"
         android:name="com.valdroid.fragments.WikiFragment"
         android:label="@string/nav_wiki" />
@@ -74,9 +69,6 @@
 
     <action android:id="@+id/action_open_custom_driver"
         app:destination="@id/driver_fragment" />
-
-    <action android:id="@+id/action_gog_login"
-        app:destination="@id/gog_login_fragment" />
 
     <action android:id="@+id/action_open_wiki"
         app:destination="@id/wiki_fragment" />
