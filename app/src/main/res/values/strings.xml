@@ -151,6 +151,8 @@ In the cloud: %2$s
     <string name="editor_delete">Delete element</string>
     <string name="editor_hint">Tap to select • drag to move</string>
     <string name="editor_reset_confirm">Reset all on-screen controls to the default layout?</string>
+    <string name="editor_layout_gamepad">Gamepad layout (default)</string>
+    <string name="editor_layout_vkbd">Keyboard and mouse layout (VKBD)</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="app_settings_theme">Theme</string>

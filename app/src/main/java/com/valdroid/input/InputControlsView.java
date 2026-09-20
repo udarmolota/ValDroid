@@ -29,7 +29,10 @@ import java.util.List;
 public class InputControlsView extends View {
 
     private static final String TAG = "ValDroid/Controls";
+    /** Default layout: the on-screen gamepad (drives the virtual Xbox 360 pad). */
     public static final String DEFAULT_ASSET = "default_controls.json";
+    /** Alternative layout: virtual keyboard + mouse. Both kinds of element can be mixed in one layout. */
+    public static final String VKBD_ASSET = "default_controls_vkbd.json";
 
     private final List<ControlElement> elements = new ArrayList<>();
     private final float density;
@@ -69,6 +72,12 @@ public class InputControlsView extends View {
 
     /** When true, all controls except the TOGGLE_CONTROLS button(s) are hidden + untouchable. */
     private boolean controlsHidden = false;
+    /** When true, the elements that drive the virtual gamepad are hidden + untouchable: a physical
+     *  pad is connected and feeds the same virtual pad. Keyboard/mouse helpers stay. */
+    private boolean gamepadElementsHidden = false;
+    /** Hat state of the virtual gamepad (bits: up 1, right 2, down 4, left 8), shared by the d-pad
+     *  element and any button bound to GAMEPAD_DPAD_*. */
+    private int dpadMask = 0;
     /** Light haptic tick on button press, when the user enabled it (per-instance, default off). */
     private boolean hapticEnabled = false;
 
@@ -143,6 +152,20 @@ public class InputControlsView extends View {
         invalidate();
     }
 
+    /** Hide/show only the virtual-gamepad elements (a physical pad connected / disconnected). */
+    public void setGamepadElementsHidden(boolean hidden) {
+        if (gamepadElementsHidden == hidden) return;
+        gamepadElementsHidden = hidden;
+        for (ControlElement el : elements) if (el.isGamepadElement()) el.reset();
+        invalidate();
+    }
+
+    /** Not drawn and not touchable right now (play mode only). */
+    private boolean isSuppressed(ControlElement el) {
+        if (controlsHidden && !isControlsToggle(el)) return true;
+        return gamepadElementsHidden && el.isGamepadElement();
+    }
+
     /** The TOGGLE_CONTROLS button stays visible/touchable even while everything else is hidden. */
     private boolean isControlsToggle(ControlElement el) {
         return el instanceof ButtonElement && ((ButtonElement) el).getBinding() == Binding.TOGGLE_CONTROLS;
@@ -212,6 +235,17 @@ public class InputControlsView extends View {
         }
         try {
             switch (b.kind) {
+                case GP_BUTTON:
+                    VirtualGamepad.button(b.code, pressed);
+                    VirtualGamepad.sync();
+                    break;
+                case GP_TRIGGER:
+                    VirtualGamepad.trigger(b.code, pressed ? 1f : 0f);
+                    VirtualGamepad.sync();
+                    break;
+                case GP_DPAD:
+                    injectDpad(pressed ? 0 : b.code, pressed ? b.code : 0);
+                    break;
                 case MOUSE:  GameActivity.buttonInput(b.code, pressed ? 1 : 0, gx(), gy()); break;
                 case SCROLL: if (pressed) GameActivity.scrollInput(gx(), gy(), b.code); break;
                 case KEY:
@@ -220,6 +254,26 @@ public class InputControlsView extends View {
                     break;
                 case NONE: default: break;
             }
+        } catch (UnsatisfiedLinkError ignored) {}
+    }
+
+    /** Analog stick of the virtual gamepad: nx/ny in -1..1, screen orientation (down = +y, as evdev). */
+    public void injectStick(Binding stick, float nx, float ny) {
+        if (stick == null || stick.kind != Binding.Kind.GP_STICK) return;
+        try {
+            VirtualGamepad.stick(stick.code, nx);          // ABS_X  / ABS_RX
+            VirtualGamepad.stick(stick.code + 1, ny);      // ABS_Y  / ABS_RY
+            VirtualGamepad.sync();
+        } catch (UnsatisfiedLinkError ignored) {}
+    }
+
+    /** Replace one source's d-pad bits (released, then pressed) and send the hat. */
+    public void injectDpad(int released, int pressedBits) {
+        dpadMask = (dpadMask & ~released) | pressedBits;
+        try {
+            VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, ((dpadMask & 2) != 0 ? 1 : 0) - ((dpadMask & 8) != 0 ? 1 : 0));
+            VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, ((dpadMask & 4) != 0 ? 1 : 0) - ((dpadMask & 1) != 0 ? 1 : 0));
+            VirtualGamepad.sync();
         } catch (UnsatisfiedLinkError ignored) {}
     }
 
@@ -249,7 +303,7 @@ public class InputControlsView extends View {
         for (ControlElement el : elements) {
             // While hidden, only the toggle button reacts — everything else is non-interactive
             // so taps pass through to the game (pan/zoom) instead of hitting invisible buttons.
-            if (controlsHidden && !isControlsToggle(el)) continue;
+            if (isSuppressed(el)) continue;
             if (el.handleTouch(e)) { consumed = true; if (down) break; }
         }
         return consumed; // false -> Activity gets it (pinch-zoom / direct tap)
@@ -263,10 +317,19 @@ public class InputControlsView extends View {
     @Override protected void onDraw(Canvas c) {
         for (ControlElement el : elements) {
             // In play mode, when hidden, draw only the toggle button. The editor always shows all.
-            if (!editMode && controlsHidden && !isControlsToggle(el)) continue;
+            if (!editMode && isSuppressed(el)) continue;
             el.draw(c);
         }
-        if (!editMode && curX >= 0) drawCursor(c);
+        if (!editMode && curX >= 0 && hasMouseElement()) drawCursor(c);
+    }
+
+    /** The overlay's own cursor arrow only makes sense when something on screen moves or clicks it. */
+    private boolean hasMouseElement() {
+        for (ControlElement el : elements) {
+            if (el instanceof MouseStickElement) return true;
+            if (el instanceof ButtonElement && ((ButtonElement) el).getBinding().kind == Binding.Kind.MOUSE) return true;
+        }
+        return false;
     }
 
     private void drawCursor(Canvas c) {
@@ -394,6 +457,8 @@ public class InputControlsView extends View {
             case "BUTTON":      return new ButtonElement(this, d);
             case "MOUSE_STICK": return new MouseStickElement(this, d);
             case "WASD_STICK":  return new WasdStickElement(this, d);
+            case "STICK":       return new AnalogStickElement(this, d);
+            case "DPAD":        return new DpadElement(this, d);
             default: Log.w(TAG, "unknown element type: " + d.type); return null;
         }
     }
@@ -428,18 +493,23 @@ public class InputControlsView extends View {
         applyDescriptions(list);
     }
 
-    public void loadDefault() {
-        applyDescriptions(readDefaultAsset());
+    public void loadDefault() { loadAsset(DEFAULT_ASSET); }
+
+    /** Replace the layout with a bundled one ({@link #DEFAULT_ASSET} or {@link #VKBD_ASSET}). */
+    public void loadAsset(String asset) {
+        applyDescriptions(readAsset(asset));
     }
 
-    private List<ControlElementDescription> readDefaultAsset() {
-        try (InputStream is = getContext().getAssets().open(DEFAULT_ASSET)) {
+    private List<ControlElementDescription> readDefaultAsset() { return readAsset(DEFAULT_ASSET); }
+
+    private List<ControlElementDescription> readAsset(String asset) {
+        try (InputStream is = getContext().getAssets().open(asset)) {
             byte[] buf = new byte[is.available()];
             int n = is.read(buf);
             String json = new String(buf, 0, Math.max(n, 0), StandardCharsets.UTF_8);
             List<ControlElementDescription> list = parse(json);
             if (list != null) return list;
-        } catch (Exception ex) { Log.e(TAG, "default asset read failed: " + ex.getMessage()); }
+        } catch (Exception ex) { Log.e(TAG, "layout asset " + asset + " read failed: " + ex.getMessage()); }
         return new ArrayList<>();
     }
 

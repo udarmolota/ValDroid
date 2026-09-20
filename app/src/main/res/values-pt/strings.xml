@@ -135,6 +135,8 @@ Na nuvem: %2$s
     <string name="editor_delete">Excluir item</string>
     <string name="editor_hint">Toque para selecionar • arraste para mover</string>
     <string name="editor_reset_confirm">Restaurar todos os controles na tela para o layout padrão?</string>
+    <string name="editor_layout_gamepad">Layout de controle (padrão)</string>
+    <string name="editor_layout_vkbd">Teclado e mouse (VKBD)</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Configurações</string>
     <string name="app_settings_theme">Tema</string>

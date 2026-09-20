@@ -3,8 +3,9 @@ package com.valdroid.input;
 /**
  * A single bindable action that a control element can inject into the game via
  * ValDroid's SDL event injection (see GameActivity.native*). This is the ValDroid
- * equivalent of Zomdroid's GLFWBinding, but targets our SDL layer and is MNK-only
- * (mouse + keyboard); there is no gamepad/joystick injection.
+ * equivalent of Zomdroid's GLFWBinding. Mouse and keyboard go through our SDL layer; the GAMEPAD_*
+ * entries (same names as Zomdroid's, so its layouts translate 1:1) drive the virtual Xbox 360 evdev
+ * pad ({@link VirtualGamepad}) that the game's own SDL reads.
  *
  * Each entry carries everything the InputControlsView needs to inject it:
  *   - MOUSE  : code = SDL button number (1=left, 2=middle, 3=right), injected at the cursor.
@@ -23,6 +24,28 @@ public enum Binding {
     // Summon / dismiss the Android on-screen keyboard for typing into game text fields (rename a
     // colonist, name a save). Handled by GameActivity, not injected as a key.
     TOGGLE_KEYBOARD(Kind.SPECIAL, 0, 0, null, "Show/hide keyboard"),
+
+    // --- Virtual gamepad (VirtualGamepad / valdroid_pad.c). GP_BUTTON: code = evdev BTN_*.
+    // GP_TRIGGER: code = evdev ABS axis, full press = full travel. GP_DPAD: code = bit in the hat
+    // mask (up 1, right 2, down 4, left 8). GP_STICK: code = the stick's X axis; analog stick only. ---
+    GAMEPAD_BUTTON_A(Kind.GP_BUTTON, VirtualGamepad.BTN_A, 0, null, "Gamepad A"),
+    GAMEPAD_BUTTON_B(Kind.GP_BUTTON, VirtualGamepad.BTN_B, 0, null, "Gamepad B"),
+    GAMEPAD_BUTTON_X(Kind.GP_BUTTON, VirtualGamepad.BTN_X, 0, null, "Gamepad X"),
+    GAMEPAD_BUTTON_Y(Kind.GP_BUTTON, VirtualGamepad.BTN_Y, 0, null, "Gamepad Y"),
+    GAMEPAD_BUTTON_LB(Kind.GP_BUTTON, VirtualGamepad.BTN_TL, 0, null, "Gamepad LB"),
+    GAMEPAD_BUTTON_RB(Kind.GP_BUTTON, VirtualGamepad.BTN_TR, 0, null, "Gamepad RB"),
+    GAMEPAD_BUTTON_BACK(Kind.GP_BUTTON, VirtualGamepad.BTN_SELECT, 0, null, "Gamepad Back"),
+    GAMEPAD_BUTTON_START(Kind.GP_BUTTON, VirtualGamepad.BTN_START, 0, null, "Gamepad Start"),
+    GAMEPAD_BUTTON_LSTICK(Kind.GP_BUTTON, VirtualGamepad.BTN_THUMBL, 0, null, "Gamepad L3 (stick click)"),
+    GAMEPAD_BUTTON_RSTICK(Kind.GP_BUTTON, VirtualGamepad.BTN_THUMBR, 0, null, "Gamepad R3 (stick click)"),
+    GAMEPAD_LTRIGGER(Kind.GP_TRIGGER, VirtualGamepad.ABS_Z, 0, null, "Gamepad LT"),
+    GAMEPAD_RTRIGGER(Kind.GP_TRIGGER, VirtualGamepad.ABS_RZ, 0, null, "Gamepad RT"),
+    GAMEPAD_DPAD_UP(Kind.GP_DPAD, 1, 0, null, "Gamepad D-pad up"),
+    GAMEPAD_DPAD_RIGHT(Kind.GP_DPAD, 2, 0, null, "Gamepad D-pad right"),
+    GAMEPAD_DPAD_DOWN(Kind.GP_DPAD, 4, 0, null, "Gamepad D-pad down"),
+    GAMEPAD_DPAD_LEFT(Kind.GP_DPAD, 8, 0, null, "Gamepad D-pad left"),
+    LEFT_JOYSTICK(Kind.GP_STICK, VirtualGamepad.ABS_X, 0, null, "Left stick"),
+    RIGHT_JOYSTICK(Kind.GP_STICK, VirtualGamepad.ABS_RX, 0, null, "Right stick"),
 
     // --- Mouse buttons (injected at the on-screen cursor) ---
     MOUSE_LEFT(Kind.MOUSE, 1, 0, null, "Left click"),
@@ -110,7 +133,7 @@ public enum Binding {
     // SDL_SCANCODE_LSHIFT=225, SDLK_LSHIFT=225|0x40000000. No text (modifier).
     KEY_LSHIFT(Kind.KEY, 225, 0x400000E1, null, "Left Shift");
 
-    public enum Kind { NONE, MOUSE, SCROLL, KEY, SPECIAL }
+    public enum Kind { NONE, MOUSE, SCROLL, KEY, SPECIAL, GP_BUTTON, GP_TRIGGER, GP_DPAD, GP_STICK }
 
     public final Kind kind;
     public final int code;      // MOUSE: button#, SCROLL: dy, KEY: scancode
@@ -127,6 +150,18 @@ public enum Binding {
     }
 
     @Override public String toString() { return label; }
+
+    /** True for everything that drives the virtual gamepad instead of mouse/keyboard. */
+    public boolean isGamepad() {
+        return kind == Kind.GP_BUTTON || kind == Kind.GP_TRIGGER || kind == Kind.GP_DPAD || kind == Kind.GP_STICK;
+    }
+
+    /** What a button or a key-stick direction can be bound to: everything except the analog sticks. */
+    public static Binding[] pressable() {
+        java.util.List<Binding> out = new java.util.ArrayList<>();
+        for (Binding b : values()) if (b.kind != Kind.GP_STICK) out.add(b);
+        return out.toArray(new Binding[0]);
+    }
 
     public static Binding fromName(String name, Binding fallback) {
         if (name == null) return fallback;

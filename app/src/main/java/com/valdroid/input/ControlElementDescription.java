@@ -10,7 +10,7 @@ package com.valdroid.input;
  */
 public class ControlElementDescription {
 
-    public String  type;            // "BUTTON" | "MOUSE_STICK" | "WASD_STICK"
+    public String  type;            // "BUTTON" | "MOUSE_STICK" | "WASD_STICK" | "STICK" | "DPAD"
     public String  shape;           // BUTTON only: "RECT" | "CIRCLE"
     public float   centerXRelative; // 0..1
     public float   centerYRelative; // 0..1
@@ -23,6 +23,8 @@ public class ControlElementDescription {
      *   BUTTON      -> bindings[0] is the action.
      *   WASD_STICK  -> bindings = [up, right, down, left].
      *   MOUSE_STICK -> empty (fixed: relative cursor + tap = left click).
+     *   STICK       -> bindings[0] is LEFT_JOYSTICK or RIGHT_JOYSTICK (analog, virtual gamepad).
+     *   DPAD        -> empty (the virtual gamepad's hat).
      */
     public String[] bindings;
 
@@ -65,6 +67,23 @@ public class ControlElementDescription {
         ControlElementDescription d = new ControlElementDescription();
         d.type = "WASD_STICK";
         d.bindings = new String[]{ up.name(), right.name(), down.name(), left.name() };
+        d.centerXRelative = xRel;
+        d.centerYRelative = yRel;
+        return d;
+    }
+
+    public static ControlElementDescription analogStick(Binding stick, float xRel, float yRel) {
+        ControlElementDescription d = new ControlElementDescription();
+        d.type = "STICK";
+        d.bindings = new String[]{ stick.name() };
+        d.centerXRelative = xRel;
+        d.centerYRelative = yRel;
+        return d;
+    }
+
+    public static ControlElementDescription dpad(float xRel, float yRel) {
+        ControlElementDescription d = new ControlElementDescription();
+        d.type = "DPAD";
         d.centerXRelative = xRel;
         d.centerYRelative = yRel;
         return d;

@@ -674,13 +674,14 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             @Override public void onInputDeviceChanged(int id) { refreshGamepadControls(); }
         };
 
-    /** Hide the on-screen controls when a gamepad connects, show them when it disconnects.
+    /** Hide the on-screen GAMEPAD elements when a physical gamepad connects (it feeds the same virtual
+     *  pad), show them again when it disconnects. Keyboard/mouse helper buttons stay on screen.
      *  Acts only on a connect/disconnect TRANSITION, so it never clobbers the manual hide toggle. */
     private void refreshGamepadControls() {
         boolean pad = isGamepadConnected();
         if (pad == lastPadConnected) return;
         lastPadConnected = pad;
-        if (controls != null) controls.setControlsHidden(pad);
+        if (controls != null) controls.setGamepadElementsHidden(pad);
     }
 
     private boolean isGamepadConnected() {

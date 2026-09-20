@@ -21,6 +21,7 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.valdroid.input.AnalogStickElement;
 import com.valdroid.input.Binding;
 import com.valdroid.input.ButtonElement;
 import com.valdroid.input.ControlElement;
@@ -192,6 +193,12 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
             MouseStickElement m = (MouseStickElement) el;
             addSlider("Sensitivity", 25, 800, Math.round(m.getSensitivity() * 100), "%",
                     v -> m.setSensitivity(v / 100f));
+        } else if (el instanceof AnalogStickElement) {
+            AnalogStickElement a = (AnalogStickElement) el;
+            addCheckbox("Right stick (camera)", a.isRightStick(), right -> {
+                a.setRightStick(right);
+                controls.invalidate();
+            });
         } else if (el instanceof WasdStickElement) {
             WasdStickElement w = (WasdStickElement) el;
             final String[] names = {"Up", "Right", "Down", "Left"};
@@ -248,7 +255,7 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
         panelContainer.addView(lbl, rowParams());
 
         Spinner sp = new Spinner(this);
-        final Binding[] values = Binding.values();
+        final Binding[] values = Binding.pressable();   // no analog sticks: those belong to the stick element
         ArrayAdapter<Binding> ad = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, values);
         ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sp.setAdapter(ad);
@@ -300,7 +307,8 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
     // ===== toolbar actions =====
 
     private void showAddDialog() {
-        final String[] items = { "Button", "Mouse-stick (cursor)", "Camera-stick (keys)" };
+        final String[] items = { "Button (key, mouse or gamepad)", "Mouse-stick (cursor)", "Key-stick (4 keys)",
+                "Gamepad left stick", "Gamepad right stick", "Gamepad D-pad" };
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_add)
                 .setItems(items, (d, which) -> {
@@ -309,6 +317,9 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
                         case 1:  desc = ControlElementDescription.mouseStick(0.5f, 0.5f); break;
                         case 2:  desc = ControlElementDescription.wasdStick(
                                 Binding.KEY_UP, Binding.KEY_RIGHT, Binding.KEY_DOWN, Binding.KEY_LEFT, 0.5f, 0.5f); break;
+                        case 3:  desc = ControlElementDescription.analogStick(Binding.LEFT_JOYSTICK, 0.5f, 0.5f); break;
+                        case 4:  desc = ControlElementDescription.analogStick(Binding.RIGHT_JOYSTICK, 0.5f, 0.5f); break;
+                        case 5:  desc = ControlElementDescription.dpad(0.5f, 0.5f); break;
                         default: desc = ControlElementDescription.button("BTN", Binding.MOUSE_LEFT, "CIRCLE", 0.5f, 0.5f); break;
                     }
                     controls.addElement(desc);
@@ -319,9 +330,12 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
     private void showResetDialog() {
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_reset)
-                .setMessage(R.string.editor_reset_confirm)
-                .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    controls.loadDefault();
+                // Two bundled layouts. Loading one replaces the current layout; elements of the other
+                // kind can be added on top with "Add" (the game takes gamepad and keyboard together).
+                .setItems(new String[]{ getString(R.string.editor_layout_gamepad),
+                                        getString(R.string.editor_layout_vkbd) }, (d, which) -> {
+                    controls.loadAsset(which == 1 ? com.valdroid.input.InputControlsView.VKBD_ASSET
+                                                  : com.valdroid.input.InputControlsView.DEFAULT_ASSET);
                     panel.setVisibility(View.GONE);
                 })
                 .setNegativeButton(android.R.string.cancel, null)

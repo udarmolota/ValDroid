@@ -1,267 +1,235 @@
 [
   {
-    "type": "MOUSE_STICK",
+    "type": "STICK",
     "shape": "CIRCLE",
-    "centerXRelative": 0.83218753,
-    "centerYRelative": 0.70655274,
+    "centerXRelative": 0.13,
+    "centerYRelative": 0.72,
     "scale": 1.0,
-    "alpha": 28,
+    "alpha": 40,
+    "bindings": [
+      "LEFT_JOYSTICK"
+    ],
+    "sensitivity": 2.0,
+    "isToggle": false
+  },
+  {
+    "type": "STICK",
+    "shape": "CIRCLE",
+    "centerXRelative": 0.74,
+    "centerYRelative": 0.76,
+    "scale": 1.0,
+    "alpha": 40,
+    "bindings": [
+      "RIGHT_JOYSTICK"
+    ],
+    "sensitivity": 2.0,
+    "isToggle": false
+  },
+  {
+    "type": "DPAD",
+    "shape": "CIRCLE",
+    "centerXRelative": 0.3,
+    "centerYRelative": 0.8,
+    "scale": 0.85,
+    "alpha": 40,
     "bindings": [],
     "sensitivity": 2.0,
     "isToggle": false
   },
   {
-    "type": "WASD_STICK",
+    "type": "BUTTON",
     "shape": "CIRCLE",
-    "centerXRelative": 0.11141601,
-    "centerYRelative": 0.7429297,
-    "scale": 1.0,
-    "alpha": 28,
+    "centerXRelative": 0.89,
+    "centerYRelative": 0.54,
+    "scale": 0.55,
+    "alpha": 40,
     "bindings": [
-      "KEY_UP",
-      "KEY_RIGHT",
-      "KEY_DOWN",
-      "KEY_LEFT"
+      "GAMEPAD_BUTTON_A"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "A"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "RBC",
-    "centerXRelative": 0.89191407,
-    "centerYRelative": 0.20520726,
-    "scale": 0.7,
-    "alpha": 28,
+    "centerXRelative": 0.945,
+    "centerYRelative": 0.41,
+    "scale": 0.55,
+    "alpha": 40,
     "bindings": [
-      "MOUSE_RIGHT"
+      "GAMEPAD_BUTTON_B"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "B"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "LBC",
-    "centerXRelative": 0.14617184,
-    "centerYRelative": 0.24819335,
-    "scale": 0.72,
-    "alpha": 28,
+    "centerXRelative": 0.835,
+    "centerYRelative": 0.41,
+    "scale": 0.55,
+    "alpha": 40,
     "bindings": [
-      "MOUSE_LEFT"
+      "GAMEPAD_BUTTON_X"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "X"
+  },
+  {
+    "type": "BUTTON",
+    "shape": "CIRCLE",
+    "centerXRelative": 0.89,
+    "centerYRelative": 0.28,
+    "scale": 0.55,
+    "alpha": 40,
+    "bindings": [
+      "GAMEPAD_BUTTON_Y"
+    ],
+    "sensitivity": 2.0,
+    "isToggle": false,
+    "text": "Y"
   },
   {
     "type": "BUTTON",
     "shape": "RECT",
-    "text": "Esc",
-    "centerXRelative": 0.14976867,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
+    "centerXRelative": 0.07,
+    "centerYRelative": 0.09,
+    "scale": 0.6,
+    "alpha": 40,
     "bindings": [
-      "KEY_ESCAPE"
+      "GAMEPAD_LTRIGGER"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "LT"
   },
   {
     "type": "BUTTON",
     "shape": "RECT",
-    "text": "Space",
-    "centerXRelative": 0.22771867,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
+    "centerXRelative": 0.17,
+    "centerYRelative": 0.09,
+    "scale": 0.6,
+    "alpha": 40,
     "bindings": [
-      "KEY_SPACE"
+      "GAMEPAD_BUTTON_LB"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
-  },
-  {
-    "type": "BUTTON",
-    "shape": "CIRCLE",
-    "text": "1",
-    "centerXRelative": 0.30567366,
-    "centerYRelative": 0.075,
-    "scale": 0.5,
-    "alpha": 28,
-    "bindings": [
-      "KEY_1"
-    ],
-    "sensitivity": 2.0,
-    "isToggle": false
-  },
-  {
-    "type": "BUTTON",
-    "shape": "CIRCLE",
-    "text": "2",
-    "centerXRelative": 0.36141187,
-    "centerYRelative": 0.075,
-    "scale": 0.5,
-    "alpha": 28,
-    "bindings": [
-      "KEY_2"
-    ],
-    "sensitivity": 2.0,
-    "isToggle": false
-  },
-  {
-    "type": "BUTTON",
-    "shape": "CIRCLE",
-    "text": "3",
-    "centerXRelative": 0.41934738,
-    "centerYRelative": 0.075,
-    "scale": 0.5,
-    "alpha": 28,
-    "bindings": [
-      "KEY_3"
-    ],
-    "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "LB"
   },
   {
     "type": "BUTTON",
     "shape": "RECT",
-    "text": "Tab",
-    "centerXRelative": 0.5395387,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
+    "centerXRelative": 0.93,
+    "centerYRelative": 0.09,
+    "scale": 0.6,
+    "alpha": 40,
     "bindings": [
-      "KEY_TAB"
+      "GAMEPAD_RTRIGGER"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "RT"
   },
   {
     "type": "BUTTON",
     "shape": "RECT",
-    "text": "F1",
-    "centerXRelative": 0.6174937,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
+    "centerXRelative": 0.83,
+    "centerYRelative": 0.09,
+    "scale": 0.6,
+    "alpha": 40,
     "bindings": [
-      "KEY_F1"
+      "GAMEPAD_BUTTON_RB"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
-  },
-  {
-    "type": "BUTTON",
-    "shape": "RECT",
-    "text": "F2",
-    "centerXRelative": 0.6954487,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
-    "bindings": [
-      "KEY_F2"
-    ],
-    "sensitivity": 2.0,
-    "isToggle": false
-  },
-  {
-    "type": "BUTTON",
-    "shape": "RECT",
-    "text": "F3",
-    "centerXRelative": 0.77340364,
-    "centerYRelative": 0.075,
-    "scale": 0.55,
-    "alpha": 28,
-    "bindings": [
-      "KEY_F3"
-    ],
-    "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "RB"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "E",
-    "centerXRelative": 0.0478,
-    "centerYRelative": 0.10107422,
+    "centerXRelative": 0.38,
+    "centerYRelative": 0.08,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
-      "KEY_E"
+      "GAMEPAD_BUTTON_BACK"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "Back"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "L",
-    "centerXRelative": 0.0478,
-    "centerYRelative": 0.21923828,
+    "centerXRelative": 0.62,
+    "centerYRelative": 0.08,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
-      "KEY_L"
+      "GAMEPAD_BUTTON_START"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "Start"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "B",
-    "centerXRelative": 0.0478,
-    "centerYRelative": 0.33703607,
+    "centerXRelative": 0.04,
+    "centerYRelative": 0.93,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
-      "KEY_B"
+      "GAMEPAD_BUTTON_LSTICK"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "L3"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "H",
-    "centerXRelative": 0.0478,
-    "centerYRelative": 0.4572754,
+    "centerXRelative": 0.96,
+    "centerYRelative": 0.93,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
-      "KEY_H"
+      "GAMEPAD_BUTTON_RSTICK"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "R3"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "V",
-    "centerXRelative": 0.955,
+    "centerXRelative": 0.47,
     "centerYRelative": 0.075,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
       "TOGGLE_CONTROLS"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "V"
   },
   {
     "type": "BUTTON",
     "shape": "CIRCLE",
-    "text": "KB",
-    "centerXRelative": 0.877,
+    "centerXRelative": 0.53,
     "centerYRelative": 0.075,
     "scale": 0.5,
-    "alpha": 28,
+    "alpha": 40,
     "bindings": [
       "TOGGLE_KEYBOARD"
     ],
     "sensitivity": 2.0,
-    "isToggle": false
+    "isToggle": false,
+    "text": "KB"
   }
 ]

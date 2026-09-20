@@ -68,6 +68,8 @@ public abstract class ControlElement {
      * Default = reset(); ButtonElement overrides it to PRESERVE intentional toggle latches.
      */
     public void clearStalePointer() { reset(); }
+    /** True when the element drives the virtual gamepad; those are hidden while a physical pad is connected. */
+    public boolean isGamepadElement() { return false; }
     public abstract ControlElementDescription describe();
     /** Short human label for the editor "selected: ..." line. */
     public abstract String editorLabel();

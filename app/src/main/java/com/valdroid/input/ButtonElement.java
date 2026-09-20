@@ -150,6 +150,8 @@ public class ButtonElement extends ControlElement {
         return baseDescribe(d);
     }
 
+    @Override public boolean isGamepadElement() { return binding.isGamepad(); }
+
     @Override public String editorLabel() { return "Button: " + (text.isEmpty() ? binding.label : text); }
 
     // --- editor setters ---
