@@ -48,6 +48,9 @@ first; this list is for later.
   whole archive (~4 GB) into the app's cache and only then extracts it: twice the time, and ~4 GB
   of free space on top of the game itself. InstallerService needs random access only for the
   pre-checks (zipContainsEntry) — those could run over a ZipInputStream on the content URI too.
+- **Real CPU/GPU temperatures in the performance bar.** GameHub's overlay shows CPU and GPU temps
+  (seen on a POCO F5: 55/54 °C); ours shows the battery's. Try the /sys/class/thermal zones where a
+  device opens them to apps (common on Xiaomi), keep the battery temperature as the fallback.
 - **Multithreaded ETC2 encoder** (Zomdroid has one). Only the first launch would gain; the cache
   covers the rest.
 
