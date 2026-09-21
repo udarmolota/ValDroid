@@ -428,7 +428,8 @@ public class LauncherFragment extends Fragment {
             String msg = intent.getStringExtra(InstallerService.EXTRA_MESSAGE);
             String action = intent.getAction();
             if (InstallerService.BROADCAST_PROGRESS.equals(action)) {
-                appendLog(msg);
+                // Numeric updates for the install dialog carry no text (several a second) — skip them.
+                if (msg != null) appendLog(msg);
             } else if (InstallerService.BROADCAST_DONE.equals(action)) {
                 appendLog(msg);
                 refreshInstances();

@@ -70,9 +70,9 @@ In the cloud: %2$s
     <string name="native_mono_off_msg">The game will run in the previous, slower mode. If you turned it off because of a problem, please send us the logs — it helps us fix it.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
-    <string name="show_fps_label">Show FPS counter (top-left)</string>
+    <string name="show_fps_label">Show performance stats: FPS, CPU, GPU, memory, heat (top)</string>
     <string name="fps_cap_label">Frame rate limit</string>
-    <string name="fps_cap_hint">Caps FPS to smooth out swings and free the CPU for the game — which can raise the game speed (TPS) on weaker devices. Try 60 or 30 if the counter jumps around.</string>
+    <string name="fps_cap_hint">A limit smooths out frame-rate swings and keeps the phone cooler, so it holds its speed longer. The number is picked to fit your screen.</string>
     <string name="texq_label">Texture compression</string>
     <string name="texq_hint">Shrinks textures to save memory and gain FPS — needed to load several DLC on weaker phones. It mainly affects vegetation and resources; pawns and animals are never touched. Low is a good balance; Ultra low is a bit faster but plants look blurry.</string>
     <string name="texq_no">No</string>
@@ -284,4 +284,23 @@ In the cloud: %2$s
     <string name="etc2_cache_header_expanded">Compressed texture cache ▾</string>
     <string name="etc2_label">Enable ETC2 compression</string>
     <string name="etc2_hint">Compresses textures into a format the phone\'s GPU reads natively, so they take about four times less memory. On weaker phones and on Mali that is the difference between running and running out of memory. Works on MobileGlues. Large textures are also always scaled down.</string>
+    <string name="install_windows_build">This is the Windows version of Valheim, but ValDroid runs only the Linux version (the one with valheim.x86_64). If you own the game on Steam, the app downloads the right version for you: side menu → %1$s.</string>
+    <string name="install_progress_title">Installing the game</string>
+    <string name="install_phase_copy">Copying the archive</string>
+    <string name="install_phase_extract">Extracting the game</string>
+    <string name="install_phase_setup">Setting up</string>
+    <string name="install_eta_minutes">about %1$d min left</string>
+    <string name="install_eta_under_minute">less than a minute left</string>
+    <string name="install_failed_title">Installation failed</string>
+    <string name="hud_label">In-game display</string>
+    <string name="hud_off">Off</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Full info</string>
+    <string name="hud_hint">Full info shows a bar at the top: GPU and CPU load, memory, power draw, temperature and an FPS graph. Handy to see what slows the game down.</string>
+    <string name="fps_mode_eco">Economy (~30)</string>
+    <string name="fps_mode_balanced">Balanced (~40)</string>
+    <string name="fps_mode_smooth">Smooth (~60)</string>
+    <string name="fps_mode_resolved">On this screen: %1$d FPS at %2$d Hz</string>
+    <string name="fps_mode_resolved_fallback">On this screen: %1$d FPS at %2$d Hz. It has no even value near 40.</string>
+    <string name="fps_mode_resolved_off">Screen up to %1$d Hz</string>
 </resources>

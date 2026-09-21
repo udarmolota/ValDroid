@@ -64,7 +64,6 @@ public class SettingsFragment extends Fragment {
         Switch swReverse      = view.findViewById(R.id.sw_reverse_landscape);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
-        Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
         final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
@@ -133,10 +132,18 @@ public class SettingsFragment extends Fragment {
         });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
-        // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps
-        // compare devices / render scales (e.g. 720p vs native). Takes effect next game launch.
-        swShowFps.setChecked(prefs.isShowFps());
-        swShowFps.setOnCheckedChangeListener((btn, checked) -> prefs.setShowFps(checked));
+        // In-game overlay — GLOBAL: off / classic FPS counter / full performance bar. Shows the true
+        // presented frame rate; the bar adds what it is up against. Takes effect next game launch.
+        android.widget.RadioGroup rgHud = view.findViewById(R.id.rg_hud);
+        switch (prefs.getHudMode()) {
+            case LauncherPreferences.HUD_FULL: rgHud.check(R.id.rb_hud_full); break;
+            case LauncherPreferences.HUD_FPS:  rgHud.check(R.id.rb_hud_fps);  break;
+            default:                           rgHud.check(R.id.rb_hud_off);  break;
+        }
+        rgHud.setOnCheckedChangeListener((group, checkedId) -> prefs.setHudMode(
+                checkedId == R.id.rb_hud_full ? LauncherPreferences.HUD_FULL
+              : checkedId == R.id.rb_hud_fps  ? LauncherPreferences.HUD_FPS
+              : LauncherPreferences.HUD_OFF));
         // Audio has no UI: it's always on. Raw Vorbis decodes clean since the box64 qsort_r fix, so the
         // launcher loads the libasound→AAudio shim on every launch (GameLauncher) — no toggle, no pack.
 
@@ -458,16 +465,25 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btn_etc2_cache_clear).setOnClickListener(v -> clearEtc2Cache());
         showEtc2CacheRow(inst.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES);
 
-        // FPS cap: three radio buttons — 30 / 60 / No limit (0 = off). Takes effect on next launch.
+        // Frame-rate mode: off / Economy ~30 / Balanced ~40 / Smooth ~60. The concrete number is
+        // picked for this screen (FpsPlanner) and shown under the choice, so nobody has to know
+        // their panel's refresh rates. Takes effect on next launch.
         android.widget.RadioGroup rgFps = view.findViewById(R.id.rg_fps_cap);
-        int curCap = inst.getFpsCap();
-        if (curCap == 30)      rgFps.check(R.id.rb_fps_30);
-        else if (curCap == 60) rgFps.check(R.id.rb_fps_60);
-        else                   rgFps.check(R.id.rb_fps_off);
+        final TextView tvFpsResolved = view.findViewById(R.id.tv_fps_resolved);
+        switch (inst.getFpsMode()) {
+            case com.valdroid.FpsPlanner.ECONOMY:  rgFps.check(R.id.rb_fps_eco);      break;
+            case com.valdroid.FpsPlanner.BALANCED: rgFps.check(R.id.rb_fps_balanced); break;
+            case com.valdroid.FpsPlanner.SMOOTH:   rgFps.check(R.id.rb_fps_smooth);   break;
+            default:                               rgFps.check(R.id.rb_fps_off);      break;
+        }
+        showFpsResolved(tvFpsResolved, inst.getFpsMode());
         rgFps.setOnCheckedChangeListener((group, checkedId) -> {
-            int cap = (checkedId == R.id.rb_fps_30) ? 30
-                    : (checkedId == R.id.rb_fps_60) ? 60 : 0;
-            inst.setFpsCap(cap);
+            int mode = checkedId == R.id.rb_fps_eco      ? com.valdroid.FpsPlanner.ECONOMY
+                     : checkedId == R.id.rb_fps_balanced ? com.valdroid.FpsPlanner.BALANCED
+                     : checkedId == R.id.rb_fps_smooth   ? com.valdroid.FpsPlanner.SMOOTH
+                     : com.valdroid.FpsPlanner.OFF;
+            inst.setFpsMode(mode);
+            showFpsResolved(tvFpsResolved, mode);
         });
     }
 
@@ -476,6 +492,19 @@ public class SettingsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         refreshGraphicsButtons();
+    }
+
+    // ---- frame-rate mode: what it becomes on THIS screen ----
+
+    private void showFpsResolved(TextView tv, int mode) {
+        if (tv == null || !isAdded()) return;
+        com.valdroid.FpsPlanner.Plan p = com.valdroid.FpsPlanner.plan(requireActivity().getDisplay(), mode);
+        if (mode == com.valdroid.FpsPlanner.OFF)
+            tv.setText(p.refreshHz > 0 ? getString(R.string.fps_mode_resolved_off, p.refreshHz) : "");
+        else if (p.fellBack)
+            tv.setText(getString(R.string.fps_mode_resolved_fallback, p.fps, p.refreshHz));
+        else
+            tv.setText(getString(R.string.fps_mode_resolved, p.fps, p.refreshHz));
     }
 
     // ---- graphics profile buttons ----

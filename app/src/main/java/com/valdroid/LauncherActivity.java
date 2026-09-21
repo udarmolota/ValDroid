@@ -147,7 +147,7 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_export_logs) {
                 chooseInstanceThen(gi -> { pendingLogInstanceName = gi.getName();
-                        exportLogsLauncher.launch("rimdroid_logs_" + timestamp() + ".zip"); });
+                        exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); });
                 return true;
             } else if (id == R.id.action_export_layout) {
                 chooseInstanceThen(gi -> { pendingInstance = gi;
@@ -574,7 +574,7 @@ public class LauncherActivity extends AppCompatActivity {
     private void exportGameData(Uri uri) {
         final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
         if (instance == null) { toast("Create a game instance first."); return; }
-        final File userDir = instance.getUserDataDir();
+        final File instanceDir = new File(instance.getGamePath());
         final String[] parts = pendingDataParts;
         toast("Exporting…");
 
@@ -582,7 +582,7 @@ public class LauncherActivity extends AppCompatActivity {
             GameDataTransfer.Result res;
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                res = GameDataTransfer.export(userDir, out, parts);
+                res = GameDataTransfer.export(instanceDir, out, parts);
             } catch (Exception ex) {
                 ui.post(() -> toast("Export failed: " + ex.getMessage()));
                 return;
@@ -599,7 +599,7 @@ public class LauncherActivity extends AppCompatActivity {
     private void importGameData(Uri uri) {
         final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
         if (instance == null) { toast("Create a game instance first."); return; }
-        final File userDir = instance.getUserDataDir();
+        final File instanceDir = new File(instance.getGamePath());
         final String[] parts = pendingDataParts;
         toast("Importing…");
 
@@ -614,7 +614,7 @@ public class LauncherActivity extends AppCompatActivity {
                 ui.post(() -> toast("Read failed: " + ex.getMessage()));
                 return;
             }
-            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, userDir, parts);
+            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, instanceDir, parts);
             //noinspection ResultOfMethodCallIgnored
             cacheZip.delete();
             final GameDataTransfer.Result fr = res;
@@ -725,7 +725,7 @@ public class LauncherActivity extends AppCompatActivity {
     private static String dataFileName(String kind, GameInstance gi) {
         String n = (gi == null || gi.getName() == null) ? "instance"
                 : gi.getName().replaceAll("[^A-Za-z0-9._-]", "_");
-        return "rimdroid_" + kind + "_" + n + "_" + timestamp() + ".zip";
+        return "valdroid_" + kind + "_" + n + "_" + timestamp() + ".zip";
     }
 
     /** Open a URL in the user's browser (community / updates links). */

@@ -38,6 +38,8 @@ public class NewInstanceFragment extends Fragment {
     // filename). Cap the name well under the byte budget: the fixed prefix+suffix take ~59 bytes,
     // leaving ~48; 40 keeps a margin for work-profile/cloned-app user dirs (/data/user/<n>/...).
     private static final int MAX_NAME_LEN = 40;
+    /** The first install phase happens here, before InstallerService: copying the picked archive. */
+    private static final String PHASE_COPY = "copy";
 
     /**
      * Optional navigation argument: the absolute path of an archive to install, so the screen opens
@@ -66,11 +68,27 @@ public class NewInstanceFragment extends Fragment {
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    // Install progress dialog — the same one Zomdroid shows, so a multi-minute install never looks
+    // like a hang: copying the archive, extracting it (both with a real percentage and a time
+    // estimate), then a short setup step without a measurable size.
+    private androidx.appcompat.app.AlertDialog progressDialog;
+    private com.valdroid.databinding.TaskProgressDialogBinding pdb;
+    private String curPhase;
+    private long phaseStartMs, phaseStartDone;
+
     private final BroadcastReceiver installerReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context ctx, Intent intent) {
             String action = intent.getAction();
-            if (InstallerService.BROADCAST_DONE.equals(action)) {
+            if (InstallerService.BROADCAST_PROGRESS.equals(action)) {
+                String phase = intent.getStringExtra(InstallerService.EXTRA_PHASE);
+                if (phase == null) return;   // a plain log line, not for the dialog
+                int label = InstallerService.PHASE_EXTRACT.equals(phase)
+                        ? R.string.install_phase_extract : R.string.install_phase_setup;
+                showProgress(phase, label, intent.getLongExtra(InstallerService.EXTRA_DONE, -1),
+                        intent.getLongExtra(InstallerService.EXTRA_TOTAL, -1));
+            } else if (InstallerService.BROADCAST_DONE.equals(action)) {
+                if (progressDialog != null) progressDialog.dismiss();
                 adviseDriverThenLeave();
             } else if (InstallerService.BROADCAST_ERROR.equals(action)) {
                 mainHandler.post(() -> {
@@ -78,10 +96,68 @@ public class NewInstanceFragment extends Fragment {
                     btnInstall.setText(R.string.install);
                     String msg = intent.getStringExtra(InstallerService.EXTRA_MESSAGE);
                     etInstanceName.setError(msg != null ? msg : getString(R.string.error_name_required));
+                    showProgressError(msg);
                 });
             }
         }
     };
+
+    private void ensureProgressDialog() {
+        if (progressDialog != null) return;
+        pdb = com.valdroid.databinding.TaskProgressDialogBinding.inflate(getLayoutInflater());
+        progressDialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setView(pdb.getRoot())
+                .setCancelable(false)   // the work goes on in the service either way
+                .create();
+        pdb.progressDialogOkMb.setOnClickListener(v -> progressDialog.dismiss());
+    }
+
+    /** One progress update; {@code done} or {@code total} < 0 = no percentage, the bar just runs. */
+    private void showProgress(String phase, int labelRes, long done, long total) {
+        if (!isAdded()) return;
+        ensureProgressDialog();
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (!phase.equals(curPhase)) { curPhase = phase; phaseStartMs = now; phaseStartDone = Math.max(0, done); }
+
+        pdb.progressDialogTitleTv.setText(R.string.install_progress_title);
+        StringBuilder msg = new StringBuilder(getString(labelRes));
+        if (done >= 0 && total > 0) {
+            int permille = (int) Math.min(1000, done * 1000 / total);
+            msg.append(" — ").append(permille / 10).append('%');
+            String eta = eta(now, done, total);
+            if (eta != null) msg.append("  ·  ").append(eta);
+            pdb.progressDialogProgressLpi.setIndeterminate(false);
+            pdb.progressDialogProgressLpi.setMax(1000);   // permille: byte counts overflow an int
+            pdb.progressDialogProgressLpi.setProgress(permille);
+        } else {
+            pdb.progressDialogProgressLpi.setIndeterminate(true);
+        }
+        pdb.progressDialogMessageTv.setText(msg);
+        pdb.progressDialogProgressLpi.setVisibility(View.VISIBLE);
+        pdb.progressDialogOkMb.setVisibility(View.GONE);
+        if (!progressDialog.isShowing()) progressDialog.show();
+    }
+
+    /** Time left from this phase's measured rate; null until there are a few seconds to go on. */
+    private String eta(long now, long done, long total) {
+        long elapsedMs = now - phaseStartMs;
+        if (elapsedMs < 3000 || done <= phaseStartDone) return null;
+        double rate = (done - phaseStartDone) / (elapsedMs / 1000.0);   // bytes per second
+        long secs = (long) ((total - done) / rate);
+        if (secs < 60) return getString(R.string.install_eta_under_minute);
+        return getString(R.string.install_eta_minutes, (int) Math.ceil(secs / 60.0));
+    }
+
+    private void showProgressError(String msg) {
+        if (!isAdded()) return;
+        ensureProgressDialog();
+        pdb.progressDialogTitleTv.setText(R.string.install_failed_title);
+        pdb.progressDialogMessageTv.setText(msg != null ? msg : "");
+        pdb.progressDialogProgressLpi.setVisibility(View.GONE);
+        pdb.progressDialogOkMb.setVisibility(View.VISIBLE);
+        curPhase = null;
+        if (!progressDialog.isShowing()) progressDialog.show();
+    }
 
     private final ActivityResultLauncher<String[]> zipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -147,6 +223,7 @@ public class NewInstanceFragment extends Fragment {
         btnInstall.setOnClickListener(v -> startInstall());
 
         IntentFilter f = new IntentFilter();
+        f.addAction(InstallerService.BROADCAST_PROGRESS);
         f.addAction(InstallerService.BROADCAST_DONE);
         f.addAction(InstallerService.BROADCAST_ERROR);
         requireContext().registerReceiver(installerReceiver, f, Context.RECEIVER_NOT_EXPORTED);
@@ -156,6 +233,7 @@ public class NewInstanceFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         requireContext().unregisterReceiver(installerReceiver);
+        if (progressDialog != null) { progressDialog.dismiss(); progressDialog = null; pdb = null; }
     }
 
     /** On install success: detect the GPU, set the recommended driver on the new instance, show a
@@ -223,15 +301,34 @@ public class NewInstanceFragment extends Fragment {
         // through mainHandler behind an isAdded() check.
         final android.content.Context appCtx = requireContext().getApplicationContext();
         final String[] extras = extraInstallers.toArray(new String[0]);
+        final Uri zipUri = selectedZipUri;
+        showProgress(PHASE_COPY, R.string.install_phase_copy, 0, -1);   // up at once, size follows
         new Thread(() -> {
             try {
+                // The archive's size from its provider, for a real percentage; -1 if it won't say.
+                long size = -1;
+                try (android.database.Cursor c = appCtx.getContentResolver().query(zipUri,
+                        new String[]{ android.provider.OpenableColumns.SIZE }, null, null, null)) {
+                    if (c != null && c.moveToFirst() && !c.isNull(0)) size = c.getLong(0);
+                } catch (Exception ignored) {}
+                final long total = size;
+
                 File cacheZip = new File(appCtx.getCacheDir(), "instance.zip");
-                try (InputStream in = appCtx.getContentResolver()
-                        .openInputStream(selectedZipUri);
+                try (InputStream in = appCtx.getContentResolver().openInputStream(zipUri);
                      FileOutputStream out = new FileOutputStream(cacheZip)) {
                     byte[] buf = new byte[65536];
                     int len;
-                    while ((len = in.read(buf)) != -1) out.write(buf, 0, len);
+                    long done = 0, lastSentMs = 0;
+                    while ((len = in.read(buf)) != -1) {
+                        out.write(buf, 0, len);
+                        done += len;
+                        long now = android.os.SystemClock.elapsedRealtime();
+                        if (now - lastSentMs >= 250) {
+                            lastSentMs = now;
+                            final long d = done;
+                            mainHandler.post(() -> showProgress(PHASE_COPY, R.string.install_phase_copy, d, total));
+                        }
+                    }
                 }
                 InstallerService.startInstallInstance(
                         appCtx, cacheZip.getAbsolutePath(), instanceName, extras);
@@ -240,6 +337,7 @@ public class NewInstanceFragment extends Fragment {
                     if (!isAdded() || getView() == null) return;
                     btnInstall.setEnabled(true);
                     btnInstall.setText(R.string.install);
+                    showProgressError(e.getMessage());
                 });
             }
         }).start();

@@ -257,7 +257,7 @@ public final class LogExporter {
         line(sb, "vulkan driver", String.valueOf(s.getVulkanDriverSo()));
         line(sb, "render scale", s.getRenderScalePercent() + "%");
         line(sb, "fixed res mode", String.valueOf(s.getFixedResMode()));
-        line(sb, "fps cap", String.valueOf(s.getFpsCap()));
+        line(sb, "fps mode", s.getFpsMode() + "   (0 off, 1 economy ~30, 2 balanced ~40, 3 smooth ~60)");
         line(sb, "texture tier", s.getTexTier() + "   (0 none, 1 low, 2 ultra low)");
         line(sb, "native mono", String.valueOf(s.isNativeMono()));
         line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));

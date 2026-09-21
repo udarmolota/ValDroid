@@ -228,8 +228,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private boolean scaling = false;
     private boolean prefsPinned = false;   // Prefs.xml resolution is pinned ONCE per launch (not per surface-change → no ping-pong)
     private com.valdroid.input.InputControlsView controls;
-    private android.widget.TextView fpsView;          // top-left "FPS: XX" overlay (optional)
-    private long fpsLastCount = 0, fpsLastTimeMs = 0;  // for computing the per-second delta
+    private android.widget.TextView fpsText;           // classic "FPS: XX" counter, top-left (optional)
+    private long fpsLastCount = 0, fpsLastTimeMs = 0;  // its per-second delta
+    private PerfOverlayView fpsView;                   // full performance bar, top-centre (optional)
+    private PerfSampler perfSampler;                   // its numbers — sampled off the UI thread
+    private android.os.HandlerThread perfThread;
+    private android.os.Handler perfHandler;
     private com.valdroid.input.GamepadHandler gamepad;   // physical controller -> MNK injection
     private com.valdroid.input.MouseKeyboardHandler mouseKb;  // physical mouse + keyboard -> SDL injection
     private String instanceName;   // the launched instance (null for the smoke test)
@@ -311,7 +315,19 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             dragPanEnabled = is.isDragPan();
             reverseLandscape = is.isReverseLandscape();
             fixedRes = is.getFixedResMode();
-            try { nativeSetFpsCap(is.getFpsCap()); } catch (UnsatisfiedLinkError ignored) {}
+            // Frame-rate mode -> a cap that divides this screen's refresh rate exactly, and the
+            // panel switched to that rate (see FpsPlanner). The panel request is a preference: a
+            // system-level per-game setting (ASUS Armoury Crate, Samsung Game Booster) may win.
+            FpsPlanner.Plan fp = FpsPlanner.plan(getDisplay(), is.getFpsMode());
+            try { nativeSetFpsCap(fp.fps); } catch (UnsatisfiedLinkError ignored) {}
+            if (fp.modeId != 0) {
+                WindowManager.LayoutParams modeLp = getWindow().getAttributes();
+                modeLp.preferredDisplayModeId = fp.modeId;
+                getWindow().setAttributes(modeLp);
+            }
+            Log.i(TAG, "fps mode " + is.getFpsMode() + " -> cap " + fp.fps + " @ " + fp.refreshHz + " Hz"
+                    + (fp.fellBack ? " (no even ~40 on this screen, fell back)" : "")
+                    + (fp.modeId != 0 ? " (display mode " + fp.modeId + " requested)" : ""));
             // 1.6/X11 render scale ENABLED (2026-07-11): the bring-up force-1.0 is gone. The old
             // race is covered — GameLauncher's settle loop waits for the FIXED-SIZE surfaceChanged
             // before starting the X server, so the buffer, the X screen and -screen-width/-height
@@ -411,29 +427,56 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             surfaceView.setPointerIcon(nullIcon);
         }
 
-        // Optional FPS overlay ("FPS: XX", top-left). Global toggle in Settings → Video.
-        // Counts real presented frames (box64 SwapWindow), so it's the true on-screen rate.
-        if (LauncherPreferences.getSingleton() != null
-                && LauncherPreferences.getSingleton().isShowFps()) {
-            fpsView = new android.widget.TextView(this);
-            fpsView.setText("FPS: --");
-            fpsView.setTextColor(0xFF00FF66);                 // green, readable over any scene
-            fpsView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
-            fpsView.setShadowLayer(4f, 0f, 0f, 0xFF000000);   // outline so it reads on light scenes
-            fpsView.setPadding(0, 0, 0, 0);
+        // In-game overlay, global setting (Settings → Frame rate): off, the classic FPS counter, or
+        // the full performance bar. FPS always counts real presented frames (box64 SwapWindow), so
+        // it is the true on-screen rate.
+        int hud = LauncherPreferences.getSingleton() != null
+                ? LauncherPreferences.getSingleton().getHudMode() : LauncherPreferences.HUD_OFF;
+
+        // Classic counter ("FPS: XX", top-left), exactly as it always was.
+        if (hud == LauncherPreferences.HUD_FPS) {
+            fpsText = new android.widget.TextView(this);
+            fpsText.setText("FPS: --");
+            fpsText.setTextColor(0xFF00FF66);                 // green, readable over any scene
+            fpsText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
+            fpsText.setShadowLayer(4f, 0f, 0f, 0xFF000000);   // outline so it reads on light scenes
+            fpsText.setPadding(0, 0, 0, 0);
             final int m = Math.round(8 * getResources().getDisplayMetrics().density);
+            FrameLayout.LayoutParams textLp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+            textLp.gravity = Gravity.TOP | Gravity.START;
+            textLp.setMargins(m, m, 0, 0);
+            root.addView(fpsText, textLp);   // on top of surface + controls
+            // Shift it RIGHT by its own width once laid out, so it clears the game's top-left HUD.
+            fpsText.post(() -> {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fpsText.getLayoutParams();
+                lp.leftMargin = m + fpsText.getWidth();
+                fpsText.setLayoutParams(lp);
+            });
+        }
+
+        // Full performance bar (API, GPU, CPU, RAM, power, heat, FPS + graph); the numbers come
+        // from PerfSampler. Top-centre: Valheim's hotbar owns the top-left corner and its minimap the
+        // top-right. Not clickable, so touches go straight through to the controls.
+        if (hud == LauncherPreferences.HUD_FULL) {
+            final float dp = getResources().getDisplayMetrics().density;
+            // First segment names the graphics path: VK = Unity on Vulkan directly (Zink ZFA
+            // setting), GL = OpenGL through a translator (MobileGlues).
+            String api = "GL";
+            if (instanceName != null
+                    && new com.valdroid.InstanceSettings(instanceName).getRenderer()
+                       == LauncherPreferences.Renderer.ZINK_ZFA)
+                api = "VK";
+            fpsView = new PerfOverlayView(this, api);
             FrameLayout.LayoutParams fpsLp = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-            fpsLp.gravity = Gravity.TOP | Gravity.START;
-            fpsLp.setMargins(m, m, 0, 0);
+            fpsLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+            fpsLp.setMargins(0, Math.round(4 * dp), 0, 0);
             root.addView(fpsView, fpsLp);   // on top of surface + controls
-            // Shift it RIGHT by its own width once laid out, so it clears RimWorld's top-left resource
-            // readout (the top-right corner has the early-game tutorial text we don't want to cover).
-            fpsView.post(() -> {
-                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fpsView.getLayoutParams();
-                lp.leftMargin = m + fpsView.getWidth();
-                fpsView.setLayoutParams(lp);
-            });
+            perfSampler = new PerfSampler(this);
+            perfThread = new android.os.HandlerThread("PerfOverlay");
+            perfThread.start();
+            perfHandler = new android.os.Handler(perfThread.getLooper());
         }
         setContentView(root);
         hideSystemBars();   // after setContentView — the decor view / insets controller now exist
@@ -616,10 +659,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         return v < 0 ? 0 : (v > max ? max : v);
     }
 
-    // === FPS overlay: poll the native presented-frame counter once a second ===
-    private final Runnable fpsTick = new Runnable() {
+    // === Performance overlay: sample once a second on its own thread, show on the UI thread ===
+    // Off the UI thread because a sample walks every thread's /proc entry (a hundred-odd small
+    // reads under box64) — cheap, but not something to do between input events.
+    // Classic counter: poll the native presented-frame counter once a second, on the UI thread.
+    private final Runnable fpsTextTick = new Runnable() {
         @Override public void run() {
-            if (fpsView == null) return;
+            if (fpsText == null) return;
             long now = android.os.SystemClock.elapsedRealtime();
             long count;
             try { count = nativeGetFrameCount(); }
@@ -627,10 +673,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             if (fpsLastTimeMs != 0) {
                 long dFrames = count - fpsLastCount;
                 long dMs = now - fpsLastTimeMs;
-                if (dMs > 0) {
-                    int fps = (int) Math.round(dFrames * 1000.0 / dMs);
-                    fpsView.setText("FPS: " + fps);
-                }
+                if (dMs > 0) fpsText.setText("FPS: " + Math.round(dFrames * 1000.0 / dMs));
             }
             fpsLastCount = count;
             fpsLastTimeMs = now;
@@ -638,14 +681,30 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         }
     };
 
+    private final Runnable fpsTick = new Runnable() {
+        @Override public void run() {
+            if (fpsView == null || perfSampler == null || perfHandler == null) return;
+            long count;
+            try { count = nativeGetFrameCount(); }
+            catch (UnsatisfiedLinkError e) { count = -1; }   // native not ready yet
+            final PerfSampler.Stats stats = perfSampler.sample(count);
+            ui.post(() -> { if (fpsView != null) fpsView.setStats(stats); });
+            perfHandler.postDelayed(this, 1000);
+        }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
         if (surfaceView != null) surfaceView.requestFocus();   // re-grab focus so sticks keep working
-        if (fpsView != null) {                         // (re)start the 1 Hz FPS poll
+        if (fpsText != null) {                         // (re)start the classic 1 Hz counter
             fpsLastTimeMs = 0;                          // reset so the first interval isn't skewed
-            ui.removeCallbacks(fpsTick);
-            ui.postDelayed(fpsTick, 1000);
+            ui.removeCallbacks(fpsTextTick);
+            ui.postDelayed(fpsTextTick, 1000);
+        }
+        if (perfHandler != null) {                     // (re)start the 1 Hz bar sampling
+            perfHandler.removeCallbacks(fpsTick);
+            perfHandler.post(fpsTick);                  // first sample only primes the deltas
         }
         if (gamepad != null) gamepad.start();         // resume the gamepad analog frame loop
         // Auto-hide the on-screen controls while a physical gamepad is connected (like Zomdroid).
@@ -657,7 +716,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onPause() {
         super.onPause();
-        ui.removeCallbacks(fpsTick);                   // stop the FPS poll while backgrounded
+        ui.removeCallbacks(fpsTextTick);               // no counting in background
+        if (perfHandler != null) perfHandler.removeCallbacks(fpsTick);
         if (gamepad != null) gamepad.stop();          // stop the loop, release held gamepad inputs
         if (inputManager != null) inputManager.unregisterInputDeviceListener(deviceListener);
         releasePan();                                 // release held camera-pan arrows
@@ -726,6 +786,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (perfThread != null) { perfThread.quitSafely(); perfThread = null; perfHandler = null; }
         GameLauncher.destroyValDroidWindow();
     }
 

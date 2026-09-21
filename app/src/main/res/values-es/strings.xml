@@ -72,9 +72,9 @@ En la nube: %2$s
     <string name="native_mono_off_msg">El juego funcionará en el modo anterior, más lento. Si lo desactivaste por un problema, envíanos los registros: nos ayuda a solucionarlo.</string>
     <string name="haptic_label">Vibrar al pulsar un botón</string>
     <string name="audio_label">Sonido del juego</string>
-    <string name="show_fps_label">Mostrar contador de FPS (arriba a la izquierda)</string>
+    <string name="show_fps_label">Mostrar rendimiento: FPS, CPU, GPU, memoria, temperatura (arriba)</string>
     <string name="fps_cap_label">Límite de FPS</string>
-    <string name="fps_cap_hint">Limita los FPS para suavizar los saltos y liberar CPU para el juego, lo que puede subir la velocidad del juego (TPS) en dispositivos más débiles. Prueba 60 o 30 si el contador salta mucho.</string>
+    <string name="fps_cap_hint">El límite suaviza los saltos de FPS y mantiene el teléfono más fresco, así aguanta su rendimiento por más tiempo. El número se elige según tu pantalla.</string>
     <string name="texq_label">Compresión de texturas</string>
     <string name="texq_hint">Reduce las texturas para ahorrar memoria y ganar FPS; hace falta para cargar varios DLC en teléfonos más débiles. Afecta sobre todo a la vegetación y los recursos; los colonos y los animales nunca se tocan. Baja es un buen equilibrio; Muy baja es algo más rápida, pero las plantas se ven borrosas.</string>
     <string name="texq_no">No</string>
@@ -266,4 +266,23 @@ En la nube: %2$s
     <string name="etc2_cache_header_expanded">Caché de texturas comprimidas ▾</string>
     <string name="etc2_label">Activar compresión ETC2</string>
     <string name="etc2_hint">Comprime las texturas a un formato que la GPU del teléfono lee de forma nativa, así ocupan unas cuatro veces menos memoria. En teléfonos más débiles y en Mali es la diferencia entre funcionar y quedarse sin memoria. Funciona con MobileGlues. Las texturas grandes además siempre se reducen.</string>
+    <string name="install_windows_build">Esta es la versión de Windows de Valheim, pero ValDroid solo ejecuta la versión Linux (la que tiene valheim.x86_64). Si tienes el juego en Steam, la app descarga la versión correcta por ti: menú lateral → %1$s.</string>
+    <string name="install_progress_title">Instalando el juego</string>
+    <string name="install_phase_copy">Copiando el archivo</string>
+    <string name="install_phase_extract">Descomprimiendo el juego</string>
+    <string name="install_phase_setup">Configurando</string>
+    <string name="install_eta_minutes">faltan unos %1$d min</string>
+    <string name="install_eta_under_minute">falta menos de un minuto</string>
+    <string name="install_failed_title">La instalación falló</string>
+    <string name="hud_label">En pantalla durante el juego</string>
+    <string name="hud_off">No</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Info completa</string>
+    <string name="hud_hint">«Info completa» muestra una barra arriba: carga de GPU y CPU, memoria, consumo, temperatura y un gráfico de FPS. Ayuda a ver qué frena el juego.</string>
+    <string name="fps_mode_eco">Económico (~30)</string>
+    <string name="fps_mode_balanced">Equilibrado (~40)</string>
+    <string name="fps_mode_smooth">Fluido (~60)</string>
+    <string name="fps_mode_resolved">En esta pantalla: %1$d FPS a %2$d Hz</string>
+    <string name="fps_mode_resolved_fallback">En esta pantalla: %1$d FPS a %2$d Hz. No tiene un valor exacto cerca de 40.</string>
+    <string name="fps_mode_resolved_off">Pantalla hasta %1$d Hz</string>
 </resources>

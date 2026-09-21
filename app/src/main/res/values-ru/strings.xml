@@ -69,9 +69,9 @@
     <string name="native_mono_off_msg">Игра будет работать в прежнем, более медленном режиме. Если вы выключили из-за проблемы, пришлите нам логи — это поможет её исправить.</string>
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук в игре</string>
-    <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
+    <string name="show_fps_label">Показывать нагрузку: FPS, процессор, видеочип, память, нагрев (вверху)</string>
     <string name="fps_cap_label">Ограничение FPS</string>
-    <string name="fps_cap_hint">Ограничивает FPS, чтобы сгладить скачки и освободить CPU под игру — это может поднять скорость игры (TPS) на слабых устройствах. Попробуй 60 или 30, если счётчик прыгает.</string>
+    <string name="fps_cap_hint">Ограничение сглаживает скачки кадров и меньше греет телефон, поэтому он дольше держит скорость. Число подбирается под ваш экран.</string>
     <string name="texq_label">Сжатие текстур</string>
     <string name="texq_hint">Ужимает текстуры ради памяти и FPS — без этого несколько DLC могут не загрузиться на слабых телефонах. Затрагивает в основном растительность и ресурсы; пешки и животные не трогаются никогда. «Низкое» — хороший баланс, «Очень низкое» чуть быстрее, но растения выглядят мыльными.</string>
     <string name="texq_no">Нет</string>
@@ -262,4 +262,23 @@
     <string name="etc2_cache_header_expanded">Кэш сжатых текстур ▾</string>
     <string name="etc2_label">Включить компрессию ETC2</string>
     <string name="etc2_hint">Сжимает текстуры в формат, который видеочип телефона понимает сам, — они занимают примерно вчетверо меньше памяти. На слабых телефонах и на Mali это разница между «работает» и «не хватает памяти». Действует на MobileGlues. Крупные текстуры вдобавок всегда уменьшаются.</string>
+    <string name="install_windows_build">Это Windows-версия Valheim, а ValDroid запускает только Linux-версию (с файлом valheim.x86_64). Если игра есть у вас в Steam, приложение само скачает нужную: боковое меню → %1$s.</string>
+    <string name="install_progress_title">Установка игры</string>
+    <string name="install_phase_copy">Копирование архива</string>
+    <string name="install_phase_extract">Распаковка игры</string>
+    <string name="install_phase_setup">Настройка</string>
+    <string name="install_eta_minutes">осталось ~%1$d мин</string>
+    <string name="install_eta_under_minute">осталось меньше минуты</string>
+    <string name="install_failed_title">Установка не удалась</string>
+    <string name="hud_label">Показ в игре</string>
+    <string name="hud_off">Выкл</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Полная информация</string>
+    <string name="hud_hint">«Полная информация» — плашка сверху: загрузка видеочипа и процессора, память, потребление, температура и график FPS. Помогает понять, что тормозит игру.</string>
+    <string name="fps_mode_eco">Экономный (~30)</string>
+    <string name="fps_mode_balanced">Сбалансированный (~40)</string>
+    <string name="fps_mode_smooth">Плавный (~60)</string>
+    <string name="fps_mode_resolved">На этом экране: %1$d FPS при %2$d Гц</string>
+    <string name="fps_mode_resolved_fallback">На этом экране: %1$d FPS при %2$d Гц. Ровного значения около 40 у него нет.</string>
+    <string name="fps_mode_resolved_off">Экран до %1$d Гц</string>
 </resources>

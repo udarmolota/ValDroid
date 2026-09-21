@@ -53,6 +53,13 @@ public class InstallerService extends Service {
     public static final String BROADCAST_ERROR    = "com.valdroid.INSTALL_ERROR";
     public static final String EXTRA_MESSAGE      = "message";
     public static final String EXTRA_SUCCESS      = "success";
+    // Numeric progress for the install dialog, on BROADCAST_PROGRESS. PHASE is one of the PHASE_*
+    // values; DONE/TOTAL are bytes, both -1 while the phase has no measurable size.
+    public static final String EXTRA_PHASE        = "phase";
+    public static final String EXTRA_DONE         = "done";
+    public static final String EXTRA_TOTAL        = "total";
+    public static final String PHASE_EXTRACT      = "extract";
+    public static final String PHASE_SETUP        = "setup";
 
     private AppStorage storage;
     private LauncherPreferences prefs;
@@ -141,12 +148,21 @@ public class InstallerService extends Service {
         // instance folder that the launcher silently hides (fails isInstalled()).
         broadcastProgress("Checking archive...");
         if (!zipContainsEntry(zipFile, GameDescriptor.VALHEIM.executable())) {
+            // The Windows build is by far the most common wrong archive, and the generic line below
+            // is English and names a file the player has never heard of — it reads as "the launcher
+            // is broken". Say what it is, in the player's language, and where the right one comes
+            // from. Windows file names are case-insensitive, so match the .exe that way.
+            if (zipContainsEntry(zipFile, "valheim.exe", true))
+                throw new Exception(getString(R.string.install_windows_build,
+                        getString(R.string.nav_download_game)));
             throw new Exception(GameDescriptor.VALHEIM.executable()
                     + " not found — this is not a Valheim Linux archive.");
         }
         instanceDir.mkdirs();
         broadcastProgress("Extracting instance...");
         extractZip(zipFile, instanceDir);
+        // Re-rooting and the Steam library download that follow have no measurable size.
+        broadcastPhase(PHASE_SETUP, -1, -1);
 
         // Re-root: the game files may sit inside a wrapper folder at any depth. Find the binary and
         // lift its folder's contents to the instance top, dropping the wrappers, so isInstalled()
@@ -264,6 +280,21 @@ public class InstallerService extends Service {
 
     private void extractZip(File zipFile, File destDir) throws IOException {
         destDir.mkdirs();
+        // Total uncompressed size from the central directory — cheap, it reads no content — so the
+        // install dialog can show a real percentage for the longest step. Entries with an unknown
+        // size just don't count; the bar then runs a little ahead, never backwards.
+        long total = 0;
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+            java.util.Enumeration<? extends ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                long sz = en.nextElement().getSize();
+                if (sz > 0) total += sz;
+            }
+        } catch (IOException e) {
+            total = -1;   // unreadable directory: still extract, just without a percentage
+        }
+        long done = 0, lastSentMs = 0;
+        broadcastPhase(PHASE_EXTRACT, 0, total);
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
             byte[] buf = new byte[65536];
@@ -275,24 +306,37 @@ public class InstallerService extends Service {
                     out.getParentFile().mkdirs();
                     try (FileOutputStream fos = new FileOutputStream(out)) {
                         int len;
-                        while ((len = zis.read(buf)) != -1) fos.write(buf, 0, len);
+                        while ((len = zis.read(buf)) != -1) {
+                            fos.write(buf, 0, len);
+                            done += len;
+                            long now = android.os.SystemClock.elapsedRealtime();
+                            if (now - lastSentMs >= 250) {   // a few updates a second is plenty
+                                lastSentMs = now;
+                                broadcastPhase(PHASE_EXTRACT, total > 0 ? Math.min(done, total) : -1, total);
+                            }
+                        }
                     }
                 }
                 zis.closeEntry();
             }
         }
+        broadcastPhase(PHASE_EXTRACT, total > 0 ? total : -1, total);
     }
 
     /** True if the archive contains an entry whose file name (last path segment) equals {@code fileName}.
      *  Uses ZipFile (reads the central directory directly) so it's instant even for a ~200MB game zip. */
     private boolean zipContainsEntry(File zipFile, String fileName) throws IOException {
+        return zipContainsEntry(zipFile, fileName, false);
+    }
+
+    private boolean zipContainsEntry(File zipFile, String fileName, boolean ignoreCase) throws IOException {
         try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
             java.util.Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 String n = en.nextElement().getName();
                 int slash = n.lastIndexOf('/');
                 String base = (slash >= 0) ? n.substring(slash + 1) : n;
-                if (base.equals(fileName)) return true;
+                if (ignoreCase ? base.equalsIgnoreCase(fileName) : base.equals(fileName)) return true;
             }
         }
         return false;
@@ -365,6 +409,16 @@ public class InstallerService extends Service {
         Intent i = new Intent(BROADCAST_PROGRESS);
         i.setPackage(getPackageName());   // explicit target so RECEIVER_NOT_EXPORTED receivers get it
         i.putExtra(EXTRA_MESSAGE, msg);
+        sendBroadcast(i);
+    }
+
+    /** Numeric progress for the install dialog (no log line: this is sent several times a second). */
+    private void broadcastPhase(String phase, long done, long total) {
+        Intent i = new Intent(BROADCAST_PROGRESS);
+        i.setPackage(getPackageName());
+        i.putExtra(EXTRA_PHASE, phase);
+        i.putExtra(EXTRA_DONE, done);
+        i.putExtra(EXTRA_TOTAL, total);
         sendBroadcast(i);
     }
 

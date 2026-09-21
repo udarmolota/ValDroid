@@ -129,6 +129,22 @@ public class InstanceSettings {
     // --- Frame-rate cap (0 = uncapped, else 30/60…). RimWorld is CPU-bound under emulation, so
     // capping the render rate evens out the FPS swings AND frees CPU for the simulation → steadier,
     // often higher TPS. Default 0 (uncapped). ---
+    /**
+     * Frame-rate MODE (FpsPlanner.OFF / ECONOMY / BALANCED / SMOOTH); the concrete number is picked
+     * per screen at launch by FpsPlanner. Default OFF: testers first want to see their maximum.
+     * An older fixed cap maps over: 30 -> Economy, 60 -> Smooth.
+     */
+    public int getFpsMode() {
+        if (p.contains(pfx + "fps_mode")) return p.getInt(pfx + "fps_mode", FpsPlanner.OFF);
+        int old = p.getInt(pfx + "fps_cap", 0);
+        return old == 30 ? FpsPlanner.ECONOMY : old == 60 ? FpsPlanner.SMOOTH : FpsPlanner.OFF;
+    }
+
+    public void setFpsMode(int mode) {
+        p.edit().putInt(pfx + "fps_mode", mode).apply();
+    }
+
+    /** Old fixed cap (0 / 30 / 60), still read by getFpsMode() for installs that set it. */
     public int getFpsCap() {
         return p.getInt(pfx + "fps_cap", 0);
     }
@@ -327,6 +343,7 @@ public class InstanceSettings {
                 .remove(pfx + "reverse_landscape")
                 .remove(pfx + "fixed_res")
                 .remove(pfx + "fps_cap")
+                .remove(pfx + "fps_mode")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
                 // A re-created instance of the same name must start over on the first-launch
