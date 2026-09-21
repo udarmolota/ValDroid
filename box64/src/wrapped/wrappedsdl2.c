@@ -1118,7 +1118,38 @@ static uint32_t rd_s3tc_etc2_ifmt(uint32_t f) {
 // The encoder itself lives in rd_etc2.c — its OWN translation unit, compiled -O2 (see CMakeLists):
 // at this file's safe -O0 the full-search encode was a 10-minute load Android SIGKILLed.
 #include "rd_etc2.h"
+#include "rd_etc2_cache.h"
 static uint64_t rd_etc2_encoded_n = 0;
+
+// ---- disk cache front for every ETC2 encode (2026-09-21) ----------------------------------------
+// Each call site computes the key ONCE from the bytes the result depends on, asks the cache, and
+// on a miss encodes and stores under that same key. For the S3TC sites the key is taken from the
+// ORIGINAL DXT bytes, before the decode, so a hit skips the decode as well as the encode. The
+// cache itself lives in rd_etc2_cache.c.
+typedef struct { uint64_t key; int use; } rd_e2k_t;
+
+static void rd_etc2_note(void) {
+    uint64_t seen = rd_etc2c_hits() + rd_etc2c_misses();
+    if (seen == 1 || (seen & 1023) == 0)
+        { printf_log(LOG_NONE, "RIMDROID GLT ETC2 cache: hits=%llu misses=%llu evicted=%llu encode-ms=%llu io-ms=%llu\n",
+                     (unsigned long long)rd_etc2c_hits(), (unsigned long long)rd_etc2c_misses(),
+                     (unsigned long long)rd_etc2c_evicted(), (unsigned long long)rd_etc2_total_ms(),
+                     (unsigned long long)rd_etc2c_io_ms()); fflush(NULL); }
+}
+
+static const void* rd_etc2_lookup(rd_e2k_t* k, const void* src, size_t n, uint32_t srcfmt,
+                                  uint32_t efmt, int32_t w, int32_t h, size_t* esz) {
+    k->use = rd_etc2c_on() && rd_etc2c_worth(w, h);
+    if (!k->use) return NULL;
+    k->key = rd_etc2c_key(src, n, srcfmt, efmt, w, h);
+    const void* hit = rd_etc2c_get(k->key, efmt, w, h, esz);
+    rd_etc2_note();
+    return hit;
+}
+
+static void rd_etc2_store(const rd_e2k_t* k, uint32_t efmt, int32_t w, int32_t h, const void* enc, size_t esz) {
+    if (k->use) rd_etc2c_put(k->key, efmt, w, h, enc, esz);
+}
 
 
 static const void* rd_upload_bounce(int32_t w, int32_t h, uint32_t fmt, uint32_t type, const void* px) {
@@ -1166,6 +1197,18 @@ static void rd_glCompressedTexImage2D(uint32_t target, int32_t level, uint32_t i
     // with RIMDROID_GLT_ETC2=1, recompress to the GLES-native ETC2 (same bytes-per-block as DXT:
     // the decode-to-RGBA fix cost 4-8x memory/bandwidth, which is exactly what budget SoCs lack).
     if (rd_s3tc_decode_on() && rd_s3tc_fmt(ifmt) && data && imageSize > 0 && w > 0 && h > 0) {
+        // Cache first, keyed on the DXT bytes themselves: a hit needs neither decode nor encode.
+        rd_e2k_t ck = { 0, 0 };
+        if (rd_etc2_on()) {
+            size_t esz = 0;
+            uint32_t efmt = rd_s3tc_etc2_ifmt(ifmt);
+            const void* hit = rd_etc2_lookup(&ck, data, (size_t)imageSize, ifmt, efmt, w, h, &esz);
+            if (hit && p_rd_real_glCompressedTexImage2D) {
+                p_rd_real_glCompressedTexImage2D(target, level, efmt, w, h, border, (int32_t)esz, hit);
+                rd_upload_exit(rd_up_tid);
+                return;
+            }
+        }
         uint8_t* dec = rd_s3tc_decode_buf(ifmt, w, h, data, (size_t)imageSize);
         if (dec) {
             rd_s3tc_decoded_n++;
@@ -1177,6 +1220,7 @@ static void rd_glCompressedTexImage2D(uint32_t target, int32_t level, uint32_t i
                 uint32_t efmt = rd_s3tc_etc2_ifmt(ifmt);
                 const void* enc = rd_etc2_encode(efmt, w, h, dec, &esz);
                 if (enc) {
+                    rd_etc2_store(&ck, efmt, w, h, enc, esz);
                     rd_etc2_encoded_n++;
                     if (rd_etc2_encoded_n <= 8 || (rd_etc2_encoded_n & 255) == 0)
                         { printf_log(LOG_NONE, "RIMDROID GLT ETC2 TexImage lvl=%d %dx%d 0x%x->0x%x sz=%zu (n=%llu, encode total=%llums)\n",
@@ -1267,7 +1311,12 @@ static void rd_glTexSubImage2D(uint32_t target, int32_t level, int32_t xo, int32
         if (fmt == 0x1908u /*GL_RGBA*/ && type == 0x1401u /*GL_UNSIGNED_BYTE*/ && xo == 0 && yo == 0) {
             size_t esz = 0;
             uint32_t efmt = (m == 1) ? 0x9279u : 0x9278u;
-            const void* enc = rd_etc2_encode(efmt, w, h, (const uint8_t*)px, &esz);
+            rd_e2k_t ck = { 0, 0 };
+            const void* enc = rd_etc2_lookup(&ck, px, (size_t)w * h * 4, 0x1908u /*RGBA8*/, efmt, w, h, &esz);
+            if (!enc) {
+                enc = rd_etc2_encode(efmt, w, h, (const uint8_t*)px, &esz);
+                if (enc) rd_etc2_store(&ck, efmt, w, h, enc, esz);
+            }
             if (enc && p_rd_real_glCompressedTexSubImage2D) {
                 rd_etc2_encoded_n++;
                 if (rd_etc2_encoded_n <= 8 || (rd_etc2_encoded_n & 511) == 0)
@@ -1362,6 +1411,20 @@ static void rd_glCompressedTexSubImage2D(uint32_t target, int32_t level, int32_t
     // the transcode is on (sub-uploads must then be ETC2 blocks; DXT sub-rects are inherently
     // 4-aligned, so block geometry carries over 1:1), else to RGBA8 (plain sub-upload).
     if (rd_s3tc_decode_on() && rd_s3tc_fmt(fmt) && data && imageSize > 0 && w > 0 && h > 0) {
+        // Cache first, keyed on the DXT bytes: a hit needs neither decode nor encode. The offset is
+        // not part of the key — the blocks depend only on the pixels, and they land wherever this
+        // call says.
+        rd_e2k_t ck = { 0, 0 };
+        if (rd_etc2_on()) {
+            size_t esz = 0;
+            uint32_t efmt = rd_s3tc_etc2_ifmt(fmt);
+            const void* hit = rd_etc2_lookup(&ck, data, (size_t)imageSize, fmt, efmt, w, h, &esz);
+            if (hit && p_rd_real_glCompressedTexSubImage2D) {
+                p_rd_real_glCompressedTexSubImage2D(target, level, xo, yo, w, h, efmt, (int32_t)esz, hit);
+                rd_upload_exit(rd_up_tid);
+                return;
+            }
+        }
         uint8_t* dec = rd_s3tc_decode_buf(fmt, w, h, data, (size_t)imageSize);
         if (dec) {
             rd_s3tc_decoded_n++;
@@ -1373,6 +1436,7 @@ static void rd_glCompressedTexSubImage2D(uint32_t target, int32_t level, int32_t
                 uint32_t efmt = rd_s3tc_etc2_ifmt(fmt);
                 const void* enc = rd_etc2_encode(efmt, w, h, dec, &esz);
                 if (enc) {
+                    rd_etc2_store(&ck, efmt, w, h, enc, esz);
                     rd_etc2_encoded_n++;
                     if (rd_etc2_encoded_n <= 8 || (rd_etc2_encoded_n & 255) == 0)
                         { printf_log(LOG_NONE, "RIMDROID GLT ETC2 TexSubImage lvl=%d %d,%d %dx%d 0x%x->0x%x sz=%zu (n=%llu, encode total=%llums)\n",

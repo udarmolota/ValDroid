@@ -447,6 +447,8 @@ set(ELFLOADER_SRC
     # only wrappedsdl2.c calls. Gets per-file -O2 (set right below the ELFLOADER_SRC list — it
     # must come AFTER BOX64_ROOT is defined; keyed on the path, an early empty prefix won't match).
     "${BOX64_ROOT}/src/wrapped/rd_etc2.c"
+    # RimDroid: on-disk cache for those transcodes — same kind of helper TU, same -O2 below.
+    "${BOX64_ROOT}/src/wrapped/rd_etc2_cache.c"
     "${BOX64_ROOT}/src/box64context.c"
     "${BOX64_ROOT}/src/build_info.c"
     "${BOX64_ROOT}/src/custommem.c"
@@ -502,6 +504,8 @@ set(ELFLOADER_SRC
 # bake into a 10-minute load that Android SIGKILLed as unresponsive. Must live below the
 # BOX64_ROOT definition: the property is keyed on the full path.
 set_source_files_properties("${BOX64_ROOT}/src/wrapped/rd_etc2.c" PROPERTIES COMPILE_FLAGS "-O2")
+# The cache hashes every uploaded texture; at -O0 the hash would eat into what the cache saves.
+set_source_files_properties("${BOX64_ROOT}/src/wrapped/rd_etc2_cache.c" PROPERTIES COMPILE_FLAGS "-O2")
 if(NOT STATICBUILD)
     list(APPEND ELFLOADER_SRC
         "${BOX64_ROOT}/src/mallochook.c"
