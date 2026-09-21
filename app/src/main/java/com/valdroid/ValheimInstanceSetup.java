@@ -184,6 +184,12 @@ public final class ValheimInstanceSetup {
      * scene at 360 lines instead of 480.
      */
     private static final String[] GFX_COMMON = {
+            // "Custom" quality mode, and it has to be written with the profile. Without the key,
+            // Valheim treats the start as its first one, picks its own default mode (Medium) and
+            // overwrites every individual key with that mode's values — seen on a fresh tablet
+            // 2026-09-21: our Very low written at 16:08, the game came up on Medium. 100 is what
+            // the game itself writes once the player edits settings by hand.
+            "GraphicsQualityMode=100",
             // off in both presets: each of these multiplies the work the emulated engine does
             "Tesselation=0", "ShadowQuality=0", "DistantShadows=0", "PointLightShadows=0",
             "SSAO_2=0", "MotionBlur=0", "DOF=0", "ClothQuality=0", "Lights=0", "SimulationDistance=0",
@@ -230,6 +236,24 @@ public final class ValheimInstanceSetup {
     }
 
     private static final int GFX_KEEP_RESULT = com.valdroid.InstanceSettings.GFX_KEEP;
+
+    /**
+     * Whether the game has ever saved its graphics settings in this instance. Not the same as
+     * "the settings file exists": our own install step creates that file before the first launch
+     * (ShouldTryAutoLogin, see apply()), which made every new instance look already played and
+     * skip the first-launch profile. GraphicsQualityMode is written only by the game — or by us
+     * together with a profile — so its presence is the real "settings were set" signal.
+     */
+    public static boolean hasGameGraphicsSettings(File instanceDir) {
+        File f = new File(instanceDir, "unity3d/unknown/unknown/prefs");
+        if (!f.isFile()) return false;
+        try {
+            String xml = new String(java.nio.file.Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+            return xml.contains("name=\"GraphicsQualityMode\"");
+        } catch (IOException e) {
+            return true;   // unreadable: do not risk overwriting someone's settings
+        }
+    }
 
     private static boolean profileMatches(java.util.Map<String, Integer> have, String[] tier) {
         for (String[] set : new String[][]{ GFX_COMMON, tier }) {

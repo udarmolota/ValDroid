@@ -176,17 +176,17 @@ public class InstanceSettings {
      * nothing to write. This replaced "stamp the preset on every launch", which silently undid
      * whatever the player changed in game.
      *
-     * With no stored value: an instance whose game has never written its settings file gets
+     * With no stored value: an instance whose game has never saved graphics settings gets
      * GFX_ULTRA, so it starts on the emulation-tuned profile without anyone opening the settings.
-     * One that already has a settings file gets GFX_KEEP — it was played before, and on the old
-     * scheme it already carries our values from its last launch.
+     * One whose game has saved them gets GFX_KEEP — it was played before. "Has saved them" is
+     * decided by the GraphicsQualityMode key, NOT by the settings file existing: our own install
+     * step creates that file, which made every new instance look played (see
+     * ValheimInstanceSetup.hasGameGraphicsSettings).
      */
     public int getGraphicsPending() {
         if (p.contains(pfx + "gfx_pending")) return p.getInt(pfx + "gfx_pending", GFX_KEEP);
-        java.io.File prefs = new java.io.File(
-                com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName),
-                "unity3d/unknown/unknown/prefs");
-        return prefs.isFile() ? GFX_KEEP : GFX_ULTRA;
+        java.io.File dir = com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
+        return com.valdroid.ValheimInstanceSetup.hasGameGraphicsSettings(dir) ? GFX_KEEP : GFX_ULTRA;
     }
 
     public void setGraphicsPending(int preset) {
