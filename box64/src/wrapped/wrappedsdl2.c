@@ -1295,12 +1295,17 @@ static void rd_sub_account(uint64_t sz) {
 }
 static void rd_glTexSubImage2D(uint32_t target, int32_t level, int32_t xo, int32_t yo, int32_t w, int32_t h, uint32_t fmt, uint32_t type, const void* px) {
     int rd_up_tid = rd_upload_enter("TexSubImage2D", rd_cur_tex2d(), level, w, h);
-    if (px) { rd_unpack_tighten(); px = rd_upload_bounce(w, h, fmt, type, px); }   // translator path: see notes above
     // Texture shrink: on a shrunk texture the game's level-N data belongs in our level N-shift;
     // data for the dropped top level(s) has nowhere to go (the smaller mips carry the image) and
     // is discarded BEFORE accounting — a dropped upload must not advance the pacing counters.
+    // Also BEFORE the bounce below (2026-09-21): it used to run first, so every dropped top level
+    // was copied in full just to be thrown away — for a 2048-square RGBA level that is 16 MB of
+    // pointless copying, per shrunk texture, at load time. Neither the bounce nor the unpack
+    // tightening depends on the level, so the order is free to change. The compressed path
+    // (rd_glCompressedTexSubImage2D) already drops before it bounces.
     { int sh = (target == RD_GL_TEXTURE_2D) ? rd_shrink_get(rd_cur_tex2d()) : 0;
       if (sh) { if (level < sh) { rd_shrink_dropped++; rd_upload_exit(rd_up_tid); return; } level -= sh; rd_shrink_feed(rd_cur_tex2d()); } }
+    if (px) { rd_unpack_tighten(); px = rd_upload_bounce(w, h, fmt, type, px); }   // translator path: see notes above
     if (rd_t16_hi && target == RD_GL_TEXTURE_2D) rd_t16_mark(rd_cur_tex2d(), RD_T16_F_SUB, "SUB-UPLOAD");
     // ETC2-UNCOMP: this texture's storage was re-declared as ETC2 in rd_glTexStorage2D, so the
     // uncompressed pixels Unity hands us here have to be encoded on the way in. The allocation is
