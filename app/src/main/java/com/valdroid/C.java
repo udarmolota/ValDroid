@@ -9,14 +9,17 @@ public class C {
         // Content revision of assets/bundles/libs.tar.xz. BUMP whenever the bundle changes so existing
         // installs (which already have areDependenciesInstalled=true) re-extract it on next app open and
         // pick up added/updated libs — a plain boolean flag would leave updaters on the old libs.
-        //   v1 = original bundle (renderer + 7 basic x86_64 libs)
-        //   v2 = + 24 Debian x86_64 X11 client libs (libX11/xcb/Xrandr…) for RimWorld 1.6 SDL video
-        //   v3 = libzfa.so rebuilt with the NULL-resource guards in our ZFA frontend (fixes the
-        //        Adreno 610 SIGSEGV in tc_flush_resource before the first frame)
-        //   v4 = + libmobileglues.so 2.0.0 (the MobileGlues renderer: desktop GL over the phone's
-        //        own GLES driver, zero Vulkan — the broken-Vulkan/A11/Mali fallback)
-        public static final int BUNDLE_VERSION = 4;
-        // x86_64 game libs (libgcc_s.so.1, libjniwrapper.so, etc.)
+        // Re-extraction only overwrites members by name: a file dropped from the bundle stays on an
+        // install that already had it (harmless — nothing loads it).
+        //   v1 (ValDroid 0.1.0, numbering restarted with the version) = the RimDroid-era bundle minus
+        //        13 libraries nothing loads: the Java-game leftovers inherited from Zomdroid
+        //        (libjassimp64, libsqlitejdbc, lwjgl-3.2.3 and lwjgl-3.3.6, libjniwrapper,
+        //        libpthread_wrapper), libjemalloc with its only dependant libc++_shared, and an
+        //        ARM64 glibc/ that referenced only itself. Checked two ways before removal: no
+        //        reference anywhere in the code, and no DT_NEEDED on them from any bundled library.
+        //        Recompressed at xz -9e on the way (4.7 MB of the 7.4 MB saved is that alone).
+        public static final int BUNDLE_VERSION = 1;
+        // x86_64 game libs (libgcc_s.so.1, libstdc++, the X11 client libs, etc.)
         public static final String LIBS_LINUX_X86_64 = ROOT + "/linux-x86_64";
         // Android ARM64 renderer libs — all in one flat directory
         public static final String LIBS_ANDROID_ARM64 = ROOT + "/android-arm64-v8a";
