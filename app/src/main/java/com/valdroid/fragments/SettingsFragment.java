@@ -30,6 +30,9 @@ public class SettingsFragment extends Fragment {
     public static final String ARG_INSTANCE = "instance";
 
     private LauncherPreferences prefs;
+    private View rowEtc2Cache;
+    private TextView tvEtc2Cache;
+    private View btnGfxUltra, btnGfxLow;
     private InstanceSettings inst;   // per-instance: renderer / driver / debug / interpreter / scale / controls
     private String instanceName;     // the instance this page edits
 
@@ -58,7 +61,6 @@ public class SettingsFragment extends Fragment {
 
         Switch swDebug        = view.findViewById(R.id.sw_debug);
         Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
-        Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
         Switch swReverse      = view.findViewById(R.id.sw_reverse_landscape);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
@@ -92,11 +94,10 @@ public class SettingsFragment extends Fragment {
             } else if (checkedId == R.id.rb_mobileglues) {
                 inst.setRenderer(LauncherPreferences.Renderer.MOBILEGLUES);
             }
+            showEtc2CacheRow(checkedId == R.id.rb_mobileglues);
         });
         swDebug.setChecked(inst.isDebug());
         swStrict.setChecked(inst.isInterpreter());
-        swDragPan.setChecked(inst.isDragPan());
-        swDragPan.setOnCheckedChangeListener((btn, checked) -> inst.setDragPan(checked));
         // Mirrored landscape: opt-in for USB-C gamepad cradles that hold the phone the other way up.
         // Takes effect on the next launch (orientation is requested once in GameActivity.onCreate).
         swReverse.setChecked(inst.isReverseLandscape());
@@ -425,34 +426,37 @@ public class SettingsFragment extends Fragment {
             }
         });
 
-        // Graphics preset: written into the game's settings at launch (see ValheimInstanceSetup).
-        android.widget.RadioGroup rgGfx = view.findViewById(R.id.rg_gfx_preset);
-        switch (inst.getGraphicsPreset()) {
-            case com.valdroid.InstanceSettings.GFX_ULTRA: rgGfx.check(R.id.rb_gfx_ultra); break;
-            case com.valdroid.InstanceSettings.GFX_LOW:   rgGfx.check(R.id.rb_gfx_low);   break;
-            default:                                      rgGfx.check(R.id.rb_gfx_keep);  break;
-        }
-        rgGfx.setOnCheckedChangeListener((group, checkedId) -> {
-            int preset = (checkedId == R.id.rb_gfx_ultra) ? com.valdroid.InstanceSettings.GFX_ULTRA
-                       : (checkedId == R.id.rb_gfx_low)   ? com.valdroid.InstanceSettings.GFX_LOW
-                       : com.valdroid.InstanceSettings.GFX_KEEP;
-            inst.setGraphicsPreset(preset);
-        });
+        // Graphics profile: a button queues that profile for the NEXT launch (written once, then the
+        // game's own settings are left alone). It is queued rather than written now because the
+        // game, if running, would overwrite the file on exit.
+        btnGfxUltra = view.findViewById(R.id.btn_gfx_ultra);
+        btnGfxLow = view.findViewById(R.id.btn_gfx_low);
+        btnGfxUltra.setOnClickListener(v ->
+                queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_ULTRA, R.string.gfx_preset_ultra));
+        btnGfxLow.setOnClickListener(v ->
+                queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_LOW, R.string.gfx_preset_low));
+        refreshGraphicsButtons();
 
-        // Texture compression tier: No / Low / Ultra low (see InstanceSettings.getTexTier).
-        // Takes effect on the next launch.
-        android.widget.RadioGroup rgTexq = view.findViewById(R.id.rg_texq);
-        switch (inst.getTexTier()) {
-            case com.valdroid.InstanceSettings.TEX_ULTRA: rgTexq.check(R.id.rb_texq_ultra); break;
-            case com.valdroid.InstanceSettings.TEX_LOW:   rgTexq.check(R.id.rb_texq_low);   break;
-            default:                                     rgTexq.check(R.id.rb_texq_no);    break;
-        }
-        rgTexq.setOnCheckedChangeListener((group, checkedId) -> {
-            int tier = (checkedId == R.id.rb_texq_ultra) ? com.valdroid.InstanceSettings.TEX_ULTRA
-                     : (checkedId == R.id.rb_texq_low)   ? com.valdroid.InstanceSettings.TEX_LOW
-                     : com.valdroid.InstanceSettings.TEX_NONE;
-            inst.setTexTier(tier);
+        // ETC2 compression switch (both ETC2 paths; see GameLauncher). Takes effect on next launch.
+        Switch swEtc2 = view.findViewById(R.id.sw_etc2);
+        swEtc2.setChecked(inst.isEtc2Enabled());
+        swEtc2.setOnCheckedChangeListener((btn, checked) -> inst.setEtc2Enabled(checked));
+
+        // ETC2 transcode cache: size + Clear, collapsed to its header — it is housekeeping, not a
+        // setting. App-wide (every instance shares it), but shown here because it only exists for
+        // MobileGlues, and this is where the renderer is chosen.
+        rowEtc2Cache = view.findViewById(R.id.row_etc2_cache);
+        tvEtc2Cache = view.findViewById(R.id.tv_etc2_cache);
+        final TextView cacheHeader = view.findViewById(R.id.tv_etc2_cache_header);
+        final View cacheBody = view.findViewById(R.id.body_etc2_cache);
+        cacheHeader.setOnClickListener(v -> {
+            boolean open = cacheBody.getVisibility() != View.VISIBLE;
+            cacheBody.setVisibility(open ? View.VISIBLE : View.GONE);
+            cacheHeader.setText(open ? R.string.etc2_cache_header_expanded : R.string.etc2_cache_header_collapsed);
+            if (open) refreshEtc2CacheSize();
         });
+        view.findViewById(R.id.btn_etc2_cache_clear).setOnClickListener(v -> clearEtc2Cache());
+        showEtc2CacheRow(inst.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES);
 
         // FPS cap: three radio buttons — 30 / 60 / No limit (0 = off). Takes effect on next launch.
         android.widget.RadioGroup rgFps = view.findViewById(R.id.rg_fps_cap);
@@ -465,5 +469,93 @@ public class SettingsFragment extends Fragment {
                     : (checkedId == R.id.rb_fps_60) ? 60 : 0;
             inst.setFpsCap(cap);
         });
+    }
+
+    // The game's settings change while it runs, so the buttons are re-read on every return here.
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshGraphicsButtons();
+    }
+
+    // ---- graphics profile buttons ----
+
+    private void queueGraphicsProfile(int preset, int nameRes) {
+        inst.setGraphicsPending(preset);
+        android.widget.Toast.makeText(requireContext(),
+                getString(R.string.gfx_preset_pending, getString(nameRes)),
+                android.widget.Toast.LENGTH_SHORT).show();
+        refreshGraphicsButtons();
+    }
+
+    /**
+     * A button is greyed while its profile is what the game will run with: the one queued for the
+     * next launch if there is one, else whatever the game's settings file matches exactly. Both
+     * stay live once the player has changed anything in game. Reads a small file, off the main
+     * thread anyway.
+     */
+    private void refreshGraphicsButtons() {
+        if (btnGfxUltra == null || inst == null) return;
+        final InstanceSettings s = inst;
+        final java.io.File dir = com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
+        new Thread(() -> {
+            int pending = s.getGraphicsPending();
+            final int current = (pending != InstanceSettings.GFX_KEEP) ? pending
+                    : com.valdroid.ValheimInstanceSetup.detectGraphicsPreset(dir);
+            android.app.Activity a = getActivity();
+            if (a == null) return;
+            a.runOnUiThread(() -> {
+                if (!isAdded() || btnGfxUltra == null) return;
+                btnGfxUltra.setEnabled(current != InstanceSettings.GFX_ULTRA);
+                btnGfxLow.setEnabled(current != InstanceSettings.GFX_LOW);
+            });
+        }, "GfxProfileDetect").start();
+    }
+
+    // ---- ETC2 transcode cache row ----
+    // Directory walks go off the main thread: the cache holds thousands of files once warm.
+
+    private void showEtc2CacheRow(boolean visible) {
+        if (rowEtc2Cache == null) return;
+        rowEtc2Cache.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    private void refreshEtc2CacheSize() {
+        final java.io.File dir = com.valdroid.AppStorage.requireSingleton().getEtc2CacheDir();
+        new Thread(() -> {
+            long bytes = 0;
+            java.io.File[] fs = dir.listFiles();
+            if (fs != null) for (java.io.File f : fs) if (f.isFile()) bytes += f.length();
+            final long total = bytes;
+            android.app.Activity a = getActivity();
+            if (a == null) return;
+            a.runOnUiThread(() -> {
+                if (!isAdded() || tvEtc2Cache == null) return;
+                tvEtc2Cache.setText(total == 0 ? getString(R.string.etc2_cache_empty)
+                        : getString(R.string.etc2_cache_size,
+                                android.text.format.Formatter.formatShortFileSize(requireContext(), total)));
+            });
+        }, "Etc2CacheSize").start();
+    }
+
+    /**
+     * Safe even with the game running: a vanished entry is just a miss, re-encoded on sight. Only
+     * top-level files are touched — the cache is flat, and a stray subdirectory is not ours.
+     */
+    private void clearEtc2Cache() {
+        final java.io.File dir = com.valdroid.AppStorage.requireSingleton().getEtc2CacheDir();
+        new Thread(() -> {
+            java.io.File[] fs = dir.listFiles();
+            if (fs != null) for (java.io.File f : fs) if (f.isFile()) //noinspection ResultOfMethodCallIgnored
+                f.delete();
+            android.app.Activity a = getActivity();
+            if (a == null) return;
+            a.runOnUiThread(() -> {
+                if (!isAdded()) return;
+                android.widget.Toast.makeText(requireContext(), R.string.etc2_cache_cleared,
+                        android.widget.Toast.LENGTH_SHORT).show();
+                refreshEtc2CacheSize();
+            });
+        }, "Etc2CacheClear").start();
     }
 }

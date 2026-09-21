@@ -140,10 +140,10 @@
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ============================ COMPRESSION ============================ -->
-    <!-- Texture quality: Half = the GL-layer shim halves mipped textures (4x less texture
-         memory) — for DLC-heavy loads and weaker phones. The chooser sits ABOVE its
-         explanatory text so the choice reads first and the "why" follows. -->
+    <!-- ============================ GRAPHICS ============================ -->
+    <!-- Graphics profile: written into the game ONCE — on the first launch, or on the launch after
+         a button press — and then left alone, so what the player changes in game survives. A
+         button greys out while the game's settings are exactly that profile. -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -164,40 +164,72 @@
             android:text="@string/gfx_preset_label"
             android:layout_marginBottom="6dp" />
 
-        <RadioGroup
-            android:id="@+id/rg_gfx_preset"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <RadioButton
-                android:id="@+id/rb_gfx_keep"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="@string/gfx_preset_keep" />
-
-            <RadioButton
-                android:id="@+id/rb_gfx_low"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="@string/gfx_preset_low" />
-
-            <RadioButton
-                android:id="@+id/rb_gfx_ultra"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/gfx_preset_ultra" />
-        </RadioGroup>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/gfx_preset_hint"
             android:textAppearance="?attr/textAppearanceBodySmall"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/gfx_preset_ultra"
+                android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+            <Button
+                android:id="@+id/btn_gfx_ultra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gfx_preset_apply" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/gfx_preset_low"
+                android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+            <Button
+                android:id="@+id/btn_gfx_low"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gfx_preset_apply" />
+        </LinearLayout>
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ TEXTURE COMPRESSION ============================ -->
+    <!-- Texture quality: the GL-layer shim drops the top mips of big textures (4x less texture
+         memory per step) — for weaker phones. The chooser sits ABOVE its explanatory text so the
+         choice reads first and the "why" follows. -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
 
         <TextView
             style="@style/AppTheme.CardHeader"
@@ -206,39 +238,74 @@
             android:text="@string/texq_label"
             android:layout_marginBottom="6dp" />
 
-        <RadioGroup
-            android:id="@+id/rg_texq"
+        <Switch
+            android:id="@+id/sw_etc2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <RadioButton
-                android:id="@+id/rb_texq_no"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="@string/texq_no" />
-
-            <RadioButton
-                android:id="@+id/rb_texq_low"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="@string/texq_low" />
-
-            <RadioButton
-                android:id="@+id/rb_texq_ultra"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/texq_ultra" />
-        </RadioGroup>
+            android:textSize="14sp"
+            android:text="@string/etc2_label"
+            android:layout_marginBottom="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/texq_hint"
+            android:text="@string/etc2_hint"
             android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <!-- ETC2 transcode cache: shown only for MobileGlues, the one renderer that writes it, and
+             collapsed to its header by default — it is housekeeping, not a setting. -->
+        <LinearLayout
+            android:id="@+id/row_etc2_cache"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp">
+
+            <TextView
+                android:id="@+id/tv_etc2_cache_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:background="?attr/selectableItemBackground"
+                android:text="@string/etc2_cache_header_collapsed"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+            <LinearLayout
+                android:id="@+id/body_etc2_cache"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_etc2_cache"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/etc2_cache_hint"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btn_etc2_cache_clear"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/etc2_cache_clear" />
+            </LinearLayout>
+        </LinearLayout>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -356,14 +423,6 @@
             android:layout_marginTop="16dp"
             android:textSize="14sp"
             android:text="@string/haptic_label" />
-
-        <Switch
-            android:id="@+id/sw_drag_pan"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textSize="14sp"
-            android:text="@string/drag_pan_label" />
 
         <Switch
             android:id="@+id/sw_reverse_landscape"

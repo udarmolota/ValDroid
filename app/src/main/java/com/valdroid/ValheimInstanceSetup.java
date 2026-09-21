@@ -199,7 +199,52 @@ public final class ValheimInstanceSetup {
             "PointLights=0", "ClutterQuality=0", "LodBias=0", "Target3DResolutionVertical=360",
     };
 
-    /** Applies {@link com.valdroid.InstanceSettings#getGraphicsPreset()}; KEEP writes nothing. */
+    // Not graphics quality: frame pacing and the intro film. The game can change them for its own
+    // reasons, and that must not make "Very low" read as "custom" in the launcher.
+    private static final java.util.Set<String> GFX_NOT_QUALITY =
+            new java.util.HashSet<>(java.util.Arrays.asList("VSync", "FPSLimit", "SkipIntroCinematic"));
+
+    /**
+     * Which of our profiles the game's settings currently are, for the launcher's buttons: GFX_ULTRA
+     * or GFX_LOW when every quality key matches that profile exactly, GFX_KEEP when the player has
+     * changed something, -1 when the game has not written its settings file yet. Reads the file
+     * Unity actually loads under box64 (unknown/unknown — see setPlayerPrefInt).
+     */
+    public static int detectGraphicsPreset(File instanceDir) {
+        File f = new File(instanceDir, "unity3d/unknown/unknown/prefs");
+        if (!f.isFile()) return -1;
+        java.util.Map<String, Integer> have = new java.util.HashMap<>();
+        try {
+            String xml = new String(java.nio.file.Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("<pref\\s+name=\"([^\"]+)\"\\s+type=\"int\"\\s*>\\s*(-?\\d+)\\s*</pref>")
+                    .matcher(xml);
+            while (m.find()) have.put(m.group(1), Integer.parseInt(m.group(2)));
+        } catch (Exception e) {
+            Log.w(TAG, "graphics preset detect: " + e);
+            return GFX_KEEP_RESULT;
+        }
+        if (profileMatches(have, GFX_ULTRA)) return com.valdroid.InstanceSettings.GFX_ULTRA;
+        if (profileMatches(have, GFX_LOW))   return com.valdroid.InstanceSettings.GFX_LOW;
+        return GFX_KEEP_RESULT;
+    }
+
+    private static final int GFX_KEEP_RESULT = com.valdroid.InstanceSettings.GFX_KEEP;
+
+    private static boolean profileMatches(java.util.Map<String, Integer> have, String[] tier) {
+        for (String[] set : new String[][]{ GFX_COMMON, tier }) {
+            for (String kv : set) {
+                int eq = kv.indexOf('=');
+                String key = kv.substring(0, eq);
+                if (GFX_NOT_QUALITY.contains(key)) continue;
+                Integer v = have.get(key);
+                if (v == null || v != Integer.parseInt(kv.substring(eq + 1))) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Applies {@link com.valdroid.InstanceSettings#getGraphicsPending()}; KEEP writes nothing. */
     public static void applyGraphicsPreset(File instanceDir, int preset) {
         if (preset != com.valdroid.InstanceSettings.GFX_LOW
                 && preset != com.valdroid.InstanceSettings.GFX_ULTRA) return;

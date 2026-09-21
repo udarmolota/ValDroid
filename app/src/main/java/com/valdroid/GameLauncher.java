@@ -224,12 +224,17 @@ public class GameLauncher {
         // everywhere else, and it puts the game's own binary back if the address becomes available.
         UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
 
-        // Graphics preset (Settings -> Video): written into the game's own settings before it starts,
-        // so the player gets a profile that suits emulation instead of Valheim's PC-shaped presets.
+        // Graphics profile: written into the game's own settings ONCE — on a new instance's first
+        // launch, or on the launch after the player pressed a profile button — and then left alone.
+        // Stamping it on every launch (the old behaviour) silently undid every change the player
+        // made in game. Cleared only after a successful write, so a failed one retries next time.
         try {
-            com.valdroid.ValheimInstanceSetup.applyGraphicsPreset(
-                    new java.io.File(gameInstance.getGamePath()),
-                    gameInstance.settings().getGraphicsPreset());
+            int pending = gameInstance.settings().getGraphicsPending();
+            if (pending != com.valdroid.InstanceSettings.GFX_KEEP) {
+                com.valdroid.ValheimInstanceSetup.applyGraphicsPreset(
+                        new java.io.File(gameInstance.getGamePath()), pending);
+                gameInstance.settings().setGraphicsPending(com.valdroid.InstanceSettings.GFX_KEEP);
+            }
         } catch (Throwable t) {
             Log.w(TAG, "graphics preset failed", t);
         }
@@ -454,8 +459,12 @@ public class GameLauncher {
                 // path (+50% on the S25 same-save test) — mobile drivers treat ETC2 as the
                 // first-class format. The extra-env field applies later, so =0 there is the
                 // escape hatch for A/B on any device.
+                // The DECODE stays on regardless of the ETC2 switch below: it is what keeps the world
+                // from rendering black on a GPU without S3TC. With ETC2 off it simply hands the
+                // driver plain RGBA8 — correct, only fatter.
+                final String etc2 = gameInstance.settings().isEtc2Enabled() ? "1" : "0";
                 Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
-                Os.setenv("RIMDROID_GLT_ETC2", "1", true);
+                Os.setenv("RIMDROID_GLT_ETC2", etc2, true);
                 // ...and the same treatment for the textures that arrive ALREADY uncompressed.
                 // Valheim's albedo ships as BC7, which nothing in this stack can sample, so Unity
                 // decompresses it in software itself and hands us SRGB8_ALPHA8 — four times the
@@ -463,7 +472,17 @@ public class GameLauncher {
                 // of extra load (12.7s vs 10.4s measured on Adreno 830) and bought 28-32 -> 29-45
                 // fps at Medium settings, with no upload the encoder could not handle. It matters
                 // more, not less, on the phones this GL path exists for: Mali, 8GB, no Turnip.
-                Os.setenv("RIMDROID_GLT_ETC2_UNCOMP", "1", true);
+                // Both ETC2 paths follow the one switch in Settings -> Texture compression ("Enable
+                // ETC2 compression", default on); the extra-env field is applied later and still wins.
+                Os.setenv("RIMDROID_GLT_ETC2_UNCOMP", etc2, true);
+                // Where the encodes are kept between launches, so each texture is encoded once and
+                // read back afterwards. The path is passed explicitly rather than derived inside
+                // box64: app data lives under /data/user/0/... on some devices and /data/data/...
+                // on others, and a guessed path silently disables the cache.
+                java.io.File etc2Cache = AppStorage.requireSingleton().getEtc2CacheDir();
+                //noinspection ResultOfMethodCallIgnored
+                etc2Cache.mkdirs();
+                Os.setenv("RIMDROID_ETC2_CACHE_DIR", etc2Cache.getAbsolutePath(), true);
                 // Threaded rendering, ON BY DEFAULT for MobileGlues (her call after playing it,
                 // 2026-08-15) — roughly double the frame rate on 1.6, and the loss of sharpness at
                 // low zoom turned out not to be noticeable in play.
@@ -491,6 +510,7 @@ public class GameLauncher {
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
                 Os.unsetenv("RIMDROID_GLT_ETC2");
                 Os.unsetenv("RIMDROID_GLT_ETC2_UNCOMP");
+                Os.unsetenv("RIMDROID_ETC2_CACHE_DIR");
                 Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }

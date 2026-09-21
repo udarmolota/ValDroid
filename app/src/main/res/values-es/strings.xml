@@ -80,6 +80,11 @@ En la nube: %2$s
     <string name="texq_no">No</string>
     <string name="texq_low">Baja</string>
     <string name="texq_ultra">Muy baja</string>
+    <string name="etc2_cache_size">Caché de texturas comprimidas: %1$s</string>
+    <string name="etc2_cache_empty">La caché de texturas comprimidas está vacía</string>
+    <string name="etc2_cache_hint">Las texturas se comprimen una vez y se guardan aquí, así los siguientes inicios cargan más rápido. Borrarla es seguro: en el próximo inicio simplemente se vuelven a comprimir.</string>
+    <string name="etc2_cache_clear">Borrar</string>
+    <string name="etc2_cache_cleared">Caché de texturas borrada</string>
     <string name="fps_cap_30">30 FPS</string>
     <string name="fps_cap_60">60 FPS</string>
     <string name="fps_cap_off">Sin límite</string>
@@ -251,8 +256,14 @@ En la nube: %2$s
     <string name="gfx_preset_keep">No tocar</string>
     <string name="gfx_preset_low">Baja</string>
     <string name="gfx_preset_ultra">Muy baja</string>
-    <string name="gfx_preset_hint">Escribe en el juego un conjunto de ajustes gráficos antes de iniciarlo, pensado para la emulación: sin teselación, sin sombras y sin distancia de dibujado extra, que es lo que más cuesta aquí. «Baja» mantiene los efectos que la GPU hace casi gratis. «Muy baja» también los quita y dibuja el mundo a menor resolución interna.</string>
+    <string name="gfx_preset_hint">El juego siempre arranca en Muy baja, un perfil ajustado para la emulación. Después puedes adaptar los gráficos a tu teléfono en los ajustes del propio juego: el lanzador ya no los toca. Un botón devuelve los ajustes a ese perfil en el siguiente inicio. Un botón gris significa que ese perfil ya está puesto.</string>
     <string name="instance_downloading">descargando</string>
     <string name="instance_incomplete">sin terminar</string>
     <string name="download_backup_note">Después de la descarga, el juego se empaqueta en un archivo de respaldo en la carpeta Descargas. Ese paso ocurre cuando la barra ya llegó al 100%, tarda unos minutos para varios GB y necesita la app abierta: ten paciencia.</string>
+    <string name="gfx_preset_apply">Aplicar</string>
+    <string name="gfx_preset_pending">«%1$s» se aplicará en el siguiente inicio</string>
+    <string name="etc2_cache_header_collapsed">Caché de texturas comprimidas ▸</string>
+    <string name="etc2_cache_header_expanded">Caché de texturas comprimidas ▾</string>
+    <string name="etc2_label">Activar compresión ETC2</string>
+    <string name="etc2_hint">Comprime las texturas a un formato que la GPU del teléfono lee de forma nativa, así ocupan unas cuatro veces menos memoria. En teléfonos más débiles y en Mali es la diferencia entre funcionar y quedarse sin memoria. Funciona con MobileGlues. Las texturas grandes además siempre se reducen.</string>
 </resources>

@@ -24,8 +24,10 @@ public class InstanceSettings {
     private final SharedPreferences p;
     private final String pfx;
     private final LauncherPreferences global;
+    private final String instanceName;
 
     public InstanceSettings(String instanceName) {
+        this.instanceName = instanceName;
         global = LauncherPreferences.requireSingleton();
         p = global.getSharedPrefs();
         pfx = "inst:" + instanceName + ":";
@@ -82,8 +84,13 @@ public class InstanceSettings {
     // --- Drag-to-pan (move the camera by dragging the map with a finger). Default OFF (changed
     // 2026-07-23): with it on, a stray drag on the bare map moves the camera when the user meant to
     // tap; opt-in for those who want it. ---
+    /**
+     * Always off since 2026-09-21, and gone from the settings: drag-to-pan is RimWorld's map
+     * camera (a finger drag presses the arrow keys). Valheim has no such camera, and a swipe
+     * should not press keys.
+     */
     public boolean isDragPan() {
-        return p.getBoolean(pfx + "drag_pan", false);
+        return false;
     }
 
     public void setDragPan(boolean v) {
@@ -142,8 +149,14 @@ public class InstanceSettings {
     // old "tex_shrink" was a boolean, reading it as an int would throw. ---
     public static final int TEX_NONE = 0, TEX_LOW = 1, TEX_ULTRA = 2;
 
+    /**
+     * Always ULTRA since 2026-09-21: the choice was taken out of the UI. Switching tiers made no
+     * difference anyone could feel in play, and one fixed value is one less thing to get wrong. The
+     * stored value is ignored rather than migrated, so bringing the chooser back is a one-line
+     * change.
+     */
     public int getTexTier() {
-        return p.getInt(pfx + "tex_tier", TEX_NONE);
+        return TEX_ULTRA;
     }
 
     public void setTexTier(int tier) {
@@ -158,12 +171,35 @@ public class InstanceSettings {
      */
     public static final int GFX_KEEP = 0, GFX_LOW = 1, GFX_ULTRA = 2;
 
-    public int getGraphicsPreset() {
-        return p.getInt(pfx + "gfx_preset", GFX_KEEP);
+    /**
+     * The graphics profile to write into the game on the NEXT launch, once — GFX_KEEP when there is
+     * nothing to write. This replaced "stamp the preset on every launch", which silently undid
+     * whatever the player changed in game.
+     *
+     * With no stored value: an instance whose game has never written its settings file gets
+     * GFX_ULTRA, so it starts on the emulation-tuned profile without anyone opening the settings.
+     * One that already has a settings file gets GFX_KEEP — it was played before, and on the old
+     * scheme it already carries our values from its last launch.
+     */
+    public int getGraphicsPending() {
+        if (p.contains(pfx + "gfx_pending")) return p.getInt(pfx + "gfx_pending", GFX_KEEP);
+        java.io.File prefs = new java.io.File(
+                com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName),
+                "unity3d/unknown/unknown/prefs");
+        return prefs.isFile() ? GFX_KEEP : GFX_ULTRA;
     }
 
-    public void setGraphicsPreset(int preset) {
-        p.edit().putInt(pfx + "gfx_preset", preset).apply();
+    public void setGraphicsPending(int preset) {
+        p.edit().putInt(pfx + "gfx_pending", preset).apply();
+    }
+
+    // --- ETC2 compression on the GL path (MobileGlues). Default ON. ---
+    public boolean isEtc2Enabled() {
+        return p.getBoolean(pfx + "etc2", true);
+    }
+
+    public void setEtc2Enabled(boolean on) {
+        p.edit().putBoolean(pfx + "etc2", on).apply();
     }
 
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
@@ -293,6 +329,12 @@ public class InstanceSettings {
                 .remove(pfx + "fps_cap")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
+                // A re-created instance of the same name must start over on the first-launch
+                // profile, which only happens while gfx_pending is absent.
+                .remove(pfx + "gfx_pending")
+                .remove(pfx + "gfx_preset")
+                .remove(pfx + "tex_tier")
+                .remove(pfx + "etc2")
                 .apply();
     }
 }

@@ -40,6 +40,15 @@ public class AppStorage {
     /** /data/data/com.valdroid/cache */
     public String getCachePath() { return CACHE_DIR_PATH; }
 
+    /**
+     * ETC2 transcode cache (box64 rd_etc2_cache.c). In files/, not in the Android cache dir: the
+     * system empties that under storage pressure, and losing it means a full 10+ second re-encode
+     * on the next launch — so the player controls it instead (size + Clear in the settings).
+     * Deliberately app-wide rather than per instance: entries are content-addressed, so every
+     * instance of the same game shares them, and deleting an instance must not take them along.
+     */
+    public File getEtc2CacheDir() { return new File(HOME_DIR_PATH, "etc2cache"); }
+
     /** Native .so libs dir (ARM64, installed by APK) */
     public String getLibraryPath() { return LIBRARY_DIR_PATH; }
 
