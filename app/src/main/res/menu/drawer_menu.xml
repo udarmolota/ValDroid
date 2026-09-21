@@ -48,7 +48,7 @@
             android:title="@string/nav_import_saves" />
         <item
             android:id="@+id/action_export_settings"
-            android:icon="@drawable/mt_icon_settings"
+            android:icon="@drawable/mt_icon_tune"
             android:title="@string/nav_export_settings" />
         <item
             android:id="@+id/action_import_settings"

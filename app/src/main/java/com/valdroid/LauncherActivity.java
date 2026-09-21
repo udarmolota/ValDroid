@@ -187,7 +187,6 @@ public class LauncherActivity extends AppCompatActivity {
             navController.navigate(R.id.action_open_wiki);
         });
         findViewById(R.id.link_github).setOnClickListener(v -> { binding.drawerLayout.close(); checkForUpdates(); });
-        findViewById(R.id.link_x).setOnClickListener(v -> openLink(R.string.url_x));
         findViewById(R.id.link_reddit).setOnClickListener(v -> openLink(R.string.url_reddit_sub));
         findViewById(R.id.link_support).setOnClickListener(v -> { binding.drawerLayout.close(); showDonateDialog(); });
         findViewById(R.id.link_zomdroid).setOnClickListener(v -> { binding.drawerLayout.close(); showZomdroidDialog(); });
