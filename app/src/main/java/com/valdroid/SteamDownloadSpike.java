@@ -867,6 +867,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             progress("Download finished. Packing a backup copy (a few GB — this takes a few minutes; "
                     + "keep the app open): " + zip.getAbsolutePath());
             ZipUtil.zipDir(instanceDir, zip);
+            // Otherwise the file picker does not list it when the player adds an instance from it.
+            storage.publishToMediaIndex(zip, "application/zip");
             progress("Backup saved: " + zip.getName() + " ("
                     + (zip.length() / (1024 * 1024)) + " MB). You can delete it from the Downloads "
                     + "folder if you need the space.");

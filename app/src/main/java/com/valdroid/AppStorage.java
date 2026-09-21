@@ -13,7 +13,10 @@ public class AppStorage {
     private final String LIBRARY_DIR_PATH;
     private static AppStorage singleton;
 
+    private final Context appContext;
+
     private AppStorage(Context applicationContext) {
+        appContext       = applicationContext;
         HOME_DIR_PATH    = applicationContext.getFilesDir().getAbsolutePath();
         CACHE_DIR_PATH   = applicationContext.getCacheDir().getAbsolutePath();
         LIBRARY_DIR_PATH = applicationContext.getApplicationInfo().nativeLibraryDir;
@@ -48,6 +51,20 @@ public class AppStorage {
      * instance of the same game shares them, and deleting an instance must not take them along.
      */
     public File getEtc2CacheDir() { return new File(HOME_DIR_PATH, "etc2cache"); }
+
+    /**
+     * Tell the system's media index that we just wrote {@code f} into shared storage. Everything we
+     * put in Downloads is written through plain file paths (see getDownloadsDir), and the system
+     * file picker lists only what the media index knows: without this, a finished backup zip
+     * exists on disk but never shows in "Downloads" when adding an instance. Seen on device
+     * 2026-09-21 — a 3.9 GB Valheim zip with no media row at all until it was scanned by hand.
+     * Asynchronous and best-effort: a failed scan costs visibility, never the file.
+     */
+    public void publishToMediaIndex(File f, String mimeType) {
+        if (f == null || !f.isFile()) return;
+        android.media.MediaScannerConnection.scanFile(appContext,
+                new String[]{ f.getAbsolutePath() }, new String[]{ mimeType }, null);
+    }
 
     /** Native .so libs dir (ARM64, installed by APK) */
     public String getLibraryPath() { return LIBRARY_DIR_PATH; }

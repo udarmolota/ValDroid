@@ -243,6 +243,7 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
                         // Informative name: "<Mod Title>_<id>.zip" (id kept for uniqueness/traceability).
                         File zip = new File(downloadsDir, sanitizeFileName(lastTitle) + "_" + id + ".zip");
                         ZipUtil.zipDir(work, zip);
+                        storage.publishToMediaIndex(zip, "application/zip");   // picker visibility
                         progress("✓ " + id + " → " + zip.getAbsolutePath());
                         ok++;
                     } else {
