@@ -463,7 +463,7 @@ public class LauncherActivity extends AppCompatActivity {
     private static String[] fetchLatestTag() {
         try {
             java.net.HttpURLConnection c = (java.net.HttpURLConnection)
-                    new java.net.URL("https://api.github.com/repos/udarmolota/rimdroid/releases/latest")
+                    new java.net.URL("https://api.github.com/repos/udarmolota/ValDroid/releases/latest")
                             .openConnection();
             c.setRequestProperty("Accept", "application/vnd.github+json");
             c.setConnectTimeout(8000);
