@@ -115,7 +115,7 @@ public class GameLauncher {
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
-                + " (dynarec knobs at box64 defaults" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1" : "")
+                + " (box64 defaults + CALLRET=1" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1" : "")
                 + "; Extra env overrides)\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "active mods   : " + readActiveMods(gi) + "\n"
@@ -256,6 +256,14 @@ public class GameLauncher {
                 "BOX64_DYNAREC_WEAKBARRIER", "BOX64_DYNAREC_FASTNAN", "BOX64_DYNAREC_FASTROUND"}) {
             Os.unsetenv(knob);
         }
+        // CALL/RET optimization ON (box64 default is off, 2026-09-21). With it a RET jumps straight
+        // to the translated code after its CALL instead of looking the address up in the jump table
+        // on every return; Unity's code is little but calls, and our frame rate is bound by one
+        // emulated thread (the main thread sits at 97-98%). Measured on the S25: loading-time CPU of
+        // that thread dropped, Very low went to 98-117 fps, no crash. It also switches on SEP
+        // (secondary entry points, default 1), which does nothing without it. box64 falls back to
+        // the table whenever a return does not match. Extra env still wins: CALLRET=0 turns it off.
+        Os.setenv("BOX64_DYNAREC_CALLRET", "1", true);
         // The built-in ValDroid mod reads this on RimWorld's managed loading thread. Extra env
         // vars are applied later, so RIMDROID_CONTROLLER_UI=0/1 remains an explicit A/B override.
         gamepadPresentAtLaunch = com.valdroid.input.GamepadHandler.hasConnectedGamepad();
