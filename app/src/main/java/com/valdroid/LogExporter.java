@@ -77,6 +77,14 @@ public final class LogExporter {
                 put(candidates, "prefs-game.xml", new File(userDir, "prefs"));
                 put(candidates, "prefs-unknown.xml", new File(gamePath, "unity3d/unknown/unknown/prefs"));
                 put(candidates, ValDroidApplication.CRASH_LOG, crashLog);
+                // MobileGlues' own log and the config we wrote for it (MG_DIR_PATH = the app cache
+                // dir, see GameLauncher). The log is where a translator failure actually shows:
+                // "Failed to get OpenGL function <name>" for every entry point the game asks for
+                // and MG does not have, and the glslang output for every shader that does not
+                // translate. On a GPU we have never run on, that is the first file to read.
+                String mgDir = AppStorage.requireSingleton().getCachePath();
+                put(candidates, "mobileglues.log", new File(mgDir, "latest.log"));
+                put(candidates, "mobileglues-config.json", new File(mgDir, "config.json"));
         }
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
@@ -86,8 +94,12 @@ public final class LogExporter {
                 if (f == null || !f.isFile()) continue;
                 zos.putNextEntry(new ZipEntry(e.getKey()));
                 try (FileInputStream in = new FileInputStream(f)) {
-                    // Tail cap for the per-fault SIGSEGV logs (see the candidates note above).
-                    if (e.getKey().startsWith("sigsegv_fault") && f.length() > SIGSEGV_TAIL_BYTES) {
+                    // Tail cap for the per-fault SIGSEGV logs (see the candidates note above), and for
+                    // MobileGlues' log, where a shader that fails to translate is reported every
+                    // time it is used.
+                    boolean tailOnly = e.getKey().startsWith("sigsegv_fault")
+                            || e.getKey().equals("mobileglues.log");
+                    if (tailOnly && f.length() > SIGSEGV_TAIL_BYTES) {
                         long skip = f.length() - SIGSEGV_TAIL_BYTES;
                         while (skip > 0) {
                             long s = in.skip(skip);
