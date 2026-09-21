@@ -99,6 +99,11 @@
         O ValDroid precisa da <b>versão Linux</b> de Valheim. O download dentro do app pega da conta
         Steam que tem o jogo; a outra forma é um arquivo que você mesmo prepara.
     </p>
+    <p>
+        Se você tem o jogo na Steam, é o jeito mais prático: ele baixa dentro do app, atualiza pelo
+        telefone sem PC, e os saves passam pelo <b>Steam Cloud</b>, compartilhados com o PC — dá
+        para continuar no telefone um mundo do PC e vice-versa.
+    </p>
 
     <section id="steam-in-app">
         <h3>1. Da Steam, no app</h3>
@@ -121,6 +126,12 @@
             Para pegar uma build específica em vez da mais recente, digite o <b>Manifest ID</b> dela
             no campo avançado (os IDs estão no SteamDB). Caso contrário, deixe vazio.
         </p>
+        <p>
+            <b>Atualizar o jogo.</b> Quando sair uma versão nova na Steam, inicie o download de novo
+            com o <b>mesmo nome de instância</b>: a versão nova é baixada, e seus saves e
+            configurações ficam onde estão. Por enquanto isso baixa o jogo inteiro de novo, uns
+            4 GB.
+        </p>
     </section>
 
     <section id="zip-archive">
@@ -134,11 +145,20 @@
             <li>O .zip precisa conter a versão <b>Linux</b> de Valheim — aquela com o arquivo
                 <code>valheim.x86_64</code>. Uma pasta em volta não atrapalha, o ValDroid
                 encontra.</li>
+            <li>A versão de <b>Windows</b> (a que tem <code>valheim.exe</code>) não roda: precisa ser a
+                versão Linux.</li>
+            <li>Deixe a internet ligada durante a instalação: o launcher baixa uma pequena
+                biblioteca para o jogo.</li>
             <li>Num PC dá para montar esse arquivo com o
                 <a href="https://github.com/SteamRE/DepotDownloader" target="_blank">DepotDownloader</a>:
                 <code>DepotDownloader -app 892970 -depot 892971 -os linux</code>, e depois compactar
                 o resultado.</li>
             <li>Use um nome curto: letras latinas e números, até 40 caracteres.</li>
+            <li><b>O arquivo não aparece em "Downloads"?</b> Essa seção mostra só os arquivos que o
+                sistema conhece, e os que foram colocados por fora dele (via adb, Termux ou alguns
+                gerenciadores de arquivos) podem faltar. No seletor, abra <b>Armazenamento interno
+                → Download</b>: ali a pasta é lida direto do disco. Se essa opção não aparecer,
+                ative no menu do seletor: <b>Mostrar armazenamento interno</b>.</li>
         </ul>
     </section>
 </section>

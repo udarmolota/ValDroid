@@ -98,6 +98,11 @@
         ValDroid needs the <b>Linux build</b> of Valheim. The in-app download takes it from the
         Steam account that has the game; the other way is an archive you prepare yourself.
     </p>
+    <p>
+        If you own the game on Steam, that is the easiest way: it downloads right inside the app,
+        updates from the phone without a PC, and saves go through <b>Steam Cloud</b>, shared with
+        your PC — you can continue a PC world on the phone and back.
+    </p>
 
     <section id="steam-in-app">
         <h3>1. From Steam, in the app</h3>
@@ -119,6 +124,11 @@
             To get an older build instead of the newest one, enter its <b>Manifest ID</b> in the
             advanced field (the IDs are listed on SteamDB). Otherwise leave it empty.
         </p>
+        <p>
+            <b>Updating the game.</b> When a new version comes out on Steam, run the download again
+            with the <b>same instance name</b>: the new build is fetched, and your saves and
+            settings stay where they are. For now this downloads the whole game again, about 4 GB.
+        </p>
     </section>
 
     <section id="zip-archive">
@@ -131,11 +141,20 @@
         <ul>
             <li>The .zip must hold the <b>Linux</b> build of Valheim — the one with the
                 <code>valheim.x86_64</code> file. A folder around it is fine, ValDroid finds it.</li>
+            <li>The <b>Windows</b> version (the one with <code>valheim.exe</code>) will not run — it
+                has to be the Linux version.</li>
+            <li>Keep the internet on while installing: the launcher fetches a small library for the
+                game.</li>
             <li>On a PC you can make that archive with
                 <a href="https://github.com/SteamRE/DepotDownloader" target="_blank">DepotDownloader</a>:
                 <code>DepotDownloader -app 892970 -depot 892971 -os linux</code>, then zip the
                 result.</li>
             <li>Keep the name short: Latin letters and digits, up to 40 characters.</li>
+            <li><b>The archive does not show in "Downloads"?</b> That section lists only files the
+                system knows about, and files put there around it (by adb, Termux or some file
+                managers) may be missing. In the file picker open <b>Internal storage →
+                Download</b> instead — that reads the folder straight from disk. If there is no
+                such entry, turn it on in the picker's menu: <b>Show internal storage</b>.</li>
         </ul>
     </section>
 </section>
