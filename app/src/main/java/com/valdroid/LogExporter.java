@@ -85,6 +85,11 @@ public final class LogExporter {
                 String mgDir = AppStorage.requireSingleton().getCachePath();
                 put(candidates, "mobileglues.log", new File(mgDir, "latest.log"));
                 put(candidates, "mobileglues-config.json", new File(mgDir, "config.json"));
+                // The game's own GLSL for every shader, as our GL layer hands it to MobileGlues
+                // (rd_glShaderSource writes it to RIMDROID_CACHE_DIR = the same cache dir). Needed
+                // when one material renders wrong on one GPU (black terrain on Mali): the source
+                // tells which features that shader uses. Plain text, compresses well in the zip.
+                put(candidates, "rd_shaders.txt", new File(mgDir, "rd_shaders.txt"));
         }
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
@@ -255,7 +260,7 @@ public final class LogExporter {
                 + ", Android " + android.os.Build.VERSION.RELEASE);
         line(sb, "renderer", String.valueOf(s.getRenderer()));
         line(sb, "vulkan driver", String.valueOf(s.getVulkanDriverSo()));
-        line(sb, "render scale", s.getRenderScalePercent() + "%");
+        line(sb, "render scale", s.describeRenderScale());
         line(sb, "fixed res mode", String.valueOf(s.getFixedResMode()));
         line(sb, "fps mode", s.getFpsMode() + "   (0 off, 1 economy ~30, 2 balanced ~40, 3 smooth ~60)");
         line(sb, "texture tier", s.getTexTier() + "   (0 none, 1 low, 2 ultra low)");

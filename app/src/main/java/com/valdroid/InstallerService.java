@@ -93,7 +93,11 @@ public class InstallerService extends Service {
                         String zipPath      = intent.getStringExtra(EXTRA_ZIP_PATH);
                         String instanceName = intent.getStringExtra(EXTRA_INSTANCE_NAME);
                         String[] extras     = intent.getStringArrayExtra(EXTRA_EXTRA_INSTALLERS);
-                        installInstance(zipPath, instanceName, extras);
+                        try {
+                            installInstance(zipPath, instanceName, extras);
+                        } finally {
+                            deleteCachedZip(zipPath);
+                        }
                         break;
                     }
                     case TASK_INSTALL_DEPS:
@@ -118,6 +122,25 @@ public class InstallerService extends Service {
     // =========================================================================
     // INSTALL INSTANCE FROM ZIP
     // =========================================================================
+
+    /**
+     * The picker's zip is copied into our cache before installing (NewInstanceFragment,
+     * LauncherFragment), a ~4 GB file that nothing removed afterwards. Delete it once the install
+     * is over, whether it worked or not — but only our own copy in the cache dir, never a file the
+     * player pointed at somewhere else.
+     */
+    private void deleteCachedZip(String zipPath) {
+        if (zipPath == null) return;
+        try {
+            File zip = new File(zipPath).getCanonicalFile();
+            File cacheDir = getCacheDir().getCanonicalFile();
+            if (cacheDir.equals(zip.getParentFile()) && zip.isFile() && !zip.delete()) {
+                Log.w(TAG, "Could not delete the cached install zip " + zip);
+            }
+        } catch (IOException e) {
+            Log.w(TAG, "Could not resolve the install zip path " + zipPath, e);
+        }
+    }
 
     private void installInstance(String zipPath, String instanceName, String[] extraInstallers)
             throws Exception {
