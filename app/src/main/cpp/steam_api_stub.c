@@ -618,11 +618,11 @@ VD_EXPORT uint64_t SteamAPI_ISteamRemotePlay_GetSessionClientName(void) { return
 VD_EXPORT uint64_t SteamAPI_ISteamRemotePlay_GetSessionCount(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemotePlay_GetSessionID(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemotePlay_GetSessionSteamID(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_BeginFileWriteBatch(void) { return 0; }
+VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_BeginFileWriteBatch(void) { return 1; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_CommitPublishedFileUpdate(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_CreatePublishedFileUpdateRequest(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_DeletePublishedFile(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_EndFileWriteBatch(void) { return 0; }
+VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_EndFileWriteBatch(void) { return 1; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_EnumeratePublishedFilesByUserAction(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_EnumeratePublishedWorkshopFiles(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamRemoteStorage_EnumerateUserPublishedFiles(void) { return 0; }

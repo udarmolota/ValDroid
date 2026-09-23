@@ -49,6 +49,11 @@ OVERRIDES = {
     # Valheim picks its Steam Deck platform config (lighter defaults, controller UI) from this, not
     # from the SteamDeck environment variable. On by default; SteamDeck=0 in the environment turns it off.
     "SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck": "vd_steam_deck()",
+    # The save system opens a write batch around every character/world save. A false return reads as
+    # "a batch is already started": 1.0.15 only warns, but older builds (1.0.7) fail the mount and the
+    # character-creation "Done" button does nothing. Cloud stays disabled, so saves still go local.
+    "SteamAPI_ISteamRemoteStorage_BeginFileWriteBatch": "1",
+    "SteamAPI_ISteamRemoteStorage_EndFileWriteBatch": "1",
 }
 
 # every ISteamClient_GetISteamXxx accessor returns the dummy interface
