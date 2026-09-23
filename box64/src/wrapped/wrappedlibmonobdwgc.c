@@ -600,8 +600,10 @@ static void* rd_dl_try(const char* file)
  * The few symbols whose glibc ABI differs from bionic are translated in rd_dl_fallback_symbol.
  */
 static void* rd_glibc_libc_handle;
+static void* rd_glibc_libdl_handle;
 
-static void* rd_dl_try_glibc(const char* base)
+/* The bionic soname for a glibc system library name, or NULL when it is not one. */
+static const char* rd_glibc_bionic_name(const char* base)
 {
     static const struct { const char* glibc; const char* bionic; } map[] = {
         { "libc", "libc.so" }, { "libc.so", "libc.so" }, { "libc.so.6", "libc.so" },
@@ -609,17 +611,41 @@ static void* rd_dl_try_glibc(const char* base)
         { "libdl", "libdl.so" }, { "libdl.so.2", "libdl.so" },
         { "libm", "libm.so" }, { "libm.so.6", "libm.so" },
     };
-    for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); ++i) {
-        if (strcmp(base, map[i].glibc))
-            continue;
-        void* handle = dlopen(map[i].bionic, RTLD_NOW | RTLD_LOCAL);
-        printf_log(LOG_NONE, "[RD-MONO] native library %s -> Android %s%s%s\n", base, map[i].bionic,
-            handle ? "" : " FAILED: ", handle ? "" : dlerror());
-        if (handle && !strcmp(map[i].bionic, "libc.so"))
-            rd_glibc_libc_handle = handle;
-        return handle;
-    }
+    for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); ++i)
+        if (!strcmp(base, map[i].glibc))
+            return map[i].bionic;
     return NULL;
+}
+
+static void* rd_dl_try_glibc(const char* base)
+{
+    const char* bionic = rd_glibc_bionic_name(base);
+    if (!bionic)
+        return NULL;
+    void* handle = dlopen(bionic, RTLD_NOW | RTLD_LOCAL);
+    printf_log(LOG_NONE, "[RD-MONO] native library %s -> Android %s%s%s\n", base, bionic,
+        handle ? "" : " FAILED: ", handle ? "" : dlerror());
+    if (handle && !strcmp(bionic, "libc.so"))
+        rd_glibc_libc_handle = handle;
+    if (handle && !strcmp(bionic, "libdl.so"))
+        rd_glibc_libdl_handle = handle;
+    return handle;
+}
+
+/* dlopen as handed to managed code. MonoMod's DynDll (BepInEx, mods) opens libraries itself with
+ * glibc names — dlopen("libc.so.6"), then "libc" — which do not exist on Android. Map them like the
+ * P/Invoke fallback does; glibc and bionic agree on the RTLD_* flag values on arm64. */
+static void* rd_glibc_dlopen(const char* file, int flags)
+{
+    if (file) {
+        const char* slash = strrchr(file, '/');
+        const char* bionic = rd_glibc_bionic_name(slash ? slash + 1 : file);
+        if (bionic) {
+            printf_log(LOG_NONE, "[RD-MONO] managed dlopen(%s) -> Android %s\n", file, bionic);
+            file = bionic;
+        }
+    }
+    return dlopen(file, flags);
 }
 
 /* glibc's errno accessor; bionic calls it __errno. */
@@ -664,6 +690,11 @@ static void* rd_dl_fallback_load(const char* name, int flags, char** err, void* 
     base = base ? base + 1 : name;
     if (!*base || strlen(base) > 200)
         return NULL;
+    /* Mono's etc/mono/config maps these to libmono-native, but Unity parses that file after
+     * mono_jit_init_version, and BepInEx (started there) already needs System.Native for its first
+     * File.Exists. Same mapping, available from the start. */
+    if (!strcmp(base, "System.Native") || !strcmp(base, "System.Net.Security.Native"))
+        base = "libmono-native.so";
     void* handle = rd_dl_try(base);
     if (!handle && !strstr(base, ".so")) {
         char file[256];
@@ -729,10 +760,16 @@ static void* rd_dl_fallback_symbol(void* handle, const char* name, char** err, v
             translated = (void*)rd_glibc_sysconf;
         else if (!strcmp(name, "mmap"))
             translated = (void*)rd_glibc_mmap;
+        else if (!strcmp(name, "dlopen"))   // glibc 2.34+ exports it from libc
+            translated = (void*)rd_glibc_dlopen;
         void* plain = translated ? NULL : dlsym(handle, name);
         printf_log(LOG_NONE, "[RD-MONO] libc symbol %s -> %s\n", name,
             translated ? "glibc ABI shim" : (plain ? "bionic" : "MISSING"));
         return translated ? translated : plain;
+    }
+    if (handle && handle == rd_glibc_libdl_handle && name && !strcmp(name, "dlopen")) {
+        printf_log(LOG_NONE, "[RD-MONO] libdl symbol dlopen -> glibc-name shim\n");
+        return (void*)rd_glibc_dlopen;
     }
     void* symbol = dlsym(handle, name);
     if (symbol && name) {
@@ -820,6 +857,23 @@ static void rd_bepinex_boot(void* domain)
         return;
     }
 
+    /* Unity gives the domain its base directory and config file only after mono_jit_init_version;
+     * BepInEx needs them sooner (System.Configuration via Trace.Listeners throws "ExeConfigFilename
+     * cannot be null"). Doorstop sets them here, to <exe dir> and <exe>.config; so do we. */
+    void (*domain_set_config)(void*, const char*, const char*) = rd_native_sym("mono_domain_set_config");
+    if (domain_set_config && exe) {
+        char base_dir[4096], config[4096];
+        const char* slash = strrchr(exe, '/');
+        size_t dirlen = slash ? (size_t)(slash - exe) : 0;
+        if (dirlen < sizeof(base_dir) && strlen(exe) + sizeof(".config") < sizeof(config)) {
+            memcpy(base_dir, exe, dirlen);
+            base_dir[dirlen] = 0;
+            snprintf(config, sizeof(config), "%s.config", exe);
+            domain_set_config(domain, base_dir, config);
+            printf_log(LOG_NONE, "[RD-MONO] BepInEx: domain config %s (base %s)\n", config, base_dir);
+        }
+    }
+
     printf_log(LOG_NONE, "[RD-MONO] BepInEx: loading %s\n", dll);
     void* assembly = assembly_open(domain, dll);
     if (!assembly) {
@@ -840,6 +894,20 @@ static void rd_bepinex_boot(void* domain)
         printf_log(LOG_NONE, "[RD-MONO] BepInEx: Start() threw %s.%s\n",
             (eklass && class_get_namespace) ? class_get_namespace(eklass) : "?",
             (eklass && class_get_name) ? class_get_name(eklass) : "?");
+        /* The type name alone says little (a TypeInitializationException hides the real failure in
+         * its InnerException), so log Exception.ToString(): message, inner exceptions, stack. */
+        void* (*object_to_string)(void*, void**) = rd_native_sym("mono_object_to_string");
+        char* (*string_to_utf8)(void*) = rd_native_sym("mono_string_to_utf8");
+        void (*mono_free_fn)(void*) = rd_native_sym("mono_free");
+        if (object_to_string && string_to_utf8) {
+            void* inner_exc = NULL;
+            void* text = object_to_string(exception, &inner_exc);
+            char* utf8 = (text && !inner_exc) ? string_to_utf8(text) : NULL;
+            if (utf8) {
+                printf_log(LOG_NONE, "[RD-MONO] BepInEx: %s\n", utf8);
+                if (mono_free_fn) mono_free_fn(utf8);
+            }
+        }
         return;
     }
     printf_log(LOG_NONE, "[RD-MONO] BepInEx: preloader finished\n");
