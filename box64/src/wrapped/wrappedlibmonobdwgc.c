@@ -455,9 +455,31 @@ static inline void rd_stats_invoke_leave(uint64_t t0)
 static unsigned long rd_icall_bound;
 static unsigned long rd_icall_missing;
 
+/* ValDroid: BurstRuntime.LoadAdditionalLibrary (mods ship their own lib_burst_generated, e.g.
+ * ValheimPerformanceOptimizations' VPOBurst_linux_x86_64.so) ends up here. Such a library is x86_64:
+ * jobs the engine runs from it are fine under box64, but a [BurstCompile] method called straight from
+ * C# (BurstDirectCall) jumps from the native ARM64 Mono into x86 code and crashes — seen with VPO's
+ * water waves. Answer "not loaded" instead; mods then take their managed code path. */
+static uint8_t rd_burst_refuse_additional_library(void* path)
+{
+    (void)path;
+    static int logged;
+    if (!logged) {
+        logged = 1;
+        printf_log(LOG_NONE, "[RD-MONO] BurstCompilerService.LoadBurstLibrary refused: an x86_64 Burst library "
+            "cannot be called from the native ARM64 Mono; the mod falls back to its managed code\n");
+    }
+    return 0;
+}
+
 EXPORT void my_mono_add_internal_call(x64emu_t* emu, const char* name, void* method)
 {
     (void)emu;
+    if (name && !strcmp(name, "Unity.Burst.LowLevel.BurstCompilerService::LoadBurstLibrary_Injected")) {
+        rd_icall_bound++;
+        my->mono_add_internal_call((void*)name, (void*)rd_burst_refuse_additional_library);
+        return;
+    }
     void* host = NULL;
     if (method) {
         host = GetNativeFnc((uintptr_t)method);

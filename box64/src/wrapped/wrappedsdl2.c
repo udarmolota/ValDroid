@@ -293,6 +293,112 @@ static int rd_gl_diag_on(void) {
     }
     return on;
 }
+/* ValDroid mesh diagnostics (RIMDROID_GLT_MESHDIAG=1), for the Mali-G615 whose terrain never draws:
+ * the terrain shader is never even submitted there, so the question is whether the terrain mesh
+ * gets created and drawn at all. Logs, each capped: every distinct vertex attribute layout, GL
+ * errors after buffer uploads and draws, each new largest indexed draw, shader compile / program
+ * link failures with their info log, and incomplete framebuffers. Off, it costs nothing: the extra
+ * wrappers are not even installed. */
+static int rd_meshdiag_on(void) {
+    static int on = -1;
+    if (on < 0) {
+        const char* e = getenv("RIMDROID_GLT_MESHDIAG");
+        on = (e && e[0] == '1') ? 1 : 0;
+        if (on) { printf_log(LOG_NONE, "RIMDROID MESHDIAG enabled\n"); fflush(NULL); }
+    }
+    return on;
+}
+static uint32_t (*p_rd_md_glGetError)(void) = NULL;
+static uint32_t rd_md_error(void) {
+    if (!p_rd_md_glGetError) p_rd_md_glGetError = (uint32_t(*)(void))rimdroid_gl_proc_resolver("glGetError");
+    return p_rd_md_glGetError ? p_rd_md_glGetError() : 0;
+}
+static void rd_md_check(const char* what, long long a, long long b) {
+    static int budget = 80;
+    uint32_t err = rd_md_error();
+    if (err && budget > 0) {
+        budget--;
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG GL error 0x%x after %s (%lld, %lld)\n", err, what, a, b);
+        fflush(NULL);
+    }
+}
+static void rd_md_draw(const char* what, int32_t count, uint32_t type) {
+    static int32_t biggest = 0;
+    static int budget = 40;
+    if (count > biggest && budget > 0) {
+        biggest = count; budget--;
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG new largest %s: %d indices, type 0x%x\n", what, count, type);
+        fflush(NULL);
+    }
+    rd_md_check(what, count, type);
+}
+static void (*p_rd_real_glVertexAttribPointer)(uint32_t,int32_t,uint32_t,uint8_t,int32_t,const void*) = NULL;
+static void (*p_rd_real_glVertexAttribIPointer)(uint32_t,int32_t,uint32_t,int32_t,const void*) = NULL;
+static void rd_md_layout(const char* fn, uint32_t index, int32_t size, uint32_t type, int norm, int32_t stride) {
+    static uint32_t seen[96];
+    static int nseen = 0;
+    uint32_t key = (index & 0xff) << 24 | (uint32_t)(size & 0xf) << 20 | (type & 0xffff) << 4 | (norm ? 1u : 0u);
+    for (int i = 0; i < nseen; i++) if (seen[i] == key) return;
+    if (nseen >= (int)(sizeof(seen) / sizeof(seen[0]))) return;
+    seen[nseen++] = key;
+    printf_log(LOG_NONE, "RIMDROID MESHDIAG layout %s attr=%u size=%d type=0x%x norm=%d stride=%d\n",
+               fn, index, size, type, norm, stride);
+    fflush(NULL);
+}
+static void rd_glVertexAttribPointer(uint32_t index, int32_t size, uint32_t type, uint8_t norm, int32_t stride, const void* ptr) {
+    rd_md_layout("VertexAttribPointer", index, size, type, norm & 0xff, stride);
+    if (p_rd_real_glVertexAttribPointer) p_rd_real_glVertexAttribPointer(index, size, type, norm, stride, ptr);
+    rd_md_check("VertexAttribPointer", index, type);
+}
+static void rd_glVertexAttribIPointer(uint32_t index, int32_t size, uint32_t type, int32_t stride, const void* ptr) {
+    rd_md_layout("VertexAttribIPointer", index, size, type, 0, stride);
+    if (p_rd_real_glVertexAttribIPointer) p_rd_real_glVertexAttribIPointer(index, size, type, stride, ptr);
+    rd_md_check("VertexAttribIPointer", index, type);
+}
+static void (*p_rd_real_glCompileShader)(uint32_t) = NULL;
+static void (*p_rd_real_glLinkProgram)(uint32_t) = NULL;
+static uint32_t (*p_rd_real_glCheckFramebufferStatus)(uint32_t) = NULL;
+static void rd_md_infolog(const char* what, uint32_t id, int is_program) {
+    static int budget = 20;
+    void (*get_iv)(uint32_t, uint32_t, int32_t*) = (void(*)(uint32_t, uint32_t, int32_t*))
+        rimdroid_gl_proc_resolver(is_program ? "glGetProgramiv" : "glGetShaderiv");
+    void (*get_log)(uint32_t, int32_t, int32_t*, char*) = (void(*)(uint32_t, int32_t, int32_t*, char*))
+        rimdroid_gl_proc_resolver(is_program ? "glGetProgramInfoLog" : "glGetShaderInfoLog");
+    if (!get_iv || !get_log || budget <= 0) return;
+    int32_t ok = 1;
+    get_iv(id, is_program ? 0x8B82u /* GL_LINK_STATUS */ : 0x8B81u /* GL_COMPILE_STATUS */, &ok);
+    if (ok) return;
+    budget--;
+    char log[1024] = {0};
+    int32_t len = 0;
+    get_log(id, (int32_t)sizeof(log) - 1, &len, log);
+    printf_log(LOG_NONE, "RIMDROID MESHDIAG %s %u FAILED: %s\n", what, id, log[0] ? log : "(no info log)");
+    fflush(NULL);
+}
+static void rd_glCompileShader(uint32_t shader) {
+    if (p_rd_real_glCompileShader) p_rd_real_glCompileShader(shader);
+    rd_md_infolog("compile shader", shader, 0);
+}
+static void rd_glLinkProgram(uint32_t program) {
+    if (p_rd_real_glLinkProgram) p_rd_real_glLinkProgram(program);
+    rd_md_infolog("link program", program, 1);
+}
+static uint32_t rd_glCheckFramebufferStatus(uint32_t target) {
+    uint32_t st = p_rd_real_glCheckFramebufferStatus ? p_rd_real_glCheckFramebufferStatus(target) : 0x8CD5u;
+    static uint32_t reported[8];
+    static int nrep = 0;
+    if (st != 0x8CD5u /* GL_FRAMEBUFFER_COMPLETE */) {
+        int seen = 0;
+        for (int i = 0; i < nrep; i++) if (reported[i] == st) seen = 1;
+        if (!seen && nrep < 8) {
+            reported[nrep++] = st;
+            printf_log(LOG_NONE, "RIMDROID MESHDIAG framebuffer target=0x%x incomplete: status 0x%x\n", target, st);
+            fflush(NULL);
+        }
+    }
+    return st;
+}
+
 static void (*p_rd_real_glBufferStorage)(uint32_t,int64_t,const void*,uint32_t) = NULL;
 static void (*p_rd_real_glBufferData)(uint32_t,int64_t,const void*,uint32_t) = NULL;
 static void (*p_rd_real_glBufferSubData)(uint32_t,int64_t,int64_t,const void*) = NULL;
@@ -310,12 +416,14 @@ static void rd_glBufferData(uint32_t target, int64_t size, const void* data, uin
     if ((uint64_t)size > RD_GL_SANE_SIZE)
         { printf_log(LOG_NONE, "RIMDROID GLSANITY glBufferData target=0x%x size=%lld data=%p usage=0x%x\n", target, (long long)size, data, usage); fflush(NULL); }
     if (p_rd_real_glBufferData) p_rd_real_glBufferData(target, size, data, usage);
+    if (rd_meshdiag_on()) rd_md_check("BufferData", target, size);
     if (size > 0) rd_upload_pace((uint64_t)size);
 }
 static void rd_glBufferSubData(uint32_t target, int64_t offset, int64_t size, const void* data) {
     if ((uint64_t)size > RD_GL_SANE_SIZE || offset < 0)
         { printf_log(LOG_NONE, "RIMDROID GLSANITY glBufferSubData target=0x%x offset=%lld size=%lld data=%p\n", target, (long long)offset, (long long)size, data); fflush(NULL); }
     if (p_rd_real_glBufferSubData) p_rd_real_glBufferSubData(target, offset, size, data);
+    if (rd_meshdiag_on()) rd_md_check("BufferSubData", target, size);
     if (size > 0) rd_upload_pace((uint64_t)size);
 }
 static void* rd_glMapBufferRange(uint32_t target, int64_t offset, int64_t length, uint32_t access) {
@@ -1563,14 +1671,17 @@ static void (*p_rd_real_glGenerateMipmap)(uint32_t) = NULL;
 static void rd_glDrawArrays(uint32_t mode, int32_t first, int32_t count) {
     RD_OPLOG("RIMDROID OP#%llu DrawArrays mode=0x%x first=%d n=%d\n", (unsigned long long)rd_gl_op_seq, mode, first, count);
     if (p_rd_real_glDrawArrays) p_rd_real_glDrawArrays(mode, first, count);
+    if (rd_meshdiag_on()) rd_md_check("DrawArrays", mode, count);
 }
 static void rd_glDrawElements(uint32_t mode, int32_t count, uint32_t type, const void* idx) {
     RD_OPLOG("RIMDROID OP#%llu DrawElements mode=0x%x n=%d type=0x%x\n", (unsigned long long)rd_gl_op_seq, mode, count, type);
     if (p_rd_real_glDrawElements) p_rd_real_glDrawElements(mode, count, type, idx);
+    if (rd_meshdiag_on()) rd_md_draw("DrawElements", count, type);
 }
 static void rd_glDrawElementsBaseVertex(uint32_t mode, int32_t count, uint32_t type, const void* idx, int32_t base) {
     RD_OPLOG("RIMDROID OP#%llu DrawElementsBaseVertex mode=0x%x n=%d base=%d\n", (unsigned long long)rd_gl_op_seq, mode, count, base);
     if (p_rd_real_glDrawElementsBaseVertex) p_rd_real_glDrawElementsBaseVertex(mode, count, type, idx, base);
+    if (rd_meshdiag_on()) rd_md_draw("DrawElementsBaseVertex", count, type);
 }
 static void rd_glDrawArraysInstanced(uint32_t mode, int32_t first, int32_t count, int32_t inst) {
     RD_OPLOG("RIMDROID OP#%llu DrawArraysInstanced mode=0x%x n=%d inst=%d\n", (unsigned long long)rd_gl_op_seq, mode, count, inst);
@@ -1579,10 +1690,12 @@ static void rd_glDrawArraysInstanced(uint32_t mode, int32_t first, int32_t count
 static void rd_glDrawElementsInstanced(uint32_t mode, int32_t count, uint32_t type, const void* idx, int32_t inst) {
     RD_OPLOG("RIMDROID OP#%llu DrawElementsInstanced mode=0x%x n=%d inst=%d\n", (unsigned long long)rd_gl_op_seq, mode, count, inst);
     if (p_rd_real_glDrawElementsInstanced) p_rd_real_glDrawElementsInstanced(mode, count, type, idx, inst);
+    if (rd_meshdiag_on()) rd_md_draw("DrawElementsInstanced", count, type);
 }
 static void rd_glDrawElementsInstancedBaseVertex(uint32_t mode, int32_t count, uint32_t type, const void* idx, int32_t inst, int32_t base) {
     RD_OPLOG("RIMDROID OP#%llu DrawElementsInstancedBaseVertex mode=0x%x n=%d inst=%d base=%d\n", (unsigned long long)rd_gl_op_seq, mode, count, inst, base);
     if (p_rd_real_glDrawElementsInstancedBaseVertex) p_rd_real_glDrawElementsInstancedBaseVertex(mode, count, type, idx, inst, base);
+    if (rd_meshdiag_on()) rd_md_draw("DrawElementsInstancedBaseVertex", count, type);
 }
 static void rd_glDispatchCompute(uint32_t x, uint32_t y, uint32_t z) {
     RD_OPLOG("RIMDROID OP#%llu DispatchCompute %ux%ux%u\n", (unsigned long long)rd_gl_op_seq, x, y, z);
@@ -2689,13 +2802,19 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         else if (!strcmp(rname, "glGenerateMipmap"))    { p_rd_real_glGenerateMipmap    = rimdroid_gl_proc_resolver(rname); w = vFu;   fn = (void*)rd_glGenerateMipmap; }
         // Diagnostic-only wrappers (op-log hunts): install ONLY under RIMDROID_GL_DIAG=1 — without
         // it the game gets the REAL entry points and pays zero extra per draw call.
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawArrays"))        { p_rd_real_glDrawArrays        = rimdroid_gl_proc_resolver(rname); w = vFuii;  fn = (void*)rd_glDrawArrays; }
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawElements"))      { p_rd_real_glDrawElements      = rimdroid_gl_proc_resolver(rname); w = vFuiup; fn = (void*)rd_glDrawElements; }
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawElementsBaseVertex")) { p_rd_real_glDrawElementsBaseVertex = rimdroid_gl_proc_resolver(rname); w = vFuiupi; fn = (void*)rd_glDrawElementsBaseVertex; }
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawArraysInstanced")) { p_rd_real_glDrawArraysInstanced = rimdroid_gl_proc_resolver(rname); w = vFuiii; fn = (void*)rd_glDrawArraysInstanced; }
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawElementsInstanced")) { p_rd_real_glDrawElementsInstanced = rimdroid_gl_proc_resolver(rname); w = vFuiupi; fn = (void*)rd_glDrawElementsInstanced; }
-        else if (rd_gl_diag_on() && !strcmp(rname, "glDrawElementsInstancedBaseVertex")) { p_rd_real_glDrawElementsInstancedBaseVertex = rimdroid_gl_proc_resolver(rname); w = vFuiupii; fn = (void*)rd_glDrawElementsInstancedBaseVertex; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawArrays"))        { p_rd_real_glDrawArrays        = rimdroid_gl_proc_resolver(rname); w = vFuii;  fn = (void*)rd_glDrawArrays; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawElements"))      { p_rd_real_glDrawElements      = rimdroid_gl_proc_resolver(rname); w = vFuiup; fn = (void*)rd_glDrawElements; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawElementsBaseVertex")) { p_rd_real_glDrawElementsBaseVertex = rimdroid_gl_proc_resolver(rname); w = vFuiupi; fn = (void*)rd_glDrawElementsBaseVertex; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawArraysInstanced")) { p_rd_real_glDrawArraysInstanced = rimdroid_gl_proc_resolver(rname); w = vFuiii; fn = (void*)rd_glDrawArraysInstanced; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawElementsInstanced")) { p_rd_real_glDrawElementsInstanced = rimdroid_gl_proc_resolver(rname); w = vFuiupi; fn = (void*)rd_glDrawElementsInstanced; }
+        else if ((rd_gl_diag_on() || rd_meshdiag_on()) && !strcmp(rname, "glDrawElementsInstancedBaseVertex")) { p_rd_real_glDrawElementsInstancedBaseVertex = rimdroid_gl_proc_resolver(rname); w = vFuiupii; fn = (void*)rd_glDrawElementsInstancedBaseVertex; }
         else if (rd_gl_diag_on() && !strcmp(rname, "glDispatchCompute"))   { p_rd_real_glDispatchCompute   = rimdroid_gl_proc_resolver(rname); w = vFuuu; fn = (void*)rd_glDispatchCompute; }
+        // Mesh diagnostics (RIMDROID_GLT_MESHDIAG=1), see rd_meshdiag_on.
+        else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glCheckFramebufferStatus")) { p_rd_real_glCheckFramebufferStatus = rimdroid_gl_proc_resolver(rname); w = uFu; fn = (void*)rd_glCheckFramebufferStatus; }
         else if (!strcmp(rname, "glActiveTexture"))  { p_rd_real_glActiveTexture  = (void(*)(uint32_t))rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glActiveTexture; }
         else if (!strcmp(rname, "glBindTexture"))    { p_rd_real_glBindTexture    = (void(*)(uint32_t,uint32_t))rimdroid_gl_proc_resolver(rname); w = vFuu; fn = (void*)rd_glBindTexture; }
         else if (!strcmp(rname, "glDeleteTextures")) { p_rd_real_glDeleteTextures = (void(*)(int32_t,const uint32_t*))rimdroid_gl_proc_resolver(rname); w = vFip; fn = (void*)rd_glDeleteTextures; }
