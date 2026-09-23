@@ -27,3 +27,7 @@ app/src/main/cpp/box64/
 /docs/
 /GAME_PATCHES.md
 app/src/main/cpp/box64_UNUSED_README.txt
+# No documents on GitHub: every Markdown file and box64's docs stay local (license files are kept)
+*.md
+box64/docs/
+box64/debian/changelog
