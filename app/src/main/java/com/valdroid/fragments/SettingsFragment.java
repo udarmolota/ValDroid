@@ -383,22 +383,23 @@ public class SettingsFragment extends Fragment {
             startActivity(new android.content.Intent(requireContext(), com.valdroid.GamepadMapperActivity.class)));
 
         // --- Render resolution (Video card): vertical radios, just the resolution text. Per-device
-        // presets from a ~720p floor up to native. Lower = more FPS on weak GPUs + a bigger (blurrier)
-        // UI; native is sharpest. The floor keeps render >= ~1280x720 (RimWorld UI minimum), per-device.
-        // Applied at the next launch.
+        // presets from the ~540-row floor up to 72%. Lower = more FPS on weak GPUs. Applied at the next
+        // launch.
         android.widget.RadioGroup rgRes = view.findViewById(R.id.rg_render_res);
         android.graphics.Rect bounds =
                 requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds();
         final int sLong  = Math.max(bounds.width(), bounds.height());   // landscape width
         final int sShort = Math.min(bounds.width(), bounds.height());   // landscape height = native render height
         final int MIN = LauncherPreferences.minRenderScalePercent(sLong, sShort);
+        // Up to 72% only (778 rows on a 1080p panel): 85% and native were too heavy for phones. The
+        // floor is the default, so a fresh install starts on the lightest option.
         java.util.LinkedHashSet<Integer> pctSet = new java.util.LinkedHashSet<>();
-        pctSet.add(MIN); pctSet.add(100);
-        for (int p : new int[]{ 60, 72, 85 }) if (p > MIN) pctSet.add(p);   // finer steps for the GPU/CPU balance
+        pctSet.add(MIN);
+        for (int p : new int[]{ 60, LauncherPreferences.RENDER_SCALE_MAX_OFFERED }) if (p > MIN) pctSet.add(p);
         final java.util.List<Integer> pcts = new java.util.ArrayList<>(pctSet);
-        java.util.Collections.sort(pcts);   // ascending; displayed native (high) → floor (low)
+        java.util.Collections.sort(pcts);   // ascending; displayed high → floor (low)
 
-        final int curPct = Math.max(MIN, inst.getRenderScalePercent());
+        final int curPct = LauncherPreferences.effectiveRenderScalePercent(inst.getRenderScalePercent(), sLong, sShort);
         final boolean curFixed = inst.getFixedResMode() != com.valdroid.InstanceSettings.FIXED_NONE;
         int nearestPct = pcts.get(0), nearestD = Integer.MAX_VALUE;   // relative preset closest to the stored %
         for (int p : pcts) { int d = Math.abs(p - curPct); if (d < nearestD) { nearestD = d; nearestPct = p; } }

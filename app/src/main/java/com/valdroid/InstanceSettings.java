@@ -306,10 +306,22 @@ public class InstanceSettings {
                 Math.max(LauncherPreferences.RENDER_SCALE_ABS_MIN, Math.min(100, pct))).apply();
     }
 
-    /** Stored scale raised to the per-device floor (>=1280x720), as a 0..1 fraction. */
+    /**
+     * For logs and bug reports: the scale actually applied on this display, e.g. "50% (1170x540)".
+     * The stored value alone can mislead — the default is a "lowest possible" marker (25%) that is
+     * raised to the device floor when applied.
+     */
+    public String describeRenderScale() {
+        android.util.DisplayMetrics dm = android.content.res.Resources.getSystem().getDisplayMetrics();
+        int sLong = Math.max(dm.widthPixels, dm.heightPixels), sShort = Math.min(dm.widthPixels, dm.heightPixels);
+        int pct = LauncherPreferences.effectiveRenderScalePercent(getRenderScalePercent(), sLong, sShort);
+        return pct + "% (" + Math.round(sLong * pct / 100f) + "x" + Math.round(sShort * pct / 100f)
+                + ", stored " + getRenderScalePercent() + "%)";
+    }
+
+    /** Stored scale clamped to [per-device floor, 72%], as a 0..1 fraction. */
     public float getEffectiveRenderScale(int surfaceW, int surfaceH) {
-        int eff = Math.max(getRenderScalePercent(), LauncherPreferences.minRenderScalePercent(surfaceW, surfaceH));
-        return Math.min(100, eff) / 100f;
+        return LauncherPreferences.effectiveRenderScalePercent(getRenderScalePercent(), surfaceW, surfaceH) / 100f;
     }
 
     // --- On-screen controls layout (per-instance JSON) ---

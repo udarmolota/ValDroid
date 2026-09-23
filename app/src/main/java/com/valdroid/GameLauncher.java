@@ -100,7 +100,7 @@ public class GameLauncher {
             + "vulkan config : " + VulkanDriverPolicy.displayName(configuredSo) + "\n"
             + "vulkan actual : " + VulkanDriverPolicy.displayName(actualSo) + "\n"
             + "driver policy : " + decisionReason + "\n"
-            + "render scale  : " + s.getRenderScalePercent() + "%\n"
+            + "render scale  : " + s.describeRenderScale() + "\n"
             // Which render-resolution mode the user picked. Without this a report showing a 720p
             // surface is ambiguous — we had to infer it from the ZFA make_current size (S22+ blurry
             // -text report, 2026-08-05). The fixed modes render fewer pixels and upscale, so soft

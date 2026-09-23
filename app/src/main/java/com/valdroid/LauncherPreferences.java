@@ -193,11 +193,15 @@ public class LauncherPreferences {
     // can go down to ~50% (720/1440). A fixed percentage floor would force a high-res
     // "potato" to render needlessly many pixels (→ 5 FPS), so the real floor is
     // computed per device by minRenderScalePercent(); the stored value is only clamped
-    // to a sane absolute range. Default 72.
+    // to a sane absolute range. Default: the device floor (RENDER_SCALE_ABS_MIN, raised to
+    // minRenderScalePercent() when applied) — the lightest option, so the most phones can run it.
     public static final int RENDER_SCALE_ABS_MIN = 25;
+    // Highest scale the settings offer (72% = 778 rows on a 1080p panel). 85% and native were too
+    // heavy for phones; a value stored before they were removed is capped here when applied.
+    public static final int RENDER_SCALE_MAX_OFFERED = 72;
 
     public int getRenderScalePercent() {
-        int v = prefs.getInt("render_scale_pct", 72);
+        int v = prefs.getInt("render_scale_pct", RENDER_SCALE_ABS_MIN);
         return Math.max(RENDER_SCALE_ABS_MIN, Math.min(100, v));
     }
 
@@ -229,8 +233,14 @@ public class LauncherPreferences {
      * Used by both the game and the controls editor so the two always agree.
      */
     public float getEffectiveRenderScale(int surfaceW, int surfaceH) {
-        int eff = Math.max(getRenderScalePercent(), minRenderScalePercent(surfaceW, surfaceH));
-        return Math.min(100, eff) / 100f;
+        return effectiveRenderScalePercent(getRenderScalePercent(), surfaceW, surfaceH) / 100f;
+    }
+
+    /** A stored percent clamped to what the settings offer on this surface: [device floor, 72%]. */
+    public static int effectiveRenderScalePercent(int stored, int surfaceW, int surfaceH) {
+        int min = minRenderScalePercent(surfaceW, surfaceH);
+        int max = Math.max(min, RENDER_SCALE_MAX_OFFERED);   // a floor above 72% still wins
+        return Math.max(min, Math.min(max, stored));
     }
 
     // --- On-screen controls layout (JSON, see com.valdroid.input) ---
