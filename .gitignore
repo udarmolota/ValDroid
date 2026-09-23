@@ -22,3 +22,8 @@ AUDIO_FMOD_*.md
 
 # Unused duplicate checkout of box64 (the APK builds the root-level box64/, see app/src/main/cpp/box64_UNUSED_README.txt)
 app/src/main/cpp/box64/
+
+# Internal notes and documents — kept locally, not published
+/docs/
+/GAME_PATCHES.md
+app/src/main/cpp/box64_UNUSED_README.txt
