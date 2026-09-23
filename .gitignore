@@ -31,3 +31,5 @@ app/src/main/cpp/box64_UNUSED_README.txt
 *.md
 box64/docs/
 box64/debian/changelog
+# ...except the repository front page
+!/README.md
