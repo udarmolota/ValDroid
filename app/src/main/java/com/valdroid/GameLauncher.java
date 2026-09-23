@@ -807,7 +807,8 @@ public class GameLauncher {
         // Native ARM64 Mono (experimental per-instance switch, 1.6 only). Set OR unset every launch:
         // setenv persists in this process, so a stale path must not leak into the next instance. It
         // sits before the env field so a developer can still point the field at another runtime.
-        // GameInstance.getArgs() adds --burst-disable-compilation whenever this variable is set.
+        // Burst stays ON with native Mono (see GameInstance.getArgs()); only RIMDROID_NO_BURST=1 in the
+        // env field adds --burst-disable-compilation.
         boolean nativeMono = gameInstance.settings().isNativeMono()
                 && com.valdroid.game.NativeMono.isSupported(gameInstance);
         if (nativeMono) {

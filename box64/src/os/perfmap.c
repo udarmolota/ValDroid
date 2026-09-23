@@ -16,7 +16,9 @@
 
 void writePerfMap(uintptr_t func_addr, uintptr_t code_addr, size_t code_size, const char* inst_name)
 {
-    char pbuf[128];
+    // ValDroid: was 128 — a full library path + symbol + instruction overflowed it, and the truncated
+    // line lost its '\n', gluing it to the next entry.
+    char pbuf[512];
     const char* symbname = getAddrFunctionName(func_addr);
     if(!symbname || !strcmp(symbname, "???"))
         snprintf(pbuf, sizeof(pbuf), "0x%" PRIx64 " %" PRId64 " 0x%" PRIx64 ":%s\n", code_addr, code_size, func_addr, inst_name);

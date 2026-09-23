@@ -35,6 +35,11 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
 
+        <!-- Lets simpleperf attach to a release build over adb (profiling the box64 hot thread).
+             Not debuggable: no JDWP, no run-as, nothing changes for players. A debug build is no
+             substitute — box64 is compiled at -O0 there, which distorts the profile. -->
+        <profileable android:shell="true" />
+
         <!-- Game Mode (Android 12+): tells platform/vendor game services we support the
              performance profile and must not be downscaled or FPS-capped — see the config. -->
         <meta-data
