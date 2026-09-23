@@ -11,13 +11,12 @@
             android:id="@+id/action_custom_driver"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_custom_driver" />
-        <!-- Hidden: this installs RimWorld mods/DLC. Valheim mods need BepInEx, which is not wired in
-             yet (docs/TODO.md). Flip visible back on once it is. -->
+        <!-- Mods (BepInEx): opens ModsFragment. The id is the old RimWorld "Install mod / DLC" one;
+             that screen (InstallContentFragment) is no longer reachable from the menu. -->
         <item
             android:id="@+id/action_install_content"
             android:icon="@drawable/mt_icon_mods"
-            android:title="@string/nav_install_content"
-            android:visible="false" />
+            android:title="@string/nav_mods" />
     </group>
 
     <!-- 2) Get the game from a store you own it on (Steam, GOG) -->

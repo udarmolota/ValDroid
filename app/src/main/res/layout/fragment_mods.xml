@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mods (BepInEx) for one instance: the top card picks the instance, holds the master switch and
+     the install button; the second card lists the instance's mods with a switch each. The list is
+     read from the instance's BepInEx folders (ModManager), so hand-placed mods appear too. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- ======================= INSTANCE + SWITCH + INSTALL ======================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
+
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
+
+            <TextView
+                style="@style/AppTheme.CardHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/install_content_instance"
+                android:layout_marginBottom="6dp" />
+
+            <Spinner
+                android:id="@+id/sp_mods_instance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Switch
+                android:id="@+id/sw_mod_support"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="14sp"
+                android:text="@string/mod_support_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/mod_support_hint" />
+
+            <TextView
+                android:id="@+id/tv_mods_native_mono_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorError"
+                android:visibility="gone"
+                android:text="@string/mods_native_mono_warning" />
+
+            <!-- Two steps on purpose: tapping the field only picks the file and shows its name, the
+                 Install button below does the install. A wrong tap in the picker installs nothing. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_mods_pick"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:ellipsize="middle"
+                android:singleLine="true"
+                android:text="@string/mods_pick_zip" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_mods_install"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:enabled="false"
+                android:text="@string/mods_install" />
+
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================ INSTALLED MODS ============================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
+
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
+
+            <TextView
+                style="@style/AppTheme.CardHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mods_installed_header"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:id="@+id/tv_mods_off_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:visibility="gone"
+                android:text="@string/mods_off_note" />
+
+            <TextView
+                android:id="@+id/tv_mods_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:alpha="0.7"
+                android:text="@string/mods_empty" />
+
+            <!-- One row per mod, added by ModsFragment: name + version, and a switch. -->
+            <LinearLayout
+                android:id="@+id/ll_mods_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</ScrollView>

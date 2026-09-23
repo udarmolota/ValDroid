@@ -281,4 +281,20 @@
     <string name="fps_mode_resolved">На этом экране: %1$d FPS при %2$d Гц</string>
     <string name="fps_mode_resolved_fallback">На этом экране: %1$d FPS при %2$d Гц. Ровного значения около 40 у него нет.</string>
     <string name="fps_mode_resolved_off">Экран до %1$d Гц</string>
+    <!-- Mods (BepInEx) screen -->
+    <string name="nav_mods">Моды</string>
+    <string name="mod_support_label">Поддержка модов (BepInEx)</string>
+    <string name="mod_support_hint">При запуске игры загружает BepInEx, а с ним — моды, включённые ниже. Моды работают только с нативным ARM64 Mono.</string>
+    <string name="mods_native_mono_warning">Нативный ARM64 Mono в этом инстансе выключен, поэтому моды не загрузятся. Включите его в настройках инстанса.</string>
+    <string name="mods_pick_zip">Выбрать файл мода (zip)</string>
+    <string name="mods_install">Установить</string>
+    <string name="mods_installed_header">Установленные моды</string>
+    <string name="mods_off_note">Поддержка модов выключена: эти моды не загружаются.</string>
+    <string name="mods_empty">Модов пока нет.</string>
+    <string name="mod_switch_failed">Не удалось переключить мод</string>
+    <string name="mod_delete_title">Удалить %1$s?</string>
+    <string name="mod_delete_message">Мод будет удалён из этого инстанса, а файлы игры, которые он заменил, вернутся на место.</string>
+    <string name="mod_delete_confirm">Удалить</string>
+    <string name="mod_installed">Установлен: %1$s</string>
+    <string name="mod_install_failed">Не удалось установить мод</string>
 </resources>

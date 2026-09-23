@@ -120,7 +120,7 @@ public class LauncherActivity extends AppCompatActivity {
                 navController.navigate(R.id.action_install_instance);
                 return true;
             } else if (id == R.id.action_install_content) {
-                navController.navigate(R.id.action_open_install);   // dedicated install page (instance + type + file)
+                navController.navigate(R.id.action_open_mods);   // Mods (BepInEx): instance, master switch, list
                 return true;
             } else if (id == R.id.action_custom_driver) {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import

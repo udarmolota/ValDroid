@@ -40,6 +40,11 @@
         android:label="@string/nav_install_content" />
 
     <fragment
+        android:id="@+id/mods_fragment"
+        android:name="com.valdroid.fragments.ModsFragment"
+        android:label="@string/nav_mods" />
+
+    <fragment
         android:id="@+id/driver_fragment"
         android:name="com.valdroid.fragments.DriverImportFragment"
         android:label="@string/nav_custom_driver" />
@@ -66,6 +71,9 @@
 
     <action android:id="@+id/action_open_install"
         app:destination="@id/install_content_fragment" />
+
+    <action android:id="@+id/action_open_mods"
+        app:destination="@id/mods_fragment" />
 
     <action android:id="@+id/action_open_custom_driver"
         app:destination="@id/driver_fragment" />

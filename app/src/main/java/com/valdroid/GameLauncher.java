@@ -112,6 +112,10 @@ public class GameLauncher {
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
                     ? "ON (ARM64 Mono, Burst " + ("1".equals(Os.getenv("RIMDROID_NO_BURST")) ? "off" : "on") + ") " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
+            + "mods          : " + (Os.getenv("VALDROID_BEPINEX_PRELOADER") != null
+                    ? "ON (BepInEx " + ModManager.BEPINEX_VERSION + ", "
+                        + ModManager.countEnabled(new java.io.File(gi.getGamePath())) + " enabled)"
+                    : (s.isModSupport() ? "off (needs native Mono)" : "off")) + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
@@ -454,10 +458,9 @@ public class GameLauncher {
             }
             if (glTranslator != null) {
                 renderer = LauncherPreferences.Renderer.GL4ES;   // reuse the whole GL4ES/EGL plumbing
-                // Exported so BOTH later stages see it without re-parsing the settings field:
-                // GameInstance.getArgs() forces -force-gfx-direct while a translator is active
-                // (EGL contexts don't migrate to Unity's render thread — the 1.5 threaded A/B
-                // black-screened), and the native side logs it with the launch config.
+                // Exported so the native side sees which translator is active (the GL layer in box64
+                // and the launch config log). Valheim renders on Unity's own GL thread; RimWorld's
+                // forced -force-gfx-direct is not applied here (see GameInstance.getArgs()).
                 Os.setenv("RIMDROID_GLT", glTranslator, true);
                 android.util.Log.i("ValDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
                 // DXT -> ETC2 transcode ON BY DEFAULT for every MobileGlues launch (her call,
@@ -491,27 +494,21 @@ public class GameLauncher {
                 //noinspection ResultOfMethodCallIgnored
                 etc2Cache.mkdirs();
                 Os.setenv("RIMDROID_ETC2_CACHE_DIR", etc2Cache.getAbsolutePath(), true);
-                // Threaded rendering, ON BY DEFAULT for MobileGlues (her call after playing it,
-                // 2026-08-15) — roughly double the frame rate on 1.6, and the loss of sharpness at
-                // low zoom turned out not to be noticeable in play.
-                //
-                // The two variables ship as a PAIR and cannot be split: the second render thread is
-                // what doubles the fps, and on this renderer it also corrupts sampling of minified
-                // texture copies (red patches over plants and rocks when zoomed out). Clamping
-                // minification to level 0 is the ONLY thing that removes it — the defect is inside
-                // MobileGlues or its use of the Adreno GLES driver, with everything above it cleared
-                // by experiment (docs/BRIEF_mg_threaded_red_textures_round2.md). Set explicitly so a
-                // power user can still override either half from the extra-env field, which is
-                // applied after this.
-                Os.setenv("RIMDROID_GLT_THREADED", "1", true);
-                Os.setenv("RIMDROID_GLT_NOMIP", "tex", true);
-                // MobileGlues drops Unity 2019's GL_RED sub-uploads for dynamic font atlases.
-                // Enable the direct GLES replay only on the affected 1.5 SDL path.
-                if (!new java.io.File(gameInstance.getGamePath(), "rd_x11").exists())
-                    Os.setenv("RIMDROID_GLT_FONTFIX", "1", true);
-                else
-                    Os.unsetenv("RIMDROID_GLT_FONTFIX");
-                android.util.Log.i("ValDroid", "GameLauncher: threaded render ON by default (+mip clamp; override via extra env)");
+                // RimDroid workarounds that do not apply to Valheim, off (2026-09-23). Unset
+                // explicitly: setenv persists in this process, and the extra-env field (applied
+                // later) can still turn any of them back on for an A/B.
+                // - RIMDROID_GLT_NOMIP clamped minification to mip level 0 against RimWorld's red
+                //   patches under threaded MobileGlues. In Valheim it only draws moire circles on Mali
+                //   (a G99 tester's went away with NOMIP=0) and is a suspect for the black terrain on
+                //   a Mali-G615; on Adreno 830 turning it off changed neither fps nor the picture.
+                //   RIMDROID_GLT_NOMIP=tex restores it.
+                // - RIMDROID_GLT_THREADED was its pair; nothing reads it any more.
+                // - RIMDROID_GLT_FONTFIX replayed Unity 2019's GL_RED font-atlas uploads straight to
+                //   GLES past MobileGlues (RimWorld 1.5). Unity 6 does not need it, and its test (no
+                //   rd_x11 file) had it on for every Valheim launch.
+                Os.unsetenv("RIMDROID_GLT_NOMIP");
+                Os.unsetenv("RIMDROID_GLT_THREADED");
+                Os.unsetenv("RIMDROID_GLT_FONTFIX");
                 android.util.Log.i("ValDroid", "GameLauncher: translator -> DXT->ETC2 transcode ON (default; override via extra env)");
             } else {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
@@ -817,6 +814,23 @@ public class GameLauncher {
             Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
         }
         com.valdroid.game.NativeMono.noteLaunch(gameInstance.settings(), nativeMono);
+
+        // Mods (BepInEx): the Mods screen's master switch. BepInEx only runs on the native Mono (the
+        // box64 wrapper starts it there, see rd_bepinex_boot); the bundled copy is refreshed in the
+        // instance first. Set OR unset every launch, like the native Mono path above. Before the env
+        // field, so a hand-set VALDROID_BEPINEX_PRELOADER still wins.
+        Os.unsetenv("VALDROID_BEPINEX_PRELOADER");
+        if (gameInstance.settings().isModSupport() && nativeMono) {
+            java.io.File gameDir = new java.io.File(gameInstance.getGamePath());
+            try {
+                ModManager.ensureBepInEx(ValDroidApplication.APP, gameDir);
+                Os.setenv("VALDROID_BEPINEX_PRELOADER", ModManager.preloader(gameDir).getAbsolutePath(), true);
+                Log.i(TAG, "Mods: BepInEx " + ModManager.BEPINEX_VERSION + ", "
+                        + ModManager.countEnabled(gameDir) + " mod(s) enabled");
+            } catch (java.io.IOException e) {
+                Log.e(TAG, "Mods: could not set up BepInEx, starting without mods", e);
+            }
+        }
 
         // Custom env vars (KEY=VALUE pairs separated by spaces) — PER-INSTANCE (falls back to global).
         // MUST be applied after ALL defaults above — including the debug extras — so a power-user/

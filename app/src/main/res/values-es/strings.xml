@@ -285,4 +285,20 @@ En la nube: %2$s
     <string name="fps_mode_resolved">En esta pantalla: %1$d FPS a %2$d Hz</string>
     <string name="fps_mode_resolved_fallback">En esta pantalla: %1$d FPS a %2$d Hz. No tiene un valor exacto cerca de 40.</string>
     <string name="fps_mode_resolved_off">Pantalla hasta %1$d Hz</string>
+    <!-- Mods (BepInEx) screen -->
+    <string name="nav_mods">Mods</string>
+    <string name="mod_support_label">Soporte de mods (BepInEx)</string>
+    <string name="mod_support_hint">Carga BepInEx al iniciar el juego y, con él, los mods activados abajo. Los mods solo funcionan con Mono ARM64 nativo.</string>
+    <string name="mods_native_mono_warning">Mono ARM64 nativo está desactivado en esta instancia, así que los mods no se cargarán. Actívalo en los ajustes de la instancia.</string>
+    <string name="mods_pick_zip">Elegir archivo del mod (zip)</string>
+    <string name="mods_install">Instalar</string>
+    <string name="mods_installed_header">Mods instalados</string>
+    <string name="mods_off_note">El soporte de mods está desactivado: estos mods no se cargan.</string>
+    <string name="mods_empty">Todavía no hay mods instalados.</string>
+    <string name="mod_switch_failed">No se pudo cambiar este mod</string>
+    <string name="mod_delete_title">¿Eliminar %1$s?</string>
+    <string name="mod_delete_message">El mod se elimina de esta instancia y los archivos del juego que reemplazó se restauran.</string>
+    <string name="mod_delete_confirm">Eliminar</string>
+    <string name="mod_installed">Instalado: %1$s</string>
+    <string name="mod_install_failed">No se pudo instalar el mod</string>
 </resources>

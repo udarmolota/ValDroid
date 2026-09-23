@@ -262,6 +262,17 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "native_mono", v).apply();
     }
 
+    // Mod support (BepInEx), the master switch on the Mods screen. Off by default: the loader is new,
+    // and a player without mods should start exactly as before. Each mod's own on/off lives in the
+    // file system (BepInEx/plugins vs plugins_off, see ModManager), not here.
+    public boolean isModSupport() {
+        return p.getBoolean(pfx + "mod_support", false);
+    }
+
+    public void setModSupport(boolean v) {
+        p.edit().putBoolean(pfx + "mod_support", v).apply();
+    }
+
     // Safety net for the native runtime (NativeMono.settlePreviousLaunch): when a launch with it started,
     // and how many launches in a row crashed early. Written with commit(): the process may die right after.
     public long getNativeMonoLaunchTime() {
@@ -350,6 +361,7 @@ public class InstanceSettings {
                 .remove(pfx + "native_mono")
                 .remove(pfx + "native_mono_launch_ms")
                 .remove(pfx + "native_mono_failures")
+                .remove(pfx + "mod_support")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")

@@ -303,4 +303,20 @@ In the cloud: %2$s
     <string name="fps_mode_resolved">On this screen: %1$d FPS at %2$d Hz</string>
     <string name="fps_mode_resolved_fallback">On this screen: %1$d FPS at %2$d Hz. It has no even value near 40.</string>
     <string name="fps_mode_resolved_off">Screen up to %1$d Hz</string>
+    <!-- Mods (BepInEx) screen -->
+    <string name="nav_mods">Mods</string>
+    <string name="mod_support_label">Mod support (BepInEx)</string>
+    <string name="mod_support_hint">Loads BepInEx when the game starts, and with it the mods switched on below. Mods only work with Native ARM64 Mono.</string>
+    <string name="mods_native_mono_warning">Native ARM64 Mono is off for this instance, so mods will not load. Turn it on in the instance settings.</string>
+    <string name="mods_pick_zip">Choose mod file (zip)</string>
+    <string name="mods_install">Install</string>
+    <string name="mods_installed_header">Installed mods</string>
+    <string name="mods_off_note">Mod support is off: these mods are not loaded.</string>
+    <string name="mods_empty">No mods installed yet.</string>
+    <string name="mod_switch_failed">Could not switch this mod</string>
+    <string name="mod_delete_title">Delete %1$s?</string>
+    <string name="mod_delete_message">The mod is removed from this instance, and any game files it replaced are put back.</string>
+    <string name="mod_delete_confirm">Delete</string>
+    <string name="mod_installed">Installed: %1$s</string>
+    <string name="mod_install_failed">Could not install the mod</string>
 </resources>

@@ -265,6 +265,14 @@ public final class LogExporter {
         line(sb, "fps mode", s.getFpsMode() + "   (0 off, 1 economy ~30, 2 balanced ~40, 3 smooth ~60)");
         line(sb, "texture tier", s.getTexTier() + "   (0 none, 1 low, 2 ultra low)");
         line(sb, "native mono", String.valueOf(s.isNativeMono()));
+        // Whether the game ran modded, and with what — the first thing to know about a bug report.
+        StringBuilder mods = new StringBuilder(String.valueOf(s.isModSupport()));
+        for (ModManager.Mod m : ModManager.list(new java.io.File(gi.getGamePath()))) {
+            mods.append(mods.indexOf(":") < 0 ? ": " : ", ").append(m.name);
+            if (m.version != null) mods.append(' ').append(m.version);
+            if (!m.enabled) mods.append(" (off)");
+        }
+        line(sb, "mod support", mods.toString());
         line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));
         line(sb, "interpreter", String.valueOf(s.isInterpreter()));
         line(sb, "drag pan", String.valueOf(s.isDragPan()));
