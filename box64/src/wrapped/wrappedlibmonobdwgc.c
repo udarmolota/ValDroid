@@ -771,6 +771,80 @@ static void rd_dl_install_native_fallback(void)
     printf_log(LOG_NONE, "[RD-MONO] native P/Invoke libraries are taken from %s\n", rd_native_lib_dir);
 }
 
+/* ValDroid: BepInEx on the native ARM64 Mono. BepInEx normally comes in through Doorstop, a
+ * preloaded library that hooks mono_jit_init_version; on native Mono we own that call already, so
+ * we do Doorstop's job here: once the root domain exists, load BepInEx.Preloader.dll and run
+ * Doorstop.Entrypoint.Start(). Off unless VALDROID_BEPINEX_PRELOADER names the preloader DLL.
+ * BepInEx reads the DOORSTOP_* variables Doorstop would have set; fill in the ones not given. */
+static void rd_bepinex_setenv_default(const char* name, const char* value)
+{
+    if (!getenv(name))
+        setenv(name, value, 1);
+}
+
+static void rd_bepinex_boot(void* domain)
+{
+    const char* dll = getenv("VALDROID_BEPINEX_PRELOADER");
+    if (!dll || !dll[0])
+        return;
+    const char* exe = (my_context && my_context->fullpath) ? my_context->fullpath : NULL;
+    if (exe) {
+        /* Unity's data folder is <executable name without extension>_Data next to the executable. */
+        char managed[4096];
+        const char* slash = strrchr(exe, '/');
+        const char* base = slash ? slash + 1 : exe;
+        const char* dot = strrchr(base, '.');
+        size_t dirlen = (size_t)(base - exe);
+        size_t stemlen = dot ? (size_t)(dot - base) : strlen(base);
+        if (dirlen + stemlen + sizeof("_Data/Managed") < sizeof(managed)) {
+            memcpy(managed, exe, dirlen);
+            memcpy(managed + dirlen, base, stemlen);
+            strcpy(managed + dirlen + stemlen, "_Data/Managed");
+            rd_bepinex_setenv_default("DOORSTOP_MANAGED_FOLDER_DIR", managed);
+        }
+        rd_bepinex_setenv_default("DOORSTOP_PROCESS_PATH", exe);
+    }
+    rd_bepinex_setenv_default("DOORSTOP_INVOKE_DLL_PATH", dll);
+    rd_bepinex_setenv_default("DOORSTOP_INITIALIZED", "TRUE");
+
+    /* Plain GO entries are not in `my`: take the native Mono functions straight from the library. */
+    void* (*assembly_open)(void*, const char*) = rd_native_sym("mono_domain_assembly_open");
+    void* (*get_image)(void*) = rd_native_sym("mono_assembly_get_image");
+    void* (*class_from_name)(void*, const char*, const char*) = rd_native_sym("mono_class_from_name");
+    void* (*method_from_name)(void*, const char*, int) = rd_native_sym("mono_class_get_method_from_name");
+    void* (*object_get_class)(void*) = rd_native_sym("mono_object_get_class");
+    const char* (*class_get_namespace)(void*) = rd_native_sym("mono_class_get_namespace");
+    const char* (*class_get_name)(void*) = rd_native_sym("mono_class_get_name");
+    if (!assembly_open || !get_image || !class_from_name || !method_from_name) {
+        printf_log(LOG_NONE, "[RD-MONO] BepInEx: native Mono lacks the embedding API, skipped\n");
+        return;
+    }
+
+    printf_log(LOG_NONE, "[RD-MONO] BepInEx: loading %s\n", dll);
+    void* assembly = assembly_open(domain, dll);
+    if (!assembly) {
+        printf_log(LOG_NONE, "[RD-MONO] BepInEx: cannot open the preloader assembly\n");
+        return;
+    }
+    void* image = get_image(assembly);
+    void* klass = image ? class_from_name(image, "Doorstop", "Entrypoint") : NULL;
+    void* method = klass ? method_from_name(klass, "Start", 0) : NULL;
+    if (!method) {
+        printf_log(LOG_NONE, "[RD-MONO] BepInEx: Doorstop.Entrypoint.Start() not found\n");
+        return;
+    }
+    void* exception = NULL;
+    my->mono_runtime_invoke(method, NULL, NULL, &exception);
+    if (exception) {
+        void* eklass = object_get_class ? object_get_class(exception) : NULL;
+        printf_log(LOG_NONE, "[RD-MONO] BepInEx: Start() threw %s.%s\n",
+            (eklass && class_get_namespace) ? class_get_namespace(eklass) : "?",
+            (eklass && class_get_name) ? class_get_name(eklass) : "?");
+        return;
+    }
+    printf_log(LOG_NONE, "[RD-MONO] BepInEx: preloader finished\n");
+}
+
 EXPORT void* my_mono_jit_init_version(x64emu_t* emu, const char* domain_name, const char* runtime_version)
 {
     rd_dl_install_native_fallback();
@@ -787,6 +861,7 @@ EXPORT void* my_mono_jit_init_version(x64emu_t* emu, const char* domain_name, co
             printf_log(LOG_NONE, "[RD-MONO] mono_runtime_set_pending_exception missing: exceptions from x86 internal calls will corrupt the guest\n");
         rd_gc_install(emu);
         rd_stats_init();
+        rd_bepinex_boot(domain);
     }
     printf_log(LOG_NONE, "[RD-MONO] mono_jit_init_version -> domain %p\n", domain);
     return domain;
