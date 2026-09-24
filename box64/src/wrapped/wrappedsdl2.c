@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <time.h>
+#include <fcntl.h>
 
 #include "wrappedlibs.h"
 
@@ -471,13 +472,290 @@ static void rd_md_infolog(const char* what, uint32_t id, int is_program) {
     printf_log(LOG_NONE, "RIMDROID MESHDIAG %s %u FAILED: %s\n", what, id, log[0] ? log : "(no info log)");
     fflush(NULL);
 }
+#include <sys/stat.h>   /* mkdir for the program cache directory */
+/* ---- ValDroid program binary cache (RIMDROID_GLT_PROGCACHE=1) ------------------------------------
+ * Every new effect in a session compiles its shaders through MobileGlues and the GLES driver the
+ * first time it is drawn: 60-160 ms for a pair plus the link, the freezes seen right before fights.
+ * This cache keeps the linked program binary on disk, keyed by the shader sources, and loads it the
+ * next time instead of compiling:
+ *   - glCompileShader is deferred: the source is hashed (in rd_glShaderSource) and nothing else
+ *     happens; COMPILE_STATUS reads as true and the info log as empty until a real compile happens.
+ *   - glLinkProgram looks the key (attached shader hashes + attribute/frag-data bindings) up in
+ *     RIMDROID_CACHE_DIR/progcache. A hit goes to glProgramBinary; if the driver takes it, no shader
+ *     is ever compiled. A miss, or a binary the driver rejects (a driver update), compiles the
+ *     deferred shaders for real, links, and stores the new binary.
+ * Unity keeps using the program exactly as if it had been linked from source. */
+static int rd_glt_on(void);
+static int rd_pc_on(void) {
+    static int on = -1;
+    if (on < 0) {
+        const char* e = getenv("RIMDROID_GLT_PROGCACHE");
+        on = (e && e[0] == '1' && rd_glt_on()) ? 1 : 0;
+        if (on) { printf_log(LOG_NONE, "RIMDROID PROGCACHE enabled\n"); fflush(NULL); }
+    }
+    return on;
+}
+#define RD_PC_IDS 65536u
+static uint64_t rd_pc_sh_hash[RD_PC_IDS];    /* 0 = no source seen for this shader id */
+static uint8_t  rd_pc_sh_state[RD_PC_IDS];   /* 0 idle, 1 compile deferred, 2 really compiled */
+typedef struct { uint32_t sh[4]; uint8_t n; uint64_t binds; } rd_pc_prog_t;
+static rd_pc_prog_t* rd_pc_prog;              /* RD_PC_IDS entries, allocated on first use */
+static unsigned long rd_pc_hits, rd_pc_misses, rd_pc_stored, rd_pc_rejected;
+
+static void (*p_rd_real_glCompileShader)(uint32_t);
+static void (*p_rd_real_glLinkProgram)(uint32_t);
+static void (*p_rd_real_glAttachShader)(uint32_t,uint32_t);
+static void (*p_rd_real_glDetachShader)(uint32_t,uint32_t) = NULL;
+static void (*p_rd_real_glDeleteProgram)(uint32_t) = NULL;
+static void (*p_rd_real_glGetShaderiv)(uint32_t,uint32_t,int32_t*) = NULL;
+static void (*p_rd_real_glGetShaderInfoLog)(uint32_t,int32_t,int32_t*,char*) = NULL;
+static void (*p_rd_real_glBindAttribLocation)(uint32_t,uint32_t,const char*) = NULL;
+static void (*p_rd_real_glBindFragDataLocation)(uint32_t,uint32_t,const char*) = NULL;
+static void (*p_rd_real_glBindFragDataLocationIndexed)(uint32_t,uint32_t,uint32_t,const char*) = NULL;
+
+static uint64_t rd_pc_fnv(uint64_t h, const void* data, size_t n) {
+    const uint8_t* p = (const uint8_t*)data;
+    for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 0x100000001b3ull; }
+    return h;
+}
+/* Called by rd_glShaderSource with exactly the strings handed to the translator. */
+static void rd_pc_note_source(uint32_t shader, int32_t count, const char* const* strings, const int32_t* lengths) {
+    if (!rd_pc_on() || shader >= RD_PC_IDS) return;
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (int32_t i = 0; i < count; i++) {
+        if (!strings || !strings[i]) continue;
+        size_t l = (lengths && lengths[i] >= 0) ? (size_t)lengths[i] : strlen(strings[i]);
+        h = rd_pc_fnv(h, strings[i], l);
+    }
+    rd_pc_sh_hash[shader] = h ? h : 1;
+    rd_pc_sh_state[shader] = 0;
+}
+static rd_pc_prog_t* rd_pc_prog_get(uint32_t prog) {
+    if (prog >= RD_PC_IDS) return NULL;
+    if (!rd_pc_prog) rd_pc_prog = (rd_pc_prog_t*)calloc(RD_PC_IDS, sizeof(rd_pc_prog_t));
+    return rd_pc_prog ? &rd_pc_prog[prog] : NULL;
+}
+static void rd_pc_compile_now(uint32_t shader) {
+    if (shader < RD_PC_IDS && rd_pc_sh_state[shader] == 1) {
+        rd_pc_sh_state[shader] = 2;
+        if (p_rd_real_glCompileShader) p_rd_real_glCompileShader(shader);
+    }
+}
+static int rd_pc_path(char* out, size_t cap, uint64_t key) {
+    const char* dir = getenv("RIMDROID_CACHE_DIR");
+    if (!dir || !dir[0]) return 0;
+    char d[900];
+    snprintf(d, sizeof(d), "%s/progcache", dir);
+    mkdir(d, 0700);
+    snprintf(out, cap, "%s/%016llx.bin", d, (unsigned long long)key);
+    return 1;
+}
+/* Returns 1 when the program was loaded from the cache (nothing else to do). */
+static int rd_pc_try_load(uint32_t prog, uint64_t key) {
+    static void (*program_binary)(uint32_t, uint32_t, const void*, int32_t) = NULL;
+    static void (*get_programiv)(uint32_t, uint32_t, int32_t*) = NULL;
+    if (!program_binary) program_binary = (void(*)(uint32_t, uint32_t, const void*, int32_t))rimdroid_gl_proc_resolver("glProgramBinary");
+    if (!get_programiv) get_programiv = (void(*)(uint32_t, uint32_t, int32_t*))rimdroid_gl_proc_resolver("glGetProgramiv");
+    char path[1024];
+    if (!program_binary || !get_programiv || !rd_pc_path(path, sizeof(path), key)) return 0;
+    FILE* f = fopen(path, "rb");
+    if (!f) return 0;
+    uint32_t hdr[3] = {0};
+    int ok = 0;
+    if (fread(hdr, 4, 3, f) == 3 && hdr[0] == 0x31435056u /* "VPC1" */ && hdr[2] > 0 && hdr[2] < (64u << 20)) {
+        void* data = malloc(hdr[2]);
+        if (data && fread(data, 1, hdr[2], f) == hdr[2]) {
+            program_binary(prog, hdr[1], data, (int32_t)hdr[2]);
+            int32_t linked = 0;
+            get_programiv(prog, 0x8B82u /* LINK_STATUS */, &linked);
+            ok = linked ? 1 : 0;
+        }
+        free(data);
+    }
+    fclose(f);
+    if (!ok) { remove(path); rd_pc_rejected++; }
+    return ok;
+}
+static void rd_pc_store(uint32_t prog, uint64_t key) {
+    static void (*get_programiv)(uint32_t, uint32_t, int32_t*) = NULL;
+    static void (*get_binary)(uint32_t, int32_t, int32_t*, uint32_t*, void*) = NULL;
+    if (!get_programiv) get_programiv = (void(*)(uint32_t, uint32_t, int32_t*))rimdroid_gl_proc_resolver("glGetProgramiv");
+    if (!get_binary) get_binary = (void(*)(uint32_t, int32_t, int32_t*, uint32_t*, void*))rimdroid_gl_proc_resolver("glGetProgramBinary");
+    if (!get_programiv || !get_binary) return;
+    int32_t linked = 0, len = 0;
+    get_programiv(prog, 0x8B82u, &linked);
+    if (!linked) return;
+    get_programiv(prog, 0x8741u /* PROGRAM_BINARY_LENGTH */, &len);
+    if (len <= 0 || len >= (64 << 20)) return;
+    void* data = malloc((size_t)len);
+    if (!data) return;
+    int32_t got = 0; uint32_t fmt = 0;
+    get_binary(prog, len, &got, &fmt, data);
+    char path[1024], tmp[1100];
+    if (got > 0 && rd_pc_path(path, sizeof(path), key)) {
+        snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+        FILE* f = fopen(tmp, "wb");
+        if (f) {
+            uint32_t hdr[3] = { 0x31435056u, fmt, (uint32_t)got };
+            int w = fwrite(hdr, 4, 3, f) == 3 && fwrite(data, 1, (size_t)got, f) == (size_t)got;
+            fclose(f);
+            if (w && rename(tmp, path) == 0) rd_pc_stored++; else remove(tmp);
+        }
+    }
+    free(data);
+}
+/* glLinkProgram under the cache. Returns 1 when it handled the link. */
+static int rd_pc_link(uint32_t prog) {
+    rd_pc_prog_t* p = rd_pc_prog_get(prog);
+    if (!p || p->n == 0) return 0;
+    /* Salt: the translator and what it reports (MobileGlues puts its version in GL_VERSION), so a
+     * translator or driver update never reuses binaries built from an older translation. */
+    static uint64_t salt = 0;
+    if (!salt) {
+        const char* (*get_string)(uint32_t) = (const char*(*)(uint32_t))rimdroid_gl_proc_resolver("glGetString");
+        const char* glt = getenv("RIMDROID_GLT");
+        salt = 0xcbf29ce484222325ull;
+        if (glt) salt = rd_pc_fnv(salt, glt, strlen(glt));
+        static const uint32_t names[3] = { 0x1F01u /* RENDERER */, 0x1F02u /* VERSION */, 0x8B8Cu /* SHADING_LANGUAGE_VERSION */ };
+        for (int i = 0; i < 3 && get_string; i++) {
+            const char* v = get_string(names[i]);
+            if (v) salt = rd_pc_fnv(salt, v, strlen(v));
+        }
+        if (!salt) salt = 1;
+    }
+    uint64_t key = salt;
+    for (int i = 0; i < p->n; i++) {
+        uint32_t s = p->sh[i];
+        if (s >= RD_PC_IDS || !rd_pc_sh_hash[s]) return 0;   /* a source we never saw: link as usual */
+        key = rd_pc_fnv(key, &rd_pc_sh_hash[s], sizeof(uint64_t));
+    }
+    key = rd_pc_fnv(key, &p->binds, sizeof(p->binds));
+    if (rd_pc_try_load(prog, key)) {
+        rd_pc_hits++;
+    } else {
+        rd_pc_misses++;
+        for (int i = 0; i < p->n; i++) rd_pc_compile_now(p->sh[i]);
+        static void (*param_i)(uint32_t, uint32_t, int32_t) = NULL;
+        if (!param_i) param_i = (void(*)(uint32_t, uint32_t, int32_t))rimdroid_gl_proc_resolver("glProgramParameteri");
+        if (param_i) param_i(prog, 0x8257u /* PROGRAM_BINARY_RETRIEVABLE_HINT */, 1);
+        if (p_rd_real_glLinkProgram) p_rd_real_glLinkProgram(prog);
+        rd_pc_store(prog, key);
+    }
+    unsigned long total = rd_pc_hits + rd_pc_misses;
+    if (total <= 5 || total % 100 == 0) {
+        printf_log(LOG_NONE, "RIMDROID PROGCACHE links=%lu hits=%lu misses=%lu stored=%lu rejected=%lu\n",
+                   total, rd_pc_hits, rd_pc_misses, rd_pc_stored, rd_pc_rejected);
+        fflush(NULL);
+    }
+    return 1;
+}
+static void rd_glAttachShader_pc(uint32_t prog, uint32_t shader) {
+    rd_pc_prog_t* p = rd_pc_prog_get(prog);
+    if (p && p->n < 4) {
+        int dup = 0;
+        for (int i = 0; i < p->n; i++) if (p->sh[i] == shader) dup = 1;
+        if (!dup) p->sh[p->n++] = shader;
+    }
+    if (p_rd_real_glAttachShader) p_rd_real_glAttachShader(prog, shader);
+}
+static void rd_glDetachShader(uint32_t prog, uint32_t shader) {
+    /* The key was taken at link time; a detach after the link does not change what is cached. */
+    rd_pc_prog_t* p = rd_pc_prog_get(prog);
+    if (p) {
+        for (int i = 0; i < p->n; i++) if (p->sh[i] == shader) { p->sh[i] = p->sh[--p->n]; break; }
+    }
+    if (p_rd_real_glDetachShader) p_rd_real_glDetachShader(prog, shader);
+}
+static void rd_glDeleteProgram(uint32_t prog) {
+    rd_pc_prog_t* p = rd_pc_prog_get(prog);
+    if (p) memset(p, 0, sizeof(*p));
+    if (p_rd_real_glDeleteProgram) p_rd_real_glDeleteProgram(prog);
+}
+static void rd_glGetShaderiv(uint32_t shader, uint32_t pname, int32_t* v) {
+    if (shader < RD_PC_IDS && rd_pc_sh_state[shader] == 1 && v) {
+        if (pname == 0x8B81u /* COMPILE_STATUS */) { *v = 1; return; }
+        if (pname == 0x8B84u /* INFO_LOG_LENGTH */) { *v = 0; return; }
+    }
+    if (p_rd_real_glGetShaderiv) p_rd_real_glGetShaderiv(shader, pname, v);
+}
+static void rd_glGetShaderInfoLog(uint32_t shader, int32_t max, int32_t* len, char* log) {
+    if (shader < RD_PC_IDS && rd_pc_sh_state[shader] == 1) {
+        if (len) *len = 0;
+        if (log && max > 0) log[0] = 0;
+        return;
+    }
+    if (p_rd_real_glGetShaderInfoLog) p_rd_real_glGetShaderInfoLog(shader, max, len, log);
+}
+static void rd_pc_bind(uint32_t prog, uint32_t a, uint32_t b, const char* name) {
+    rd_pc_prog_t* p = rd_pc_prog_get(prog);
+    if (!p) return;
+    uint64_t h = p->binds ? p->binds : 0xcbf29ce484222325ull;
+    h = rd_pc_fnv(h, &a, sizeof(a));
+    h = rd_pc_fnv(h, &b, sizeof(b));
+    if (name) h = rd_pc_fnv(h, name, strlen(name));
+    p->binds = h;
+}
+static void rd_glBindAttribLocation(uint32_t prog, uint32_t index, const char* name) {
+    rd_pc_bind(prog, 1, index, name);
+    if (p_rd_real_glBindAttribLocation) p_rd_real_glBindAttribLocation(prog, index, name);
+}
+static void rd_glBindFragDataLocation(uint32_t prog, uint32_t color, const char* name) {
+    rd_pc_bind(prog, 2, color, name);
+    if (p_rd_real_glBindFragDataLocation) p_rd_real_glBindFragDataLocation(prog, color, name);
+}
+static void rd_glBindFragDataLocationIndexed(uint32_t prog, uint32_t color, uint32_t index, const char* name) {
+    rd_pc_bind(prog, 3, color * 16u + index, name);
+    if (p_rd_real_glBindFragDataLocationIndexed) p_rd_real_glBindFragDataLocationIndexed(prog, color, index, name);
+}
+
+/* Stutter diagnostics (RIMDROID_STUTTER_DIAG=1): shader compiles and program links that take more
+ * than 5 ms, with the wall-clock time, into $HOME/stutter_diag.log next to the frame spikes and Mono
+ * collections. A first-time shader (a new effect, a new enemy) compiles right when it is needed. */
+static int rd_stutterdiag_on(void) {
+    static int on = -1;
+    if (on < 0) { const char* e = getenv("RIMDROID_STUTTER_DIAG"); on = (e && e[0] == '1') ? 1 : 0; }
+    return on;
+}
+static void rd_sd_shader(const char* what, uint32_t id, uint64_t t0) {
+    static int fd = -2, budget = 3000;
+    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t dt = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec - t0;
+    if (dt < 5000000ull || budget <= 0) return;
+    if (fd == -2) {
+        const char* home = getenv("HOME");
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/stutter_diag.log", home ? home : ".");
+        fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+    }
+    if (fd < 0) return;
+    budget--;
+    struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
+    struct tm tmv; localtime_r(&wall.tv_sec, &tmv);
+    char buf[128];
+    int len = snprintf(buf, sizeof(buf), "%02d:%02d:%02d.%03ld %s %u: %llu ms\n", tmv.tm_hour, tmv.tm_min, tmv.tm_sec,
+                       wall.tv_nsec / 1000000, what, id, (unsigned long long)(dt / 1000000));
+    if (len > 0) (void)!write(fd, buf, (size_t)len);
+}
+static uint64_t rd_sd_t0(void) {
+    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
 static void rd_glCompileShader(uint32_t shader) {
+    if (rd_pc_on() && shader < RD_PC_IDS && rd_pc_sh_hash[shader]) { rd_pc_sh_state[shader] = 1; return; }
+    uint64_t t0 = rd_stutterdiag_on() ? rd_sd_t0() : 0;
     if (p_rd_real_glCompileShader) p_rd_real_glCompileShader(shader);
-    rd_md_infolog("compile shader", shader, 0);
+    if (t0) rd_sd_shader("SHADER compile", shader, t0);
+    if (rd_meshdiag_on()) rd_md_infolog("compile shader", shader, 0);
 }
 static void rd_glLinkProgram(uint32_t program) {
-    if (p_rd_real_glLinkProgram) p_rd_real_glLinkProgram(program);
-    rd_md_infolog("link program", program, 1);
+    uint64_t t0 = rd_stutterdiag_on() ? rd_sd_t0() : 0;
+    if (!rd_pc_on() || !rd_pc_link(program)) {
+        rd_pc_prog_t* p = rd_pc_on() ? rd_pc_prog_get(program) : NULL;
+        if (p) for (int i = 0; i < p->n; i++) rd_pc_compile_now(p->sh[i]);
+        if (p_rd_real_glLinkProgram) p_rd_real_glLinkProgram(program);
+    }
+    if (t0) rd_sd_shader("PROGRAM link", program, t0);
+    if (rd_meshdiag_on()) rd_md_infolog("link program", program, 1);
 }
 static uint32_t rd_glCheckFramebufferStatus(uint32_t target) {
     uint32_t st = p_rd_real_glCheckFramebufferStatus ? p_rd_real_glCheckFramebufferStatus(target) : 0x8CD5u;
@@ -1975,6 +2253,7 @@ static void rd_glShaderSource(uint32_t shader, int32_t count, const char* const*
                         nocap ? " no-cap" : "");
                     fflush(NULL);
                     const char* one[1] = { fixed };
+                    rd_pc_note_source(shader, 1, one, NULL);
                     if (p_rd_real_glShaderSource) p_rd_real_glShaderSource(shader, 1, one, NULL);
                     free(loop_fixed); free(quality_fixed); free(joined);
                     return;
@@ -1985,6 +2264,7 @@ static void rd_glShaderSource(uint32_t shader, int32_t count, const char* const*
             free(joined);
         }
     }
+    rd_pc_note_source(shader, count, strings, lengths);
     if (p_rd_real_glShaderSource) p_rd_real_glShaderSource(shader, count, strings, lengths);
 }
 static void rd_glAttachShader(uint32_t prog, uint32_t shader) {
@@ -2913,8 +3193,8 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glProgramBinary"))       { p_rd_real_glProgramBinary       = rimdroid_gl_proc_resolver(rname); w = vFuupi; fn = (void*)rd_glProgramBinary; }
-        else if (rd_meshdiag_on() && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
-        else if (rd_meshdiag_on() && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
+        else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
+        else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glCheckFramebufferStatus")) { p_rd_real_glCheckFramebufferStatus = rimdroid_gl_proc_resolver(rname); w = uFu; fn = (void*)rd_glCheckFramebufferStatus; }
         else if (!strcmp(rname, "glActiveTexture"))  { p_rd_real_glActiveTexture  = (void(*)(uint32_t))rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glActiveTexture; }
         else if (!strcmp(rname, "glBindTexture"))    { p_rd_real_glBindTexture    = (void(*)(uint32_t,uint32_t))rimdroid_gl_proc_resolver(rname); w = vFuu; fn = (void*)rd_glBindTexture; }
@@ -2929,6 +3209,14 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         else if (!strcmp(rname, "glBindImageTexture"))     { p_rd_real_glBindImageTexture = (void(*)(uint32_t,uint32_t,int32_t,uint8_t,int32_t,uint32_t,uint32_t))rimdroid_gl_proc_resolver(rname); w = vFuuiCiuu; fn = (void*)rd_glBindImageTexture; }
         else if (rd_gl_diag_on() && !strcmp(rname, "glUseProgram")) { p_rd_real_glUseProgram = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glUseProgram; }
         else if (!strcmp(rname, "glShaderSource"))      { p_rd_real_glShaderSource      = rimdroid_gl_proc_resolver(rname); w = vFuipp; fn = (void*)rd_glShaderSource; }
+        else if (rd_pc_on() && !strcmp(rname, "glAttachShader"))      { p_rd_real_glAttachShader      = rimdroid_gl_proc_resolver(rname); w = vFuu;   fn = (void*)rd_glAttachShader_pc; }
+        else if (rd_pc_on() && !strcmp(rname, "glDetachShader"))      { p_rd_real_glDetachShader      = rimdroid_gl_proc_resolver(rname); w = vFuu;   fn = (void*)rd_glDetachShader; }
+        else if (rd_pc_on() && !strcmp(rname, "glDeleteProgram"))     { p_rd_real_glDeleteProgram     = rimdroid_gl_proc_resolver(rname); w = vFu;    fn = (void*)rd_glDeleteProgram; }
+        else if (rd_pc_on() && !strcmp(rname, "glGetShaderiv"))       { p_rd_real_glGetShaderiv       = rimdroid_gl_proc_resolver(rname); w = vFuup;  fn = (void*)rd_glGetShaderiv; }
+        else if (rd_pc_on() && !strcmp(rname, "glGetShaderInfoLog"))  { p_rd_real_glGetShaderInfoLog  = rimdroid_gl_proc_resolver(rname); w = vFuipp; fn = (void*)rd_glGetShaderInfoLog; }
+        else if (rd_pc_on() && !strcmp(rname, "glBindAttribLocation")) { p_rd_real_glBindAttribLocation = rimdroid_gl_proc_resolver(rname); w = vFuup; fn = (void*)rd_glBindAttribLocation; }
+        else if (rd_pc_on() && !strcmp(rname, "glBindFragDataLocation")) { p_rd_real_glBindFragDataLocation = rimdroid_gl_proc_resolver(rname); w = vFuup; fn = (void*)rd_glBindFragDataLocation; }
+        else if (rd_pc_on() && !strcmp(rname, "glBindFragDataLocationIndexed")) { p_rd_real_glBindFragDataLocationIndexed = rimdroid_gl_proc_resolver(rname); w = vFuuup; fn = (void*)rd_glBindFragDataLocationIndexed; }
         else if (rd_gl_diag_on() && !strcmp(rname, "glAttachShader")) { p_rd_real_glAttachShader = rimdroid_gl_proc_resolver(rname); w = vFuu; fn = (void*)rd_glAttachShader; }
 
         if (fn && bridge) {

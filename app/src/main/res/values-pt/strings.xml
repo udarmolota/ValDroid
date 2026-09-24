@@ -303,4 +303,9 @@ Na nuvem: %2$s
     <string name="mod_delete_confirm">Excluir</string>
     <string name="mod_installed">Instalado: %1$s</string>
     <string name="mod_install_failed">Não foi possível instalar o mod</string>
+    <string name="native_mono_fallback_title">O Mono ARM64 nativo não carregou</string>
+    <string name="native_mono_fallback_message">Na última execução de %1$s não foi possível carregar o Mono ARM64 nativo, então o jogo rodou no Mono emulado, mais lento (cerca de metade dos FPS).\n\nMotivo: %2$s\n\nEnvie um relatório com «Relatar um problema» no menu.</string>
+    <string name="mods_install_header">Instalar um mod</string>
+    <string name="shader_cache_label">Cache de shaders</string>
+    <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado.</string>
 </resources>

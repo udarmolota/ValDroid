@@ -252,6 +252,21 @@
             android:text="@string/etc2_hint"
             android:textAppearance="?attr/textAppearanceBodySmall" />
 
+        <Switch
+            android:id="@+id/sw_shader_cache"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:text="@string/shader_cache_label"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/shader_cache_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
         <!-- ETC2 transcode cache: shown only for MobileGlues, the one renderer that writes it, and
              collapsed to its header by default — it is housekeeping, not a setting. -->
         <LinearLayout

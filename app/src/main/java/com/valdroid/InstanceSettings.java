@@ -218,6 +218,17 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "etc2", on).apply();
     }
 
+    // --- Program binary cache on the GL path (MobileGlues). Default ON. ---
+    // Linked shader programs are kept on disk (box64 RIMDROID_GLT_PROGCACHE), so a new effect
+    // freezes the game only the first time it is ever seen, not once per session.
+    public boolean isShaderCache() {
+        return p.getBoolean(pfx + "shader_cache", true);
+    }
+
+    public void setShaderCache(boolean on) {
+        p.edit().putBoolean(pfx + "shader_cache", on).apply();
+    }
+
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
     public boolean isHapticFeedback() {
         return p.getBoolean(pfx + "haptic", global.isHapticFeedback());
@@ -376,6 +387,7 @@ public class InstanceSettings {
                 .remove(pfx + "gfx_preset")
                 .remove(pfx + "tex_tier")
                 .remove(pfx + "etc2")
+                .remove(pfx + "shader_cache")
                 .apply();
     }
 }

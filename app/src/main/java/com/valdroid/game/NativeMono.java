@@ -54,6 +54,39 @@ public final class NativeMono {
     /** A crash later than this after the launch is a crash during play, not a failed launch. */
     private static final long EARLY_CRASH_MS = 10 * 60 * 1000L;
 
+    // What box64 really loaded, written by the wrapper (rd_native_mono_status): "loaded", or
+    // "failed: <dlerror>" when it fell back to the game's emulated x86 Mono without telling anyone.
+    private static final String STATUS_FILE = ".native_mono_status";
+    private static final String STATUS_SHOWN = ".native_mono_status_shown";
+
+    public static File statusFile(GameInstance gi) { return new File(gi.getGamePath(), STATUS_FILE); }
+
+    /** "loaded", "failed: ...", or null when unknown (the switch was off, or no launch since). */
+    public static String readStatus(GameInstance gi) {
+        File f = statusFile(gi);
+        if (!f.isFile() || f.length() > 4096) return null;
+        try {
+            byte[] b = java.nio.file.Files.readAllBytes(f.toPath());
+            String s = new String(b, java.nio.charset.StandardCharsets.UTF_8).trim();
+            return s.isEmpty() ? null : s;
+        } catch (java.io.IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The failure reason once, the first time it is asked for after a fallback, so the launcher can
+     * tell the player; null otherwise. Marks it shown, so the notice does not repeat every visit.
+     */
+    public static String takeUnshownFailure(GameInstance gi) {
+        String s = readStatus(gi);
+        if (s == null || !s.startsWith("failed")) return null;
+        File shown = new File(gi.getGamePath(), STATUS_SHOWN);
+        if (shown.isFile() && shown.lastModified() >= statusFile(gi).lastModified()) return null;
+        try { new java.io.FileOutputStream(shown).close(); } catch (java.io.IOException ignored) {}
+        return s;
+    }
+
     /** Called by GameLauncher when a launch really uses the native runtime (or really does not). */
     public static void noteLaunch(InstanceSettings settings, boolean nativeRuntime) {
         settings.setNativeMonoLaunchTime(nativeRuntime ? System.currentTimeMillis() : 0L);

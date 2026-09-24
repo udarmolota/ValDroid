@@ -65,6 +65,29 @@
                 android:visibility="gone"
                 android:text="@string/mods_native_mono_warning" />
 
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================ INSTALL A MOD ============================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
+
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
+
+            <TextView
+                style="@style/AppTheme.CardHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mods_install_header" />
+
             <!-- Two steps on purpose: tapping the field only picks the file and shows its name, the
                  Install button below does the install. A wrong tap in the picker installs nothing. -->
             <com.google.android.material.button.MaterialButton
@@ -72,7 +95,7 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:ellipsize="middle"
                 android:singleLine="true"
                 android:text="@string/mods_pick_zip" />

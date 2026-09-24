@@ -90,6 +90,9 @@ public final class LogExporter {
                 // when one material renders wrong on one GPU (black terrain on Mali): the source
                 // tells which features that shader uses. Plain text, compresses well in the zip.
                 put(candidates, "rd_shaders.txt", new File(mgDir, "rd_shaders.txt"));
+                // RIMDROID_STUTTER_DIAG=1: long frames, Mono collections and slow shader compiles,
+                // all with wall-clock times, to see what each stutter was.
+                put(candidates, "stutter_diag.log", new File(gamePath, "stutter_diag.log"));
         }
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
@@ -264,7 +267,11 @@ public final class LogExporter {
         line(sb, "fixed res mode", String.valueOf(s.getFixedResMode()));
         line(sb, "fps mode", s.getFpsMode() + "   (0 off, 1 economy ~30, 2 balanced ~40, 3 smooth ~60)");
         line(sb, "texture tier", s.getTexTier() + "   (0 none, 1 low, 2 ultra low)");
-        line(sb, "native mono", String.valueOf(s.isNativeMono()));
+        // The setting AND what box64 really loaded in the last launch: a failed native load falls back
+        // to the emulated x86 Mono silently, and only this line would show it.
+        String monoStatus = com.valdroid.game.NativeMono.readStatus(gi);
+        line(sb, "native mono", s.isNativeMono()
+                + (monoStatus != null ? " (last launch: " + monoStatus + ")" : ""));
         // Whether the game ran modded, and with what — the first thing to know about a bug report.
         StringBuilder mods = new StringBuilder(String.valueOf(s.isModSupport()));
         for (ModManager.Mod m : ModManager.list(new java.io.File(gi.getGamePath()))) {
@@ -276,6 +283,7 @@ public final class LogExporter {
         line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));
         line(sb, "interpreter", String.valueOf(s.isInterpreter()));
         line(sb, "drag pan", String.valueOf(s.isDragPan()));
+        line(sb, "shader cache", String.valueOf(s.isShaderCache()));
         line(sb, "extra env", s.getEnvVars() == null ? "" : s.getEnvVars());
         byte[] out = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         zos.putNextEntry(new ZipEntry(name));

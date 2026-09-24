@@ -450,6 +450,11 @@ public class SettingsFragment extends Fragment {
         swEtc2.setChecked(inst.isEtc2Enabled());
         swEtc2.setOnCheckedChangeListener((btn, checked) -> inst.setEtc2Enabled(checked));
 
+        // Shader (program binary) cache switch. Takes effect on next launch.
+        Switch swShaderCache = view.findViewById(R.id.sw_shader_cache);
+        swShaderCache.setChecked(inst.isShaderCache());
+        swShaderCache.setOnCheckedChangeListener((btn, checked) -> inst.setShaderCache(checked));
+
         // ETC2 transcode cache: size + Clear, collapsed to its header — it is housekeeping, not a
         // setting. App-wide (every instance shares it), but shown here because it only exists for
         // MobileGlues, and this is where the renderer is chosen.

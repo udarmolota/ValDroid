@@ -231,8 +231,60 @@ static uint64_t rd_now_ns(void) {
     return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
 }
 
+/* Stutter diagnostics (RIMDROID_STUTTER_DIAG=1): every frame longer than 50 ms goes to
+ * $HOME/stutter_diag.log with its length and the wall-clock time, next to the Mono collections the
+ * box64 wrapper logs there, plus a summary every 30 s. Timed between presents, before any cap sleep. */
+static void rd_stutter_frame(void) {
+    static int on = -1, fd = -1, budget = 2000;
+    static uint64_t last = 0, window_start = 0, window_frames = 0, window_long = 0, window_max = 0;
+    if (on < 0) {
+        const char* e = getenv("RIMDROID_STUTTER_DIAG");
+        const char* home = getenv("HOME");
+        on = (e && e[0] == '1' && home) ? 1 : 0;
+        if (on) {
+            char path[1024];
+            snprintf(path, sizeof(path), "%s/stutter_diag.log", home);
+            fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+        }
+    }
+    if (!on || fd < 0) return;
+    uint64_t now = rd_now_ns();
+    if (!window_start) window_start = now;
+    if (last) {
+        uint64_t dt = now - last;
+        window_frames++;
+        if (dt > window_max) window_max = dt;
+        if (dt > 50000000ull) {
+            window_long++;
+            if (budget > 0) {
+                budget--;
+                struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
+                struct tm tmv; localtime_r(&wall.tv_sec, &tmv);
+                char buf[128];
+                int len = snprintf(buf, sizeof(buf), "%02d:%02d:%02d.%03ld FRAME %llu ms\n",
+                                   tmv.tm_hour, tmv.tm_min, tmv.tm_sec, wall.tv_nsec / 1000000,
+                                   (unsigned long long)(dt / 1000000));
+                if (len > 0) (void)!write(fd, buf, (size_t)len);
+            }
+        }
+    }
+    last = now;
+    if (now - window_start >= 30000000000ull) {
+        struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
+        struct tm tmv; localtime_r(&wall.tv_sec, &tmv);
+        char buf[160];
+        int len = snprintf(buf, sizeof(buf), "%02d:%02d:%02d SUMMARY 30s: %llu frames (avg %llu fps), %llu over 50 ms, worst %llu ms\n",
+                           tmv.tm_hour, tmv.tm_min, tmv.tm_sec,
+                           (unsigned long long)window_frames, (unsigned long long)(window_frames / 30),
+                           (unsigned long long)window_long, (unsigned long long)(window_max / 1000000));
+        if (len > 0) (void)!write(fd, buf, (size_t)len);
+        window_start = now; window_frames = 0; window_long = 0; window_max = 0;
+    }
+}
+
 void rimdroid_frame_tick(void) {
     g_rimdroid_frame_count++;
+    rd_stutter_frame();
     uint64_t cap = g_rimdroid_frame_min_ns;
     if (!cap) { g_rd_last_present_ns = 0; return; }   // uncapped: forget the clock
     uint64_t now = rd_now_ns();
@@ -1664,9 +1716,14 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     // release build without a rebuild. This is the ONLY place the game's command line is built, so
     // anything added in Java elsewhere would never reach the game.
     //   VALDROID_JOB_WORKERS=3           -> -job-worker-count 3
-    //   VALDROID_GAME_ARGS=a,b,c         -> a b c   (comma-separated: the env field splits on spaces)
+    //   VALDROID_GAME_ARGS_AUTO=a,b      -> a b     (the launcher's own switches, e.g. -force-glcore)
+    //   VALDROID_GAME_ARGS=a,b,c         -> a b c   (the env field's; comma-separated, as the field
+    //                                               splits on spaces). Two variables, so neither
+    //                                               overwrites the other.
+    //   RIMDROID_NO_BURST=1              -> --burst-disable-compilation (Burst off, e.g. with mods)
     static char rd_workers[16];
     const char* rd_extra_args[32];
+    const int rd_extra_max = (int)(sizeof(rd_extra_args) / sizeof(rd_extra_args[0]));
     int rd_extra_n = 0;
     const char* workers = getenv("VALDROID_JOB_WORKERS");
     if (workers && workers[0] >= '0' && workers[0] <= '9') {
@@ -1674,16 +1731,26 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
         rd_extra_args[rd_extra_n++] = "-job-worker-count";
         rd_extra_args[rd_extra_n++] = rd_workers;
     }
-    static char rd_args_buf[512];
-    const char* game_args = getenv("VALDROID_GAME_ARGS");
-    if (game_args && game_args[0]) {
-        snprintf(rd_args_buf, sizeof(rd_args_buf), "%s", game_args);
-        char* tok = strtok(rd_args_buf, ",");
-        while (tok && rd_extra_n < (int)(sizeof(rd_extra_args) / sizeof(rd_extra_args[0]))) {
+    static char rd_args_buf[2][512];
+    const char* arg_vars[2] = { "VALDROID_GAME_ARGS_AUTO", "VALDROID_GAME_ARGS" };
+    for (int v = 0; v < 2; v++) {
+        const char* game_args = getenv(arg_vars[v]);
+        if (!game_args || !game_args[0]) continue;
+        snprintf(rd_args_buf[v], sizeof(rd_args_buf[v]), "%s", game_args);
+        char* save = NULL;
+        char* tok = strtok_r(rd_args_buf[v], ",", &save);
+        while (tok && rd_extra_n < rd_extra_max) {
             while (*tok == ' ') ++tok;                       // tolerate "a, b"
             if (*tok) rd_extra_args[rd_extra_n++] = tok;
-            tok = strtok(NULL, ",");
+            tok = strtok_r(NULL, ",", &save);
         }
+    }
+    const char* no_burst = getenv("RIMDROID_NO_BURST");
+    if (no_burst && no_burst[0] == '1' && rd_extra_n < rd_extra_max) {
+        int already = 0;
+        for (int i = 0; i < rd_extra_n; i++)
+            if (!strcmp(rd_extra_args[i], "--burst-disable-compilation")) already = 1;
+        if (!already) rd_extra_args[rd_extra_n++] = "--burst-disable-compilation";
     }
 
     const char* extra_argv[] = {

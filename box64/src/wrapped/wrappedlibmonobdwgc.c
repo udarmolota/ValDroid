@@ -14,12 +14,14 @@
  */
 #include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "wrappedlibs.h"
@@ -92,9 +94,80 @@ static inline uint64_t rd_ticks(void)
     return value;
 }
 
+/*
+ * Stutter diagnostics (RIMDROID_STUTTER_DIAG=1): one line per Mono collection in $HOME/stutter_diag.log
+ * with the total time, the stop-the-world time, the time spent pushing guest roots (and how many bytes
+ * of guest stack), the heap size and the wall-clock time, to line up with the frame-time spikes the
+ * launcher side logs to the same file. Written from Boehm's collection-event callback: no malloc, no
+ * floating point, a raw write(2) of a stack buffer.
+ */
+static int rd_stutter_fd = -1;
+static uint64_t rd_sd_t_start, rd_sd_t_stopped, rd_sd_stop_ns, rd_sd_push_ns;
+static void (*rd_sd_prev_event)(int);
+static size_t (*rd_sd_heap_size)(void);
+
+static uint64_t rd_sd_now_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+static void rd_sd_write(const char* line, int len)
+{
+    if (rd_stutter_fd >= 0 && len > 0) (void)!write(rd_stutter_fd, line, (size_t)len);
+}
+
+static void rd_sd_gc_event(int event)
+{
+    /* Boehm GC_EventType: 0 START, 5 END, 7 POST_STOP_WORLD, 8 PRE_START_WORLD */
+    uint64_t now = rd_sd_now_ns();
+    if (event == 0) { rd_sd_t_start = now; rd_sd_stop_ns = 0; rd_sd_push_ns = 0; }
+    else if (event == 7) rd_sd_t_stopped = now;
+    else if (event == 8 && rd_sd_t_stopped) { rd_sd_stop_ns += now - rd_sd_t_stopped; rd_sd_t_stopped = 0; }
+    else if (event == 5 && rd_sd_t_start) {
+        struct timespec wall; clock_gettime(CLOCK_REALTIME, &wall);
+        struct tm tmv; localtime_r(&wall.tv_sec, &tmv);
+        char buf[256];
+        unsigned long total_us = (unsigned long)((now - rd_sd_t_start) / 1000);
+        int len = snprintf(buf, sizeof(buf),
+            "%02d:%02d:%02d.%03ld GC #%lu total %lu.%03lu ms, world stopped %lu.%03lu ms, guest roots %lu.%03lu ms (%lu KB stack), heap %lu MB\n",
+            tmv.tm_hour, tmv.tm_min, tmv.tm_sec, wall.tv_nsec / 1000000, rd_gc_collections,
+            total_us / 1000, total_us % 1000,
+            (unsigned long)(rd_sd_stop_ns / 1000000), (unsigned long)(rd_sd_stop_ns / 1000 % 1000),
+            (unsigned long)(rd_sd_push_ns / 1000000), (unsigned long)(rd_sd_push_ns / 1000 % 1000),
+            rd_gc_bytes_last / 1024,
+            rd_sd_heap_size ? (unsigned long)(rd_sd_heap_size() >> 20) : 0ul);
+        rd_sd_write(buf, len);
+        rd_sd_t_start = 0;
+    }
+    if (rd_sd_prev_event) rd_sd_prev_event(event);
+}
+
+static void rd_stutter_gc_install(void)
+{
+    const char* on = getenv("RIMDROID_STUTTER_DIAG");
+    const char* home = getenv("HOME");
+    if (!on || on[0] != '1' || !home) return;
+    void (*(*get_event)(void))(int) = rd_native_sym("GC_get_on_collection_event");
+    void (*set_event)(void (*)(int)) = rd_native_sym("GC_set_on_collection_event");
+    rd_sd_heap_size = rd_native_sym("GC_get_heap_size");
+    if (!get_event || !set_event) {
+        printf_log(LOG_NONE, "[RD-MONO] stutter diag: GC event hooks missing\n");
+        return;
+    }
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/stutter_diag.log", home);
+    rd_stutter_fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+    rd_sd_prev_event = get_event();
+    set_event(rd_sd_gc_event);
+    printf_log(LOG_NONE, "[RD-MONO] stutter diag: Mono collections logged to %s\n", path);
+}
+
 static void rd_gc_push_guest_roots(void)
 {
     uint64_t stats_t0 = rd_stats_on ? rd_ticks() : 0;
+    uint64_t sd_t0 = rd_stutter_fd >= 0 ? rd_sd_now_ns() : 0;
     if (rd_gc_prev_push_other_roots)
         rd_gc_prev_push_other_roots();
     unsigned long bytes = 0;
@@ -113,6 +186,8 @@ static void rd_gc_push_guest_roots(void)
     rd_gc_collections++;
     if (rd_stats_on)
         rd_st_gc_hook_ticks += rd_ticks() - stats_t0;
+    if (sd_t0)
+        rd_sd_push_ns += rd_sd_now_ns() - sd_t0;
 }
 
 static void* rd_gc_add_locked(void* arg)
@@ -950,6 +1025,7 @@ EXPORT void* my_mono_jit_init_version(x64emu_t* emu, const char* domain_name, co
         if (!rd_set_pending_exception)
             printf_log(LOG_NONE, "[RD-MONO] mono_runtime_set_pending_exception missing: exceptions from x86 internal calls will corrupt the guest\n");
         rd_gc_install(emu);
+        rd_stutter_gc_install();
         rd_stats_init();
         rd_bepinex_boot(domain);
     }
@@ -1235,16 +1311,32 @@ EXPORT void my_mono_unity_install_unitytls_interface(x64emu_t* emu, void* callba
 }
 
 #ifndef STATICBUILD
+/* ValDroid: when the native Mono cannot be loaded, box64 quietly takes the game's x86 Mono and the
+ * game runs at about half the fps with nothing to show for it. Record what really happened in the
+ * file the launcher names (RIMDROID_NATIVE_MONO_STATUS), for the bug report and a notice. */
+static void rd_native_mono_status(const char* state, const char* detail)
+{
+    const char* file = getenv("RIMDROID_NATIVE_MONO_STATUS");
+    if (!file || !*file) return;
+    FILE* f = fopen(file, "w");
+    if (!f) return;
+    fprintf(f, "%s%s%s\n", state, detail ? ": " : "", detail ? detail : "");
+    fclose(f);
+}
+
 #define PRE_INIT \
     if (1) { \
         const char* path = getenv("RIMDROID_NATIVE_MONO_PATH"); \
         if (!path || !*path) return -1; \
         lib->w.lib = dlopen(path, RTLD_NOW | RTLD_GLOBAL); \
         if (!lib->w.lib) { \
-            printf_log(LOG_NONE, "[RD-MONO] cannot load native Mono %s: %s\n", path, dlerror()); \
+            const char* why = dlerror(); \
+            printf_log(LOG_NONE, "[RD-MONO] cannot load native Mono %s: %s\n", path, why); \
+            rd_native_mono_status("failed", why ? why : "dlopen failed"); \
             return -1; \
         } \
         printf_log(LOG_NONE, "[RD-MONO] using native ARM64 Mono %s\n", path); \
+        rd_native_mono_status("loaded", NULL); \
     } else
 #endif
 

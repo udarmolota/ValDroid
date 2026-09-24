@@ -297,4 +297,9 @@
     <string name="mod_delete_confirm">Удалить</string>
     <string name="mod_installed">Установлен: %1$s</string>
     <string name="mod_install_failed">Не удалось установить мод</string>
+    <string name="native_mono_fallback_title">Нативный ARM64 Mono не загрузился</string>
+    <string name="native_mono_fallback_message">При последнем запуске %1$s нативный ARM64 Mono не удалось загрузить, поэтому игра шла на более медленном эмулируемом Mono (примерно вдвое меньше кадров).\n\nПричина: %2$s\n\nПожалуйста, отправьте отчёт через «Сообщить об ошибке» в меню.</string>
+    <string name="mods_install_header">Установка мода</string>
+    <string name="shader_cache_label">Кэш шейдеров</string>
+    <string name="shader_cache_hint">Хранит собранные шейдеры на телефоне, поэтому новый враг или эффект подтормаживает только в самый первый раз, а не в каждой сессии. Действует на MobileGlues. Выключите, если что-то рисуется неправильно.</string>
 </resources>

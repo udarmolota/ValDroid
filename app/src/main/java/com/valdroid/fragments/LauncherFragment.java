@@ -140,6 +140,24 @@ public class LauncherFragment extends Fragment {
         // was restarted (no onResume = no refresh on return from other screens).
         registerInstallerReceiver();
         refreshInstances();
+        showNativeMonoFallbackOnce();
+    }
+
+    /**
+     * If the last launch asked for the native ARM64 Mono but box64 fell back to the emulated one
+     * (about half the fps, no other sign), say so once, per failure.
+     */
+    private void showNativeMonoFallbackOnce() {
+        for (com.valdroid.game.GameInstance gi : com.valdroid.game.GameInstanceManager.requireSingleton().getInstances()) {
+            String failure = com.valdroid.game.NativeMono.takeUnshownFailure(gi);
+            if (failure == null) continue;
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.native_mono_fallback_title)
+                    .setMessage(getString(R.string.native_mono_fallback_message, gi.getName(), failure))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;   // one notice at a time
+        }
     }
 
     @Override

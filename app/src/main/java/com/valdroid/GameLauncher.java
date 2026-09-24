@@ -460,7 +460,8 @@ public class GameLauncher {
                 renderer = LauncherPreferences.Renderer.GL4ES;   // reuse the whole GL4ES/EGL plumbing
                 // Exported so the native side sees which translator is active (the GL layer in box64
                 // and the launch config log). Valheim renders on Unity's own GL thread; RimWorld's
-                // forced -force-gfx-direct is not applied here (see GameInstance.getArgs()).
+                // forced -force-gfx-direct is not applied here. Game switches are built natively
+                // (valdroid.c, from VALDROID_GAME_ARGS_AUTO / VALDROID_GAME_ARGS / RIMDROID_NO_BURST).
                 Os.setenv("RIMDROID_GLT", glTranslator, true);
                 android.util.Log.i("ValDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
                 // DXT -> ETC2 transcode ON BY DEFAULT for every MobileGlues launch (her call,
@@ -494,6 +495,11 @@ public class GameLauncher {
                 //noinspection ResultOfMethodCallIgnored
                 etc2Cache.mkdirs();
                 Os.setenv("RIMDROID_ETC2_CACHE_DIR", etc2Cache.getAbsolutePath(), true);
+                // Program binary cache (Settings -> "Shader cache", default on): linked programs are
+                // stored under RIMDROID_CACHE_DIR/progcache and loaded with glProgramBinary next time,
+                // so the 100-200 ms compile+link freeze of a new effect happens once per install, not
+                // once per session. A binary the driver rejects (driver update) is simply rebuilt.
+                Os.setenv("RIMDROID_GLT_PROGCACHE", gameInstance.settings().isShaderCache() ? "1" : "0", true);
                 // RimDroid workarounds that do not apply to Valheim, off (2026-09-23). Unset
                 // explicitly: setenv persists in this process, and the extra-env field (applied
                 // later) can still turn any of them back on for an A/B.
@@ -516,6 +522,7 @@ public class GameLauncher {
                 Os.unsetenv("RIMDROID_GLT_ETC2");
                 Os.unsetenv("RIMDROID_GLT_ETC2_UNCOMP");
                 Os.unsetenv("RIMDROID_ETC2_CACHE_DIR");
+                Os.unsetenv("RIMDROID_GLT_PROGCACHE");
                 Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }
@@ -804,14 +811,25 @@ public class GameLauncher {
         // Native ARM64 Mono (experimental per-instance switch, 1.6 only). Set OR unset every launch:
         // setenv persists in this process, so a stale path must not leak into the next instance. It
         // sits before the env field so a developer can still point the field at another runtime.
-        // Burst stays ON with native Mono (see GameInstance.getArgs()); only RIMDROID_NO_BURST=1 in the
-        // env field adds --burst-disable-compilation.
+        // Burst stays ON with native Mono unless RIMDROID_NO_BURST=1 (set below when mods are on, or
+        // from the env field); the native side then adds --burst-disable-compilation (valdroid.c).
         boolean nativeMono = gameInstance.settings().isNativeMono()
                 && com.valdroid.game.NativeMono.isSupported(gameInstance);
+        // The status file says afterwards what box64 really loaded; a stale one from the previous
+        // launch must not survive into this one.
+        java.io.File monoStatus = com.valdroid.game.NativeMono.statusFile(gameInstance);
+        //noinspection ResultOfMethodCallIgnored
+        monoStatus.delete();
+        // RIMDROID_STUTTER_DIAG's log (long frames, Mono collections, slow shader compiles) is per
+        // launch; the native writers only append.
+        //noinspection ResultOfMethodCallIgnored
+        new java.io.File(gameInstance.getGamePath(), "stutter_diag.log").delete();
         if (nativeMono) {
             Os.setenv("RIMDROID_NATIVE_MONO_PATH", com.valdroid.game.NativeMono.runtimePath(), true);
+            Os.setenv("RIMDROID_NATIVE_MONO_STATUS", monoStatus.getAbsolutePath(), true);
         } else {
             Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
+            Os.unsetenv("RIMDROID_NATIVE_MONO_STATUS");
         }
         com.valdroid.game.NativeMono.noteLaunch(gameInstance.settings(), nativeMono);
 
@@ -820,7 +838,14 @@ public class GameLauncher {
         // instance first. Set OR unset every launch, like the native Mono path above. Before the env
         // field, so a hand-set VALDROID_BEPINEX_PRELOADER still wins.
         Os.unsetenv("VALDROID_BEPINEX_PRELOADER");
+        // Burst off with mods: a mod's x86_64 Burst library cannot be called from the native Mono,
+        // and without it Burst's direct calls recurse into themselves until the stack overflows
+        // (ValheimPerformanceOptimizations' water waves). With Burst off everything goes managed.
+        // Drop this once direct calls are bridged to x86 through box64. The env field is applied
+        // later, so RIMDROID_NO_BURST=0 there still turns Burst back on for an A/B.
+        Os.unsetenv("RIMDROID_NO_BURST");
         if (gameInstance.settings().isModSupport() && nativeMono) {
+            Os.setenv("RIMDROID_NO_BURST", "1", true);
             java.io.File gameDir = new java.io.File(gameInstance.getGamePath());
             try {
                 ModManager.ensureBepInEx(ValDroidApplication.APP, gameDir);
@@ -893,6 +918,10 @@ public class GameLauncher {
         // the library as "libmonobdwgc-2.0.so".
         setupMonoSymlink(gameInstance);
         Os.setenv("VALDROID_EXECUTABLE", gameInstance.getExecutableName(), true);
+        // The launcher's own game switches go in VALDROID_GAME_ARGS_AUTO, never VALDROID_GAME_ARGS:
+        // that one belongs to the env field, and writing it here (after the field) threw the
+        // player's value away. Unset first so a previous launch's value cannot leak into this one.
+        Os.unsetenv("VALDROID_GAME_ARGS_AUTO");
 
         // RimWorld 1.6 X11 runtime (spike, marker-driven like rd_batchmode): boot the
         // in-process X server (ported from Winlator) and point the guest at it. The guest's
@@ -930,7 +959,7 @@ public class GameLauncher {
                 if (glTranslatorActive) {
                     // Unity picks its graphics API by itself and prefers Vulkan; with a translator in
                     // place we want the GL one. The native side appends this to the command line.
-                    Os.setenv("VALDROID_GAME_ARGS", "-force-glcore", true);
+                    Os.setenv("VALDROID_GAME_ARGS_AUTO", "-force-glcore", true);
                     android.util.Log.i("ValDroid", "GameLauncher: GL translator active -> DIRECT_VULKAN OFF, -force-glcore");
                 } else {
                     android.util.Log.i("ValDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
