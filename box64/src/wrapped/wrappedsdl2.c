@@ -322,9 +322,105 @@ static void rd_md_check(const char* what, long long a, long long b) {
         fflush(NULL);
     }
 }
+/* Per-draw state for the terrain chunk draws (24576 indices = Valheim's 64x64 heightmap grid): which
+ * program, which shaders (with their rd_shaders.txt dump sequence), which framebuffer and draw
+ * buffers, color/depth write, depth test, blend, cull, VAO, index buffer, and the texture arrays
+ * bound. Tells a depth/shadow-only pass from a color pass, and a color pass with an empty array. */
+static uint32_t rd_md_shader_seq[16384];   /* shader id -> last dump sequence (rd_glShaderSource) */
+static uint32_t rd_md_seq_counter;
+static void rd_md_note_shader(uint32_t id) {
+    rd_md_seq_counter++;
+    if (id < sizeof(rd_md_shader_seq) / sizeof(rd_md_shader_seq[0])) rd_md_shader_seq[id] = rd_md_seq_counter;
+}
+static void rd_md_state(const char* what, int32_t count) {
+    static int budget = 100;
+    if (count != 24576 || budget <= 0) return;
+    budget--;
+    static void (*gi)(uint32_t, int32_t*) = NULL;
+    static void (*gb)(uint32_t, uint8_t*) = NULL;
+    static uint8_t (*en)(uint32_t) = NULL;
+    static void (*att)(uint32_t, int32_t, int32_t*, uint32_t*) = NULL;
+    static void (*act)(uint32_t) = NULL;
+    if (!gi) {
+        gi = (void(*)(uint32_t, int32_t*))rimdroid_gl_proc_resolver("glGetIntegerv");
+        gb = (void(*)(uint32_t, uint8_t*))rimdroid_gl_proc_resolver("glGetBooleanv");
+        en = (uint8_t(*)(uint32_t))rimdroid_gl_proc_resolver("glIsEnabled");
+        att = (void(*)(uint32_t, int32_t, int32_t*, uint32_t*))rimdroid_gl_proc_resolver("glGetAttachedShaders");
+        act = (void(*)(uint32_t))rimdroid_gl_proc_resolver("glActiveTexture");
+    }
+    if (!gi || !gb || !en) return;
+    int32_t prog = 0, fbo = 0, vao = 0, ibo = 0, dfunc = 0, db[4] = {0}, active = 0;
+    uint8_t cmask[4] = {0}, dmask = 0;
+    gi(0x8B8Du /* CURRENT_PROGRAM */, &prog);
+    gi(0x8CA6u /* DRAW_FRAMEBUFFER_BINDING */, &fbo);
+    gi(0x85B5u /* VERTEX_ARRAY_BINDING */, &vao);
+    gi(0x8895u /* ELEMENT_ARRAY_BUFFER_BINDING */, &ibo);
+    gi(0x0B74u /* DEPTH_FUNC */, &dfunc);
+    for (int i = 0; i < 4; i++) gi(0x8825u + (uint32_t)i /* DRAW_BUFFERi */, &db[i]);
+    gb(0x0C23u /* COLOR_WRITEMASK */, cmask);
+    gb(0x0B72u /* DEPTH_WRITEMASK */, &dmask);
+    int dtest = en(0x0B71u), blend = en(0x0BE2u), cull = en(0x0B44u);
+    uint32_t sh[4] = {0}; int32_t nsh = 0;
+    if (att && prog > 0) att((uint32_t)prog, 4, &nsh, sh);
+    char shaders[160] = {0}; int off = 0;
+    for (int i = 0; i < nsh && i < 4; i++) {
+        uint32_t seq = sh[i] < sizeof(rd_md_shader_seq) / sizeof(rd_md_shader_seq[0]) ? rd_md_shader_seq[sh[i]] : 0;
+        off += snprintf(shaders + off, sizeof(shaders) - off, "%s%u(seq %u)", i ? "," : "", sh[i], seq);
+    }
+    /* Texture arrays bound on units 0..15, then back to the unit that was active. */
+    char arrays[200] = {0}; int aoff = 0;
+    if (act) {
+        gi(0x84E0u /* ACTIVE_TEXTURE */, &active);
+        for (uint32_t u = 0; u < 16; u++) {
+            int32_t t = 0;
+            act(0x84C0u + u);
+            gi(0x8C1Du /* TEXTURE_BINDING_2D_ARRAY */, &t);
+            if (t) aoff += snprintf(arrays + aoff, sizeof(arrays) - aoff, "%su%u=%d", aoff ? "," : "", u, t);
+        }
+        act((uint32_t)active);
+    }
+    printf_log(LOG_NONE, "RIMDROID MESHDIAG terrain-size %s: prog=%d shaders=[%s] fbo=%d drawbuf=%x,%x,%x,%x "
+        "color=%d%d%d%d depthwrite=%d depthtest=%d func=0x%x blend=%d cull=%d vao=%d ibo=%d arrays=[%s]\n",
+        what, prog, shaders, fbo, db[0], db[1], db[2], db[3], cmask[0], cmask[1], cmask[2], cmask[3],
+        dmask, dtest, dfunc, blend, cull, vao, ibo, arrays);
+    fflush(NULL);
+}
+/* 3D / array texture uploads, and program binaries (a program loaded from a binary never goes
+ * through glShaderSource, so it would be missing from rd_shaders.txt). */
+static void rd_md_upload3d(const char* fn, uint32_t target, int32_t level, int32_t zo, int32_t w, int32_t h, int32_t d,
+                           uint32_t fmt, uint32_t type, const void* px) {
+    static int budget = 200;
+    if (budget <= 0) return;
+    budget--;
+    static void (*gi)(uint32_t, int32_t*) = NULL;
+    if (!gi) gi = (void(*)(uint32_t, int32_t*))rimdroid_gl_proc_resolver("glGetIntegerv");
+    int32_t pbo = 0, align = 0, rowlen = 0, imgh = 0, tex = 0;
+    if (gi) {
+        gi(0x88EFu /* PIXEL_UNPACK_BUFFER_BINDING */, &pbo);
+        gi(0x0CF5u /* UNPACK_ALIGNMENT */, &align);
+        gi(0x0CF2u /* UNPACK_ROW_LENGTH */, &rowlen);
+        gi(0x806Eu /* UNPACK_IMAGE_HEIGHT */, &imgh);
+        gi(0x8C1Du /* TEXTURE_BINDING_2D_ARRAY */, &tex);
+    }
+    printf_log(LOG_NONE, "RIMDROID MESHDIAG %s target=0x%x tex=%d level=%d z=%d %dx%dx%d fmt=0x%x type=0x%x px=%p "
+        "pbo=%d align=%d rowlen=%d imgh=%d\n", fn, target, tex, level, zo, w, h, d, fmt, type, px, pbo, align, rowlen, imgh);
+    fflush(NULL);
+}
+static void (*p_rd_real_glProgramBinary)(uint32_t,uint32_t,const void*,int32_t) = NULL;
+static void rd_glProgramBinary(uint32_t program, uint32_t format, const void* bin, int32_t len) {
+    static int budget = 60;
+    if (budget > 0) {
+        budget--;
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG glProgramBinary prog=%u format=0x%x len=%d\n", program, format, len);
+        fflush(NULL);
+    }
+    if (p_rd_real_glProgramBinary) p_rd_real_glProgramBinary(program, format, bin, len);
+    rd_md_check("ProgramBinary", program, len);
+}
 static void rd_md_draw(const char* what, int32_t count, uint32_t type) {
     static int32_t biggest = 0;
     static int budget = 40;
+    rd_md_state(what, count);
     if (count > biggest && budget > 0) {
         biggest = count; budget--;
         printf_log(LOG_NONE, "RIMDROID MESHDIAG new largest %s: %d indices, type 0x%x\n", what, count, type);
@@ -1282,6 +1378,7 @@ static void rd_glTexImage2D(uint32_t target, int32_t level, int32_t ifmt, int32_
 }
 static void (*p_rd_real_glTexStorage3D)(uint32_t,int32_t,uint32_t,int32_t,int32_t,int32_t) = NULL;
 static void rd_glTexStorage3D(uint32_t target, int32_t levels, uint32_t ifmt, int32_t w, int32_t h, int32_t d) {
+    if (rd_meshdiag_on()) rd_md_upload3d("TexStorage3D", target, levels, 0, w, h, d, ifmt, 0, NULL);
     if (d > 0) { for (int i = 0; i < d; i++) rd_tex_account(ifmt, levels, w, h); }
     if (rd_texlog_n < 96 && (w >= 1024 || h >= 1024 || d >= 8))
         { rd_texlog_n++; printf_log(LOG_NONE, "RIMDROID GLSANITY glTexStorage3D target=0x%x levels=%d ifmt=0x%x %dx%dx%d\n", target, levels, ifmt, w, h, d); fflush(NULL); }
@@ -1290,6 +1387,7 @@ static void rd_glTexStorage3D(uint32_t target, int32_t levels, uint32_t ifmt, in
 static void (*p_rd_real_glTexImage3D)(uint32_t,int32_t,int32_t,int32_t,int32_t,int32_t,int32_t,uint32_t,uint32_t,const void*) = NULL;
 static void rd_glTexImage3D(uint32_t target, int32_t level, int32_t ifmt, int32_t w, int32_t h, int32_t d, int32_t border, uint32_t fmt, uint32_t type, const void* px) {
     if (level == 0 && d > 0) { for (int i = 0; i < d; i++) rd_tex_account((uint32_t)ifmt, 1, w, h); }
+    if (rd_meshdiag_on()) rd_md_upload3d("TexImage3D", target, level, 0, w, h, d, fmt, type, px);
     if (p_rd_real_glTexImage3D) {
         p_rd_real_glTexImage3D(target, level, ifmt, w, h, d, border, fmt, type, px);
     }
@@ -1578,6 +1676,7 @@ static void rd_glCompressedTexSubImage2D(uint32_t target, int32_t level, int32_t
 }
 static void rd_glTexSubImage3D(uint32_t target, int32_t level, int32_t xo, int32_t yo, int32_t zo, int32_t w, int32_t h, int32_t d, uint32_t fmt, uint32_t type, const void* px) {
     if (w > 0 && h > 0 && d > 0) rd_sub_account((uint64_t)w * h * d * 4);
+    if (rd_meshdiag_on()) rd_md_upload3d("TexSubImage3D", target, level, zo, w, h, d, fmt, type, px);
     if (p_rd_real_glTexSubImage3D) {
         p_rd_real_glTexSubImage3D(target, level, xo, yo, zo, w, h, d, fmt, type, px);
     }
@@ -1834,7 +1933,8 @@ static void rd_glShaderSource(uint32_t shader, int32_t count, const char* const*
         }
     }
     if (f && strings && count > 0) {
-        fprintf(f, "=== shader %u (%d parts) ===\n", shader, count);
+        rd_md_note_shader(shader);
+        fprintf(f, "=== shader %u (%d parts) seq=%u ===\n", shader, count, rd_md_seq_counter);
         for (int32_t i = 0; i < count; i++) {
             if (!strings[i]) continue;
             if (lengths && lengths[i] >= 0) fwrite(strings[i], 1, (size_t)lengths[i], f);
@@ -2812,6 +2912,7 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         // Mesh diagnostics (RIMDROID_GLT_MESHDIAG=1), see rd_meshdiag_on.
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glProgramBinary"))       { p_rd_real_glProgramBinary       = rimdroid_gl_proc_resolver(rname); w = vFuupi; fn = (void*)rd_glProgramBinary; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glCheckFramebufferStatus")) { p_rd_real_glCheckFramebufferStatus = rimdroid_gl_proc_resolver(rname); w = uFu; fn = (void*)rd_glCheckFramebufferStatus; }
