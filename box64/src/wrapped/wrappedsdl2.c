@@ -386,6 +386,66 @@ static void rd_md_state(const char* what, int32_t count) {
         dmask, dtest, dfunc, blend, cull, vao, ibo, arrays);
     fflush(NULL);
 }
+/* GPU limits as the game sees them: the first answer to every glGetIntegerv / glGetFloatv /
+ * glGetInteger64v pname Unity asks. Unity picks subshaders from these numbers, so a shader that is
+ * compiled on one GPU and never even sourced on another (the Heightmap terrain on a Mali-G615) is
+ * explained by comparing the two lists. */
+static void (*p_rd_real_glGetIntegerv)(uint32_t, int32_t*) = NULL;
+static void (*p_rd_real_glGetFloatv)(uint32_t, float*) = NULL;
+static void (*p_rd_real_glGetInteger64v)(uint32_t, int64_t*) = NULL;
+static int rd_md_caps_first(uint32_t pname, int kind) {
+    static uint32_t seen[512]; static int n = 0;
+    uint32_t key = pname * 4u + (uint32_t)kind;
+    for (int i = 0; i < n; i++) if (seen[i] == key) return 0;
+    if (n >= (int)(sizeof(seen) / sizeof(seen[0]))) return 0;
+    seen[n++] = key;
+    return 1;
+}
+static void rd_glGetIntegerv(uint32_t pname, int32_t* v) {
+    if (p_rd_real_glGetIntegerv) p_rd_real_glGetIntegerv(pname, v);
+    if (v && rd_md_caps_first(pname, 0)) {
+        /* Only the few two-value pnames get a second number; the rest may point at one int. */
+        int two = pname == 0x0D3Au /* MAX_VIEWPORT_DIMS */ || pname == 0x846Du || pname == 0x846Eu /* ALIASED_*_RANGE */;
+        if (two) printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int 0x%04x = %d %d\n", pname, v[0], v[1]);
+        else     printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int 0x%04x = %d\n", pname, v[0]);
+        fflush(NULL);
+    }
+}
+static void rd_glGetFloatv(uint32_t pname, float* v) {
+    if (p_rd_real_glGetFloatv) p_rd_real_glGetFloatv(pname, v);
+    if (v && rd_md_caps_first(pname, 1)) {
+        int two = pname == 0x846Du || pname == 0x846Eu || pname == 0x0B12u /* POINT_SIZE_RANGE */;
+        if (two) printf_log(LOG_NONE, "RIMDROID MESHDIAG caps float 0x%04x = %g %g\n", pname, v[0], v[1]);
+        else     printf_log(LOG_NONE, "RIMDROID MESHDIAG caps float 0x%04x = %g\n", pname, v[0]);
+        fflush(NULL);
+    }
+}
+static void rd_glGetInteger64v(uint32_t pname, int64_t* v) {
+    if (p_rd_real_glGetInteger64v) p_rd_real_glGetInteger64v(pname, v);
+    if (v && rd_md_caps_first(pname, 2)) {
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int64 0x%04x = %lld\n", pname, (long long)v[0]);
+        fflush(NULL);
+    }
+}
+/* Program -> sources, taken at link time while the shaders are still attached (Unity detaches
+ * them afterwards, which is why the draw-time dump shows shaders=[]). The seq numbers are the
+ * "seq=" of rd_shaders.txt, so a program in a draw log can be read back as GLSL. */
+static void rd_md_link_map(uint32_t prog) {
+    static int budget = 4000;
+    static void (*att)(uint32_t, int32_t, int32_t*, uint32_t*) = NULL;
+    if (!att) att = (void(*)(uint32_t, int32_t, int32_t*, uint32_t*))rimdroid_gl_proc_resolver("glGetAttachedShaders");
+    if (!att || budget <= 0) return;
+    budget--;
+    uint32_t sh[4] = {0}; int32_t nsh = 0;
+    att(prog, 4, &nsh, sh);
+    char buf[160] = {0}; int off = 0;
+    for (int i = 0; i < nsh && i < 4; i++) {
+        uint32_t seq = sh[i] < sizeof(rd_md_shader_seq) / sizeof(rd_md_shader_seq[0]) ? rd_md_shader_seq[sh[i]] : 0;
+        off += snprintf(buf + off, sizeof(buf) - off, "%s%u(seq %u)", i ? "," : "", sh[i], seq);
+    }
+    printf_log(LOG_NONE, "RIMDROID MESHDIAG link prog=%u shaders=[%s]\n", prog, buf);
+    fflush(NULL);
+}
 /* 3D / array texture uploads, and program binaries (a program loaded from a binary never goes
  * through glShaderSource, so it would be missing from rd_shaders.txt). */
 static void rd_md_upload3d(const char* fn, uint32_t target, int32_t level, int32_t zo, int32_t w, int32_t h, int32_t d,
@@ -755,6 +815,7 @@ static void rd_glLinkProgram(uint32_t program) {
         if (p_rd_real_glLinkProgram) p_rd_real_glLinkProgram(program);
     }
     if (t0) rd_sd_shader("PROGRAM link", program, t0);
+    if (rd_meshdiag_on()) rd_md_link_map(program);
     if (rd_meshdiag_on()) rd_md_infolog("link program", program, 1);
 }
 static uint32_t rd_glCheckFramebufferStatus(uint32_t target) {
@@ -3192,6 +3253,9 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         // Mesh diagnostics (RIMDROID_GLT_MESHDIAG=1), see rd_meshdiag_on.
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetIntegerv"))   { p_rd_real_glGetIntegerv   = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetIntegerv; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetFloatv"))     { p_rd_real_glGetFloatv     = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetFloatv; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetInteger64v")) { p_rd_real_glGetInteger64v = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetInteger64v; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glProgramBinary"))       { p_rd_real_glProgramBinary       = rimdroid_gl_proc_resolver(rname); w = vFuupi; fn = (void*)rd_glProgramBinary; }
         else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
         else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
