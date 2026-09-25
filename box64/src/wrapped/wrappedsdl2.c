@@ -473,6 +473,58 @@ static const char* rd_glGetString(uint32_t name) {
     }
     return p_rd_real_glGetString ? p_rd_real_glGetString(name) : NULL;
 }
+/* The rest of what Unity asks the driver, first answer per key: format support
+ * (glGetInternalformativ), indexed limits (glGetIntegeri_v), shader precision
+ * (glGetShaderPrecisionFormat) and the extension list (glGetStringi). With the plain limits and
+ * GL_RENDERER ruled out for the Mali-G615 terrain, these are the remaining driver-dependent inputs
+ * to Unity's subshader choice; a G615 and a G57 log side by side show which one differs. */
+static void (*p_rd_real_glGetInternalformativ_md)(uint32_t, uint32_t, uint32_t, int32_t, int32_t*) = NULL;
+static void (*p_rd_real_glGetIntegeri_v)(uint32_t, uint32_t, int32_t*) = NULL;
+static void (*p_rd_real_glGetShaderPrecisionFormat)(uint32_t, uint32_t, int32_t*, int32_t*) = NULL;
+static const char* (*p_rd_real_glGetStringi)(uint32_t, uint32_t) = NULL;
+static int rd_md_query_first(uint64_t key) {
+    static uint64_t seen[4096]; static int n = 0;
+    for (int i = 0; i < n; i++) if (seen[i] == key) return 0;
+    if (n >= (int)(sizeof(seen) / sizeof(seen[0]))) return 0;
+    seen[n++] = key;
+    return 1;
+}
+static void rd_glGetInternalformativ_md(uint32_t target, uint32_t ifmt, uint32_t pname, int32_t count, int32_t* params) {
+    if (p_rd_real_glGetInternalformativ_md) p_rd_real_glGetInternalformativ_md(target, ifmt, pname, count, params);
+    if (!params || count <= 0) return;
+    uint64_t key = (1ull << 60) | ((uint64_t)(target & 0xFFFFu) << 40) | ((uint64_t)(ifmt & 0xFFFFFu) << 20) | (pname & 0xFFFFFu);
+    if (rd_md_query_first(key)) {
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG query ifmt target=0x%x fmt=0x%x pname=0x%x = %d\n", target, ifmt, pname, params[0]);
+        fflush(NULL);
+    }
+}
+static void rd_glGetIntegeri_v(uint32_t target, uint32_t index, int32_t* data) {
+    if (p_rd_real_glGetIntegeri_v) p_rd_real_glGetIntegeri_v(target, index, data);
+    if (!data) return;
+    uint64_t key = (2ull << 60) | ((uint64_t)target << 20) | (index & 0xFFFFFu);
+    if (rd_md_query_first(key)) {
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG query int_i 0x%04x[%u] = %d\n", target, index, data[0]);
+        fflush(NULL);
+    }
+}
+static void rd_glGetShaderPrecisionFormat(uint32_t shadertype, uint32_t prectype, int32_t* range, int32_t* precision) {
+    if (p_rd_real_glGetShaderPrecisionFormat) p_rd_real_glGetShaderPrecisionFormat(shadertype, prectype, range, precision);
+    uint64_t key = (3ull << 60) | ((uint64_t)shadertype << 20) | (prectype & 0xFFFFFu);
+    if (rd_md_query_first(key)) {
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG query precision shader=0x%x type=0x%x range=%d,%d precision=%d\n",
+                   shadertype, prectype, range ? range[0] : -1, range ? range[1] : -1, precision ? precision[0] : -1);
+        fflush(NULL);
+    }
+}
+static const char* rd_glGetStringi(uint32_t name, uint32_t index) {
+    const char* r = p_rd_real_glGetStringi ? p_rd_real_glGetStringi(name, index) : NULL;
+    uint64_t key = (4ull << 60) | ((uint64_t)name << 20) | (index & 0xFFFFFu);
+    if (rd_md_query_first(key)) {
+        printf_log(LOG_NONE, "RIMDROID MESHDIAG query stringi 0x%x[%u] = %s\n", name, index, r ? r : "(null)");
+        fflush(NULL);
+    }
+    return r;
+}
 /* Program -> sources, taken at link time while the shaders are still attached (Unity detaches
  * them afterwards, which is why the draw-time dump shows shaders=[]). The seq numbers are the
  * "seq=" of rd_shaders.txt, so a program in a draw log can be read back as GLSL. */
@@ -3300,6 +3352,10 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
         else if (rd_glt_on() && getenv("RIMDROID_GLT_RENDERER") && getenv("RIMDROID_GLT_RENDERER")[0] && !strcmp(rname, "glGetString")) { p_rd_real_glGetString = rimdroid_gl_proc_resolver(rname); w = pFu; fn = (void*)rd_glGetString; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetIntegeri_v"))            { p_rd_real_glGetIntegeri_v = rimdroid_gl_proc_resolver(rname); w = vFuup; fn = (void*)rd_glGetIntegeri_v; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetShaderPrecisionFormat")) { p_rd_real_glGetShaderPrecisionFormat = rimdroid_gl_proc_resolver(rname); w = vFuupp; fn = (void*)rd_glGetShaderPrecisionFormat; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetStringi"))               { p_rd_real_glGetStringi = rimdroid_gl_proc_resolver(rname); w = pFuu; fn = (void*)rd_glGetStringi; }
+        else if (rd_meshdiag_on() && !strcmp(rname, "glGetInternalformativ") && rimdroid_gl_proc_resolver(rname)) { p_rd_real_glGetInternalformativ_md = rimdroid_gl_proc_resolver(rname); w = vFuuuip; fn = (void*)rd_glGetInternalformativ_md; }
         else if ((rd_meshdiag_on() || rd_capclamp_on()) && !strcmp(rname, "glGetIntegerv"))   { p_rd_real_glGetIntegerv   = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetIntegerv; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glGetFloatv"))     { p_rd_real_glGetFloatv     = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetFloatv; }
         else if ((rd_meshdiag_on() || rd_capclamp_on()) && !strcmp(rname, "glGetInteger64v")) { p_rd_real_glGetInteger64v = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetInteger64v; }
