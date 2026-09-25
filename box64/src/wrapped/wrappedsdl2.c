@@ -401,12 +401,44 @@ static int rd_md_caps_first(uint32_t pname, int kind) {
     seen[n++] = key;
     return 1;
 }
+/* RIMDROID_GLT_CAPCLAMP=1: answer the game with limits no larger than an Adreno 830's. A Mali-G615
+ * reports 32768 textures, 16384 vertex uniform components, 216 UBO bindings; with those Unity never
+ * even sources the Heightmap terrain shader and draws the ground with a plain _MainTex fallback
+ * (black). min(real, Adreno) never claims more than the GPU can do; the UBO offset alignment goes
+ * the other way (a coarser alignment is always valid), so it is max(real, 32). */
+static int rd_glt_on(void);
+static int rd_capclamp_on(void) {
+    static int on = -1;
+    if (on < 0) {
+        const char* e = getenv("RIMDROID_GLT_CAPCLAMP");
+        on = (e && e[0] == '1' && rd_glt_on()) ? 1 : 0;
+        if (on) { printf_log(LOG_NONE, "RIMDROID CAPCLAMP enabled\n"); fflush(NULL); }
+    }
+    return on;
+}
+static int64_t rd_capclamp(uint32_t pname, int64_t v) {
+    switch (pname) {
+        case 0x0D33u: return v > 16384 ? 16384 : v;   /* GL_MAX_TEXTURE_SIZE */
+        case 0x8073u: return v > 2048  ? 2048  : v;   /* GL_MAX_3D_TEXTURE_SIZE */
+        case 0x84E8u: return v > 16384 ? 16384 : v;   /* GL_MAX_RENDERBUFFER_SIZE */
+        case 0x851Cu: return v > 16384 ? 16384 : v;   /* GL_MAX_CUBE_MAP_TEXTURE_SIZE */
+        case 0x88FFu: return v > 2048  ? 2048  : v;   /* GL_MAX_ARRAY_TEXTURE_LAYERS */
+        case 0x8A2Fu: return v > 84    ? 84    : v;   /* GL_MAX_UNIFORM_BUFFER_BINDINGS */
+        case 0x8B4Au: return v > 1024  ? 1024  : v;   /* GL_MAX_VERTEX_UNIFORM_COMPONENTS */
+        case 0x8A34u: return v < 32    ? 32    : v;   /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */
+        default: return v;
+    }
+}
 static void rd_glGetIntegerv(uint32_t pname, int32_t* v) {
     if (p_rd_real_glGetIntegerv) p_rd_real_glGetIntegerv(pname, v);
-    if (v && rd_md_caps_first(pname, 0)) {
+    if (!v) return;
+    int32_t orig = v[0];
+    if (rd_capclamp_on()) v[0] = (int32_t)rd_capclamp(pname, v[0]);
+    if (rd_md_caps_first(pname, 0)) {
         /* Only the few two-value pnames get a second number; the rest may point at one int. */
         int two = pname == 0x0D3Au /* MAX_VIEWPORT_DIMS */ || pname == 0x846Du || pname == 0x846Eu /* ALIASED_*_RANGE */;
         if (two) printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int 0x%04x = %d %d\n", pname, v[0], v[1]);
+        else if (orig != v[0]) printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int 0x%04x = %d (real %d, clamped)\n", pname, v[0], orig);
         else     printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int 0x%04x = %d\n", pname, v[0]);
         fflush(NULL);
     }
@@ -422,10 +454,24 @@ static void rd_glGetFloatv(uint32_t pname, float* v) {
 }
 static void rd_glGetInteger64v(uint32_t pname, int64_t* v) {
     if (p_rd_real_glGetInteger64v) p_rd_real_glGetInteger64v(pname, v);
-    if (v && rd_md_caps_first(pname, 2)) {
-        printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int64 0x%04x = %lld\n", pname, (long long)v[0]);
+    if (!v) return;
+    int64_t orig = v[0];
+    if (rd_capclamp_on()) v[0] = rd_capclamp(pname, v[0]);
+    if (rd_md_caps_first(pname, 2)) {
+        if (orig != v[0]) printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int64 0x%04x = %lld (real %lld, clamped)\n", pname, (long long)v[0], (long long)orig);
+        else printf_log(LOG_NONE, "RIMDROID MESHDIAG caps int64 0x%04x = %lld\n", pname, (long long)v[0]);
         fflush(NULL);
     }
+}
+/* RIMDROID_GLT_RENDERER=<name>: the GL_RENDERER string the game sees (Unity picks per-vendor
+ * workarounds from it). A separate test from CAPCLAMP. */
+static const char* (*p_rd_real_glGetString)(uint32_t) = NULL;
+static const char* rd_glGetString(uint32_t name) {
+    if (name == 0x1F01u /* GL_RENDERER */) {
+        const char* r = getenv("RIMDROID_GLT_RENDERER");
+        if (r && r[0]) return r;
+    }
+    return p_rd_real_glGetString ? p_rd_real_glGetString(name) : NULL;
 }
 /* Program -> sources, taken at link time while the shaders are still attached (Unity detaches
  * them afterwards, which is why the draw-time dump shows shaders=[]). The seq numbers are the
@@ -3253,9 +3299,10 @@ void* rimdroid_gl_getprocaddr(x64emu_t* emu, bridge_t* bridge, glprocaddress_t p
         // Mesh diagnostics (RIMDROID_GLT_MESHDIAG=1), see rd_meshdiag_on.
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribPointer"))  { p_rd_real_glVertexAttribPointer  = rimdroid_gl_proc_resolver(rname); w = vFuiuCip; fn = (void*)rd_glVertexAttribPointer; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glVertexAttribIPointer")) { p_rd_real_glVertexAttribIPointer = rimdroid_gl_proc_resolver(rname); w = vFuiuip; fn = (void*)rd_glVertexAttribIPointer; }
-        else if (rd_meshdiag_on() && !strcmp(rname, "glGetIntegerv"))   { p_rd_real_glGetIntegerv   = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetIntegerv; }
+        else if (rd_glt_on() && getenv("RIMDROID_GLT_RENDERER") && getenv("RIMDROID_GLT_RENDERER")[0] && !strcmp(rname, "glGetString")) { p_rd_real_glGetString = rimdroid_gl_proc_resolver(rname); w = pFu; fn = (void*)rd_glGetString; }
+        else if ((rd_meshdiag_on() || rd_capclamp_on()) && !strcmp(rname, "glGetIntegerv"))   { p_rd_real_glGetIntegerv   = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetIntegerv; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glGetFloatv"))     { p_rd_real_glGetFloatv     = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetFloatv; }
-        else if (rd_meshdiag_on() && !strcmp(rname, "glGetInteger64v")) { p_rd_real_glGetInteger64v = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetInteger64v; }
+        else if ((rd_meshdiag_on() || rd_capclamp_on()) && !strcmp(rname, "glGetInteger64v")) { p_rd_real_glGetInteger64v = rimdroid_gl_proc_resolver(rname); w = vFup; fn = (void*)rd_glGetInteger64v; }
         else if (rd_meshdiag_on() && !strcmp(rname, "glProgramBinary"))       { p_rd_real_glProgramBinary       = rimdroid_gl_proc_resolver(rname); w = vFuupi; fn = (void*)rd_glProgramBinary; }
         else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glCompileShader"))       { p_rd_real_glCompileShader       = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glCompileShader; }
         else if ((rd_meshdiag_on() || rd_stutterdiag_on() || rd_pc_on()) && !strcmp(rname, "glLinkProgram"))         { p_rd_real_glLinkProgram         = rimdroid_gl_proc_resolver(rname); w = vFu; fn = (void*)rd_glLinkProgram; }
