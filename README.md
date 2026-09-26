@@ -70,7 +70,7 @@ A few honest notes so expectations land right:
 
 ## System requirements
 
-- **Minimum:** Android 11+, ARM64, 8 GB RAM, about 10 GB of free storage (the game is ~4 GB, plus
+- **Minimum:** Android 11+, ARM64, 8 GB RAM, about 8 GB of free storage (the game is ~4 GB, plus
   space to unpack it), and a copy of Valheim you own.
 - **Recommended:** a recent flagship-class chip and 12 GB+ RAM. The closer to a current flagship,
   the better the experience.
