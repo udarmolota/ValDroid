@@ -132,8 +132,8 @@ En la nube: %2$s
     <string name="editor_reset">Diseños</string>
     <string name="editor_done">Listo</string>
     <string name="editor_delete">Eliminar elemento</string>
-    <string name="editor_layout_gamepad">Mando</string>
-    <string name="editor_layout_vkbd">Teclado y panel táctil (predeterminado)</string>
+    <string name="editor_layout_gamepad">Mando (predeterminado)</string>
+    <string name="editor_layout_vkbd">Teclado y panel táctil</string>
     <string name="nav_launcher">Lanzador</string>
     <string name="nav_settings">Ajustes</string>
     <string name="app_settings_theme">Tema</string>
@@ -303,5 +303,6 @@ En la nube: %2$s
     <string name="native_mono_fallback_message">En el último inicio de %1$s no se pudo cargar Mono ARM64 nativo, así que el juego funcionó con el Mono emulado, más lento (aproximadamente la mitad de FPS).\n\nMotivo: %2$s\n\nEnvía un informe con «Reportar un error» en el menú.</string>
     <string name="mods_install_header">Instalar un mod</string>
     <string name="shader_cache_label">Caché de shaders</string>
-    <string name="shader_cache_hint">Guarda los shaders compilados en el teléfono, así un enemigo o efecto nuevo solo da un tirón la primera vez que lo ves, no en cada sesión. Funciona con MobileGlues. Desactívalo si algo se ve mal.</string>
+    <string name="shader_cache_hint">Guarda los shaders compilados en el teléfono, así un enemigo o efecto nuevo solo da un tirón la primera vez que lo ves, no en cada sesión. Funciona con MobileGlues. Desactívalo si algo se ve mal. En GPU Mali viene desactivado: allí puede volver negra el agua.</string>
+    <string name="release_notes_body" translatable="false"><b>– Nuevos controles en pantalla</b>\nUn nuevo sistema de controles con un editor completo: botones con estilos e imágenes propias, sticks, cruceta, panel táctil, barra de desplazamiento y menú radial. Dos diseños listos: Mando (el predeterminado) y Teclado y panel táctil, en Diseños dentro del editor. Tu diseño anterior no se conserva.\n\n<b>– Cámara con el ratón</b>\nEn el juego, el panel táctil, el stick de ratón y un ratón físico giran la cámara tanto como los muevas.\n\n<b>– Teclado</b>\nTodas las teclas llegan al juego, Shift se mantiene al correr y el gesto Atrás abre el menú del juego en lugar de cerrarlo.\n\n<b>– Mods (experimental)</b>\nUna nueva pantalla Mods en el menú lateral: activa BepInEx, instala mods desde un .zip y actívalos o desactívalos. Requiere Native ARM64 Mono.\n\n<b>– Caché de shaders</b>\nUn efecto nuevo solo da un tirón la primera vez que lo ves. Desactivada por defecto en GPU Mali.\n\n<b>– Mali</b>\nLos círculos en las texturas han desaparecido. Algunas GPU Mali aún muestran el suelo negro: envíanos un informe con Reportar un error.</string>
 </resources>

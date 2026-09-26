@@ -149,8 +149,8 @@ In the cloud: %2$s
     <string name="editor_reset">Layouts</string>
     <string name="editor_done">Done</string>
     <string name="editor_delete">Delete element</string>
-    <string name="editor_layout_gamepad">Gamepad</string>
-    <string name="editor_layout_vkbd">Keyboard and touchpad (default)</string>
+    <string name="editor_layout_gamepad">Gamepad (default)</string>
+    <string name="editor_layout_vkbd">Keyboard and touchpad</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="app_settings_theme">Theme</string>
@@ -272,7 +272,7 @@ In the cloud: %2$s
     <string name="gfx_preset_low">Low</string>
     <string name="gfx_preset_ultra">Very low</string>
     <string name="gfx_preset_hint">The game always starts on Very low — a profile tuned for emulation. After that you can tune the graphics to your phone in the game\'s own settings: the launcher no longer touches them. A button puts the settings back to that profile on the next launch. A grey button means that profile is already set.</string>
-    <string name="release_notes_body" translatable="false"><b>ValDroid runs Valheim on Android.</b>\nThe game itself is not included: the launcher runs the Linux build of your own copy, downloaded from Steam inside the app or added as a .zip.\n\n<b>– Native ARM64 Mono</b>\nThe game\'s own code runs directly on your phone\'s processor; only the Unity engine is emulated.\n\n<b>– On-screen gamepad</b>\nTwo sticks, a d-pad and the full set of buttons, editable in the controls editor. A keyboard and mouse layout is there too, and a physical gamepad works as well.\n\n<b>– Graphics presets</b>\nLow and Very low, written into the game before it starts and tuned for emulation rather than for a PC.\n\n<b>– Steam inside the app</b>\nDownload the game, and move saves between the phone and your PC through Steam Cloud.</string>
+    <string name="release_notes_body" translatable="false"><b>– New on-screen controls</b>\nA new controls system with a full editor: buttons with styles and your own pictures, sticks, d-pad, touchpad, scroll bar, radial menu. Two ready-made layouts: Gamepad (the default) and Keyboard and touchpad, under Layouts in the editor. Your old layout is not carried over.\n\n<b>– Mouse look</b>\nIn gameplay the touchpad, the mouse stick and a physical mouse turn the camera as far as you move them.\n\n<b>– Keyboard</b>\nEvery key reaches the game, Shift stays held while sprinting, and the Back gesture opens the game menu instead of closing the game.\n\n<b>– Mods (experimental)</b>\nA new Mods screen in the side menu: turn on BepInEx, install mods from a .zip, switch them on and off. Needs Native ARM64 Mono.\n\n<b>– Shader cache</b>\nA new effect stutters only the very first time you see it. Off by default on Mali GPUs.\n\n<b>– Mali</b>\nThe circles on textures are gone. Some Mali GPUs still show black ground — please send a report with Report a bug.</string>
     <string name="instance_downloading">downloading</string>
     <string name="instance_incomplete">not finished</string>
     <string name="download_backup_note">After the download the game is packed into a backup archive in the Downloads folder. That step runs after the progress bar reaches 100%, takes a few minutes for several GB, and needs the app open — please be patient.</string>
@@ -321,5 +321,5 @@ In the cloud: %2$s
     <string name="native_mono_fallback_message">In the last launch of %1$s the native ARM64 Mono could not be loaded, so the game ran on the slower emulated Mono (about half the frame rate).\n\nReason: %2$s\n\nPlease send a report with Report a bug in the menu.</string>
     <string name="mods_install_header">Install a mod</string>
     <string name="shader_cache_label">Shader cache</string>
-    <string name="shader_cache_hint">Keeps compiled shaders on the phone, so a new enemy or effect stutters only the very first time you see it, not in every session. Works on MobileGlues. Turn it off if something renders wrong.</string>
+    <string name="shader_cache_hint">Keeps compiled shaders on the phone, so a new enemy or effect stutters only the very first time you see it, not in every session. Works on MobileGlues. Turn it off if something renders wrong. Off by default on Mali GPUs: there it can turn the water black.</string>
 </resources>

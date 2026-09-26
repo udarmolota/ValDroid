@@ -348,6 +348,7 @@ public abstract class WindowRequests {
             if (!isContained) return;
         }
 
+        client.xServer.noteWarp();
         // ValDroid: use setPosition (NOT raw setX/setY) so the move triggers MotionNotify like a
         // real X server — SDL's warp handling waits to observe the pointer actually moving.
         if (dstWindow == null) {

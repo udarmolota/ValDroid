@@ -72,7 +72,7 @@
     <ol>
         <li>You need <b>your own copy</b> of Valheim — bought on <b>Steam</b>, for example. ValDroid
             runs the <b>Linux</b> build of the game.</li>
-        <li>Get the game into the app: open the side menu and tap <b>Download game (Steam)</b>. The
+        <li>Get the game into the app: open the side menu and tap <b>Steam Downloads</b>. The
             game downloads straight into a ready instance. The other way is
             <a href="#zip-archive">a .zip archive</a> prepared on a PC.</li>
         <li>An <b>instance</b> is one installed copy of the game. It has its own card on the main
@@ -107,7 +107,7 @@
     <section id="steam-in-app">
         <h3>1. From Steam, in the app</h3>
         <ol>
-            <li>Open the side menu and tap <b>Download game (Steam)</b>, tab <b>Game</b>.</li>
+            <li>Open the side menu and tap <b>Steam Downloads</b>, tab <b>Game</b>.</li>
             <li>Enter a name for the new instance.</li>
             <li>Sign in with your Steam account. Your login goes to Steam only and is not stored.
                 Approve the sign-in in the Steam Mobile app, or enter the Steam Guard code.</li>
@@ -175,6 +175,9 @@
         <li><b>Texture quality</b> shrinks textures to save memory: <b>Low</b> halves the biggest
             ones, <b>Ultra low</b> quarters them. It saves a few hundred MB of video memory, which
             matters on phones with less RAM, and costs some sharpness up close.</li>
+        <li><b>Shader cache</b> (on by default) keeps compiled shaders on the phone, so a new enemy
+            or effect stutters only the very first time you see it, not in every session. Turn it
+            off if something renders wrong.</li>
         <li><b>Show FPS counter</b> puts the frame rate in the top-left corner.</li>
         <li><b>Frame rate limit</b> (30, 60 or no limit) smooths out swings. A steady 30 often feels
             better than a frame rate that jumps between 25 and 60.</li>
@@ -191,35 +194,95 @@
 <section id="controls">
     <h2>Controls</h2>
 
-    <h3>On-screen gamepad</h3>
+    <h3>On-screen controls</h3>
     <p>
-        Valheim has a full controller interface, so ValDroid feeds it a virtual gamepad: the
-        on-screen controls are a real pad as far as the game is concerned, with the game's own
-        button hints.
+        A new instance starts with the <b>gamepad</b> layout. It drives a virtual Xbox controller,
+        so as far as the game is concerned you are holding a real pad, with the game's own button
+        hints. Valheim's controller interface then handles the inventory, building and menus with
+        buttons, and you never have to aim a cursor at small cells on a phone screen.
     </p>
     <ul>
-        <li>The default layout is the familiar one: <b>two sticks</b>, a <b>d-pad</b>,
-            <b>A/B/X/Y</b>, <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> and <b>Start</b>, and the stick
-            clicks <b>L</b> and <b>R</b>. <b>V</b> hides and shows the controls, <b>KB</b> opens the
-            phone's keyboard.</li>
-        <li>Edit it in the instance settings, <b>Edit on-screen controls</b>: tap an element to
-            select it, drag to move it, hold it for a moment to open its settings (size, opacity,
-            action, and for a stick its <b>sensitivity</b> — the right stick is at 70% by default,
-            because a thumb on glass overshoots easily).</li>
-        <li><b>Add</b> creates sticks, a d-pad, or buttons bound to a gamepad button, a key or a
-            mouse action. Keyboard and gamepad elements can be mixed in one layout: the game accepts
-            both at the same time.</li>
-        <li><b>Reset</b> offers the two bundled layouts: the <b>gamepad</b> one, and a
-            <b>keyboard and mouse</b> layout (VKBD) with a cursor stick.</li>
-        <li><b>Export controls layout</b> and <b>Import controls layout</b> in the side menu share a
-            layout as a .json file.</li>
+        <li>The <b>Gamepad</b> layout: <b>two sticks</b>, a <b>d-pad</b>, <b>A/B/X/Y</b>,
+            <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> and <b>Start</b>, and the stick clicks
+            <b>L3</b> and <b>R3</b>.</li>
+        <li>The second built-in layout, <b>Keyboard and touchpad</b>, is under <b>Layouts</b> in the
+            editor. It plays with keys and the mouse instead: a <b>WASD stick</b> to walk, a
+            <b>mouse stick</b> for the camera and the cursor, <b>ATK/R</b> (left click: attack),
+            <b>BLK/L</b> (right click: block), <b>ALT</b> (middle click: secondary attack),
+            <b>JUMP</b>, <b>RUN</b> (Shift; it stays on until you tap it again), <b>CROUCH</b>
+            (Ctrl), <b>USE/E</b>, <b>R</b>, <b>F</b>, <b>AUTO</b> (Q, autorun), <b>Esc</b>,
+            <b>INV</b> (Tab), <b>MAP</b> (M) and the hotbar keys <b>1</b>–<b>8</b>.</li>
+        <li>Both layouts have <b>V</b>, which hides and shows the controls, and <b>KB</b>, which
+            opens the Android keyboard for typing.</li>
+        <li>Keyboard and gamepad elements can be mixed in one layout: the game accepts both at the
+            same time.</li>
+    </ul>
+
+    <h3>Camera and cursor</h3>
+    <ul>
+        <li>In gameplay the <b>touchpad</b> and the <b>mouse stick</b> turn the camera by as much as
+            your finger moves, and stop as soon as it stops. In menus and the inventory they move
+            the cursor instead.</li>
+        <li>A tap on the touchpad is a left click. It can be switched off in the touchpad's
+            settings (<b>Tap = left click</b>), so a stray tap does not click anything.</li>
+        <li>A physical <b>mouse</b> works for looking around too: in gameplay the app captures it,
+            so the camera turns freely instead of stopping at the screen edge.</li>
+    </ul>
+
+    <h3>Element types</h3>
+    <ul>
+        <li><b>Button</b>, rectangle or round. Styles: <b>Outline</b>, <b>Filled</b> and
+            <b>Glass</b>. It can show your own picture (a PNG) instead of text, with <b>Keep original
+            colors</b> if the picture should not be tinted. <b>Toggle</b> makes it latch: one tap
+            holds the key, the next releases it. Bind several keys to one button for a combo.</li>
+        <li><b>D-pad</b>.</li>
+        <li><b>Stick</b>: a gamepad stick, or four keys of your choice.</li>
+        <li><b>WASD stick</b>: presses W, A, S and D.</li>
+        <li><b>Mouse stick</b> and <b>touchpad</b>: the camera and the cursor.</li>
+        <li><b>Scroll bar</b>: the mouse wheel.</li>
+        <li><b>Radial menu</b>: put your finger on the centre and swipe into one of four sectors;
+            each sector has its own action.</li>
+    </ul>
+
+    <h3>Controls editor</h3>
+    <p>
+        In the instance settings (gear icon), card <b>Controls</b>, tap <b>Edit on-screen
+        controls</b>.
+    </p>
+    <ul>
+        <li><b>Tap an element</b> to open its settings: size, opacity (<b>To all</b> applies it to
+            every element), sensitivity, text, toggle, style, picture, the bindings (add and remove
+            them), the input type, and <b>Delete element</b>.</li>
+        <li><b>Drag</b> an element to move it.</li>
+        <li><b>Long-press an empty spot</b>, or tap <b>Add</b>, to add an element.</li>
+        <li><b>Layouts</b> loads one of the two built-in layouts in place of the current one.</li>
+        <li><b>Background</b> puts a picture behind the layout — a screenshot of the game, for
+            example — so you can place the buttons against it. <b>No BG</b> removes it. The
+            background is only for the editor; the game never shows it.</li>
+        <li><b>Grid</b>: while it is on, an element snaps to the grid when you let go of it.</li>
+        <li><b>Done</b> closes the editor. Changes are saved automatically.</li>
+    </ul>
+
+    <h3>Saving and sharing layouts</h3>
+    <ul>
+        <li>Each instance keeps its own layout.</li>
+        <li><b>Export controls layout</b> and <b>Import controls layout</b> in the side menu save
+            and load a layout as a .zip, with its pictures inside.</li>
+        <li>Layouts from earlier ValDroid versions cannot be imported: make a new one in the
+            editor.</li>
     </ul>
 
     <h3>Physical gamepad, mouse and keyboard</h3>
     <ul>
         <li>A physical <b>gamepad</b> works and feeds the same virtual pad. While one is connected,
             the on-screen gamepad elements are hidden; keyboard and mouse helper buttons stay.</li>
-        <li>A physical <b>mouse and keyboard</b> work too.</li>
+        <li>A physical <b>mouse and keyboard</b> work too. Shift stays held while you press and
+            release other keys, so sprinting no longer stops; Backspace, Delete and the arrows
+            repeat when held; the numpad keys, numpad Enter included, work.</li>
+        <li>Every key can be put on an on-screen button, Backspace, comma, period, Ctrl, Alt and
+            Right Shift included.</li>
+        <li>The Android <b>Back</b> gesture or button works as <b>Esc</b>: it opens Valheim's menu
+            instead of closing the game.</li>
         <li>The game always runs in landscape. <b>Mirror the picture (180°)</b> flips it for a
             gamepad or cradle that holds the phone the other way up. It applies from the next
             launch.</li>
@@ -287,10 +350,18 @@
 <section id="mods">
     <h2>Mods</h2>
     <p>
-        Valheim mods are not supported yet. They rely on <b>BepInEx</b>, which loads its own runtime
-        into the game, and that is not wired up here. The <b>Install mod / DLC</b> screen is left
-        over from the launcher's RimWorld origins and is not useful for Valheim.
+        Mods are installed per instance: open the side menu and tap <b>Mods</b>.
     </p>
+    <ul>
+        <li>Pick the instance at the top and turn on <b>Mod support (BepInEx)</b>: it loads
+            BepInEx when the game starts, and with it the mods switched on below.</li>
+        <li>Mods only work with <a href="#native-mono">Native ARM64 Mono</a> on.</li>
+        <li>To install a mod, tap <b>Choose mod file (zip)</b>, pick the .zip and tap
+            <b>Install</b>.</li>
+        <li>Each installed mod has its own switch, to turn it on or off.</li>
+        <li>To delete a mod, tap the <b>trash can</b> on its row and confirm. Any game files the
+            mod replaced are put back.</li>
+    </ul>
 </section>
 
 <hr>
@@ -386,7 +457,14 @@
     <h3>Phones without an Adreno GPU</h3>
     <p>
         Valheim has only been brought up on Snapdragon (Adreno) phones. On Mali and other GPUs it
-        may not start at all, or the picture may be wrong. Reports with logs are welcome.
+        may not start at all, or the picture may be wrong. Please send a report with
+        <a href="#report">Report a bug</a>.
+    </p>
+
+    <h3>Black ground on some Mali GPUs</h3>
+    <p>
+        On some Mali GPUs (the Mali-G615, for example) the ground can render black. We are working
+        on it. Please send a report with <a href="#report">Report a bug</a>: it helps us fix it.
     </p>
 </section>
 
@@ -398,8 +476,7 @@
         Open the side menu and tap <b>Report a bug</b>, then choose the instance where the problem
         happened. ValDroid attaches its logs, your graphics settings and your phone's details to a
         message to us: pick your email app, describe the problem and tap <b>Send</b>. Report right
-        after the problem happens, while the log still holds it. <b>Export logs (ZIP)</b> saves the
-        same logs as a file, for example to attach to a GitHub issue.
+        after the problem happens, while the log still holds it.
     </p>
     <p>
         The icons at the top of the side menu lead to new versions on GitHub and to the author's X

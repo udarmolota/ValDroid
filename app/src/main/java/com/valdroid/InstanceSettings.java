@@ -222,7 +222,9 @@ public class InstanceSettings {
     // Linked shader programs are kept on disk (box64 RIMDROID_GLT_PROGCACHE), so a new effect
     // freezes the game only the first time it is ever seen, not once per session.
     public boolean isShaderCache() {
-        return p.getBoolean(pfx + "shader_cache", true);
+        // Off by default on Mali: there cached programs turned the water black (Mali-G57 tester,
+        // 2026-09-26), while Adreno runs the cache for hours. The player can still turn it on.
+        return p.getBoolean(pfx + "shader_cache", !GpuInfo.isMali());
     }
 
     public void setShaderCache(boolean on) {

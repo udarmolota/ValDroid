@@ -134,8 +134,8 @@ Na nuvem: %2$s
     <string name="editor_reset">Layouts</string>
     <string name="editor_done">Concluir</string>
     <string name="editor_delete">Excluir item</string>
-    <string name="editor_layout_gamepad">Gamepad</string>
-    <string name="editor_layout_vkbd">Teclado e touchpad (padrão)</string>
+    <string name="editor_layout_gamepad">Gamepad (padrão)</string>
+    <string name="editor_layout_vkbd">Teclado e touchpad</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Configurações</string>
     <string name="app_settings_theme">Tema</string>
@@ -305,5 +305,6 @@ Na nuvem: %2$s
     <string name="native_mono_fallback_message">Na última execução de %1$s não foi possível carregar o Mono ARM64 nativo, então o jogo rodou no Mono emulado, mais lento (cerca de metade dos FPS).\n\nMotivo: %2$s\n\nEnvie um relatório com «Relatar um problema» no menu.</string>
     <string name="mods_install_header">Instalar um mod</string>
     <string name="shader_cache_label">Cache de shaders</string>
-    <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado.</string>
+    <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado. Em GPUs Mali vem desligado: lá ele pode deixar a água preta.</string>
+    <string name="release_notes_body" translatable="false"><b>– Novos controles na tela</b>\nUm novo sistema de controles com um editor completo: botões com estilos e imagens próprias, analógicos, direcional, touchpad, barra de rolagem e menu radial. Dois layouts prontos: Gamepad (o padrão) e Teclado e touchpad, em Layouts no editor. Seu layout antigo não é mantido.\n\n<b>– Câmera com o mouse</b>\nNo jogo, o touchpad, o analógico de mouse e um mouse físico giram a câmera exatamente o quanto você os move.\n\n<b>– Teclado</b>\nTodas as teclas chegam ao jogo, o Shift continua pressionado ao correr e o gesto Voltar abre o menu do jogo em vez de fechá-lo.\n\n<b>– Mods (experimental)</b>\nUma nova tela Mods no menu lateral: ative o BepInEx, instale mods de um .zip e ligue ou desligue cada um. Requer Native ARM64 Mono.\n\n<b>– Cache de shaders</b>\nUm efeito novo só engasga na primeira vez que você o vê. Desligado por padrão em GPUs Mali.\n\n<b>– Mali</b>\nOs círculos nas texturas sumiram. Algumas GPUs Mali ainda mostram o chão preto: envie um relatório com Relatar um problema.</string>
 </resources>

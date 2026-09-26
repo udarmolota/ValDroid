@@ -167,6 +167,29 @@ public class XServer {
         }
     }
 
+    // Mouse look. In gameplay Valheim locks the cursor; SDL2 then grabs the pointer (GrabPointer)
+    // and, with no XInput2 here, runs "warp mode": after each motion it warps the pointer back to
+    // the window centre and turns the offset into camera movement. Absolute positions from our
+    // overlay cursor then look like huge jumps from the centre and spin the camera, so while the
+    // game holds the mouse, mouse-like input must arrive as deltas from wherever the pointer is.
+    private volatile boolean explicitPointerGrab;
+    private volatile long lastWarpMs;
+
+    public void setExplicitPointerGrab(boolean grabbed) { explicitPointerGrab = grabbed; }
+    public void noteWarp() { lastWarpMs = android.os.SystemClock.uptimeMillis(); }
+
+    /** Mouse look: the game's cursor is hidden AND the pointer is grabbed or was warped within the
+     *  last second. A grab alone is not enough: SDL also grabs the pointer for a fullscreen window
+     *  in the menus, where the cursor must stay visible and move absolutely. Valheim hides its
+     *  cursor exactly while the camera follows the mouse (an all-transparent cursor, which
+     *  CursorManager marks invisible). */
+    public boolean isMouseLockedByGame() {
+        Window w = inputDeviceManager.getPointWindow();
+        Cursor c = w != null ? w.attributes.getCursor() : null;
+        boolean hidden = c != null && !c.isVisible();
+        return hidden && (explicitPointerGrab || android.os.SystemClock.uptimeMillis() - lastWarpMs < 1000);
+    }
+
     public void injectPointerMoveDelta(int dx, int dy) {
         enqueueInput(new PendingInput(INPUT_POINTER_DELTA, dx, dy, null));
     }

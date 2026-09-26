@@ -36,11 +36,14 @@ import java.util.zip.ZipOutputStream;
 public final class ControlsStorage {
     private static final String TAG = "ValDroid/Controls";
 
-    /** Keyboard + touchpad layout: the default for a new instance. */
+    /** Keyboard + touchpad layout, offered under Layouts in the editor. */
     public static final String ASSET_VKBD = "controls/valheim_vkbd.json";
-    /** On-screen gamepad layout (drives the virtual Xbox 360 pad). */
+    /** On-screen gamepad layout (drives the virtual Xbox 360 pad): the default for a new instance.
+     *  Valheim's gamepad UI (Steam Deck) covers inventory, building and menus with buttons, so a
+     *  new player never has to aim a cursor at small cells on a phone screen, and a physical pad
+     *  connected later works the same way. */
     public static final String ASSET_GAMEPAD = "controls/valheim_gamepad.json";
-    public static final String DEFAULT_ASSET = ASSET_VKBD;
+    public static final String DEFAULT_ASSET = ASSET_GAMEPAD;
 
     public static final String FILE_NAME = "controls.json";
     public static final String ICONS_DIR = "icons";

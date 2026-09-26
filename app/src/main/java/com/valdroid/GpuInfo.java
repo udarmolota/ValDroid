@@ -51,6 +51,12 @@ public final class GpuInfo {
 
     /** Query the GPU. Cheap (a 1x1 pbuffer context); call off the very first frame to be safe. */
     @NonNull
+    /** The phone's GPU is an Arm Mali (GL_RENDERER "Mali-..."). False when the probe failed. */
+    public static boolean isMali() {
+        String r = query().renderer;
+        return r != null && r.contains("Mali");
+    }
+
     public static GpuInfo query() {
         GpuInfo result = cached;
         if (result != null) return result;

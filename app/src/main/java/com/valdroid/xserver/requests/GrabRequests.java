@@ -47,6 +47,7 @@ public abstract class GrabRequests {
         else {
             status = Status.SUCCESS;
             client.xServer.grabManager.activatePointerGrab(window, ownerEvents, eventMask, client);
+            client.xServer.setExplicitPointerGrab(true);
         }
 
         try (XStreamLock lock = outputStream.lock()) {
@@ -61,5 +62,6 @@ public abstract class GrabRequests {
     public static void ungrabPointer(XClient client, XInputStream inputStream, XOutputStream outputStream) {
         inputStream.skip(4);
         client.xServer.grabManager.deactivatePointerGrab();
+        client.xServer.setExplicitPointerGrab(false);
     }
 }

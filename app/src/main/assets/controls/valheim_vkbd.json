@@ -1,10 +1,10 @@
 [
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [],
-    "centerXRelative": 0.12,
-    "centerYRelative": 0.68,
-    "color": -3355444,
+    "centerXRelative": 0.13461539,
+    "centerYRelative": 0.7583333,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -16,48 +16,13 @@
     "type": "STICK_WASD"
   },
   {
-    "alpha": 128,
-    "bindings": [],
-    "centerXRelative": 0.6,
-    "centerYRelative": 0.47,
-    "color": -3355444,
-    "icon": "NO_ICON",
-    "inputType": "MNK",
-    "isToggle": false,
-    "noTint": false,
-    "scale": 1.5,
-    "sensitivity": 2.0,
-    "style": "OUTLINE",
-    "tapDisabled": false,
-    "type": "TOUCHPAD"
-  },
-  {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "MOUSE_BUTTON_LEFT"
     ],
-    "centerXRelative": 0.905,
-    "centerYRelative": 0.75,
-    "color": -3355444,
-    "icon": "NO_ICON",
-    "inputType": "MNK",
-    "isToggle": false,
-    "noTint": false,
-    "scale": 1.25,
-    "sensitivity": 2.0,
-    "style": "OUTLINE",
-    "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "ATK"
-  },
-  {
-    "alpha": 128,
-    "bindings": [
-      "MOUSE_BUTTON_RIGHT"
-    ],
-    "centerXRelative": 0.795,
-    "centerYRelative": 0.87,
-    "color": -3355444,
+    "centerXRelative": 0.93240684,
+    "centerYRelative": 0.4085612,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -66,17 +31,36 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "BLK"
+    "text": "ATK/R",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
+    "bindings": [
+      "MOUSE_BUTTON_RIGHT"
+    ],
+    "centerXRelative": 0.83368015,
+    "centerYRelative": 0.45616862,
+    "color": -1,
+    "icon": "NO_ICON",
+    "inputType": "MNK",
+    "isToggle": false,
+    "noTint": false,
+    "scale": 1.0,
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "text": "BLK/L",
+    "type": "BUTTON_CIRCLE"
+  },
+  {
+    "alpha": 156,
     "bindings": [
       "MOUSE_BUTTON_WHEEL"
     ],
-    "centerXRelative": 0.8,
-    "centerYRelative": 0.66,
-    "color": -3355444,
+    "centerXRelative": 0.87165713,
+    "centerYRelative": 0.31017253,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -85,17 +69,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "ALT"
+    "text": "ALT",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_SPACE"
     ],
-    "centerXRelative": 0.925,
-    "centerYRelative": 0.52,
-    "color": -3355444,
+    "centerXRelative": 0.23087065,
+    "centerYRelative": 0.54132485,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -104,17 +88,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "JUMP"
+    "text": "JUMP",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_E"
     ],
-    "centerXRelative": 0.94,
-    "centerYRelative": 0.33,
-    "color": -3355444,
+    "centerXRelative": 0.7799429,
+    "centerYRelative": 0.5831217,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -123,17 +107,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "USE"
+    "text": "USE/E",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_R"
     ],
-    "centerXRelative": 0.845,
-    "centerYRelative": 0.42,
-    "color": -3355444,
+    "centerXRelative": 0.77543944,
+    "centerYRelative": 0.75730795,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -142,17 +126,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "R"
+    "text": "R",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_F"
     ],
-    "centerXRelative": 0.845,
-    "centerYRelative": 0.29,
-    "color": -3355444,
+    "centerXRelative": 0.77495116,
+    "centerYRelative": 0.89112955,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -161,33 +145,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "F"
+    "text": "F",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
-    "bindings": [],
-    "centerXRelative": 0.978,
-    "centerYRelative": 0.64,
-    "color": -3355444,
-    "icon": "NO_ICON",
-    "inputType": "MNK",
-    "isToggle": false,
-    "noTint": false,
-    "scale": 0.9,
-    "sensitivity": 2.0,
-    "style": "OUTLINE",
-    "tapDisabled": false,
-    "type": "SCROLL_BAR"
-  },
-  {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_LEFT_SHIFT"
     ],
-    "centerXRelative": 0.265,
-    "centerYRelative": 0.84,
-    "color": -3355444,
+    "centerXRelative": 0.7063514,
+    "centerYRelative": 0.57358396,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": true,
@@ -196,17 +164,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "RUN"
+    "text": "RUN",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_LEFT_CONTROL"
     ],
-    "centerXRelative": 0.265,
-    "centerYRelative": 0.64,
-    "color": -3355444,
+    "centerXRelative": 0.026923077,
+    "centerYRelative": 0.875,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -215,17 +183,17 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "CROUCH"
+    "text": "CROUCH",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_Q"
     ],
-    "centerXRelative": 0.235,
-    "centerYRelative": 0.46,
-    "color": -3355444,
+    "centerXRelative": 0.69791543,
+    "centerYRelative": 0.43761393,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
@@ -234,254 +202,270 @@
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "AUTO"
+    "text": "AUTO",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_ESCAPE"
     ],
-    "centerXRelative": 0.045,
-    "centerYRelative": 0.24,
-    "color": -3355444,
+    "centerXRelative": 0.053846154,
+    "centerYRelative": 0.525,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.55,
+    "scale": 0.64,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_RECT",
-    "text": "Esc"
+    "text": "Esc",
+    "type": "BUTTON_RECT"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_TAB"
     ],
-    "centerXRelative": 0.045,
-    "centerYRelative": 0.33,
-    "color": -3355444,
+    "centerXRelative": 0.26923078,
+    "centerYRelative": 0.7583333,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.55,
+    "scale": 0.65,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_RECT",
-    "text": "INV"
+    "text": "INV",
+    "type": "BUTTON_RECT"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_M"
     ],
-    "centerXRelative": 0.045,
-    "centerYRelative": 0.42,
-    "color": -3355444,
+    "centerXRelative": 0.26923078,
+    "centerYRelative": 0.875,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.55,
+    "scale": 0.65,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_RECT",
-    "text": "MAP"
+    "text": "MAP",
+    "type": "BUTTON_RECT"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_1"
     ],
-    "centerXRelative": 0.36,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.342351,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "1"
+    "text": "1",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_2"
     ],
-    "centerXRelative": 0.4,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.381133,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "2"
+    "text": "2",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_3"
     ],
-    "centerXRelative": 0.44,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.419915,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "3"
+    "text": "3",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_4"
     ],
-    "centerXRelative": 0.48,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.458697,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "4"
+    "text": "4",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_5"
     ],
-    "centerXRelative": 0.52,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.497479,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "5"
+    "text": "5",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_6"
     ],
-    "centerXRelative": 0.56,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.536261,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "6"
+    "text": "6",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_7"
     ],
-    "centerXRelative": 0.6,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.575044,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "7"
+    "text": "7",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "KEY_8"
     ],
-    "centerXRelative": 0.64,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.613826,
+    "centerYRelative": 0.910189,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "8"
+    "text": "8",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "UI_TOGGLE_KEYBOARD"
     ],
-    "centerXRelative": 0.31,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.50201696,
+    "centerYRelative": 0.1461914,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "KB"
+    "text": "KB",
+    "type": "BUTTON_CIRCLE"
   },
   {
-    "alpha": 128,
+    "alpha": 156,
     "bindings": [
       "UI_TOGGLE_OVERLAY"
     ],
-    "centerXRelative": 0.69,
-    "centerYRelative": 0.935,
-    "color": -3355444,
+    "centerXRelative": 0.4535419,
+    "centerYRelative": 0.14277343,
+    "color": -1,
     "icon": "NO_ICON",
     "inputType": "MNK",
     "isToggle": false,
     "noTint": false,
-    "scale": 0.5,
+    "scale": 0.6,
     "sensitivity": 2.0,
     "style": "OUTLINE",
     "tapDisabled": false,
-    "type": "BUTTON_CIRCLE",
-    "text": "V"
+    "text": "V",
+    "type": "BUTTON_CIRCLE"
+  },
+  {
+    "alpha": 156,
+    "bindings": [],
+    "centerXRelative": 0.9058984,
+    "centerYRelative": 0.74907225,
+    "color": -1,
+    "icon": "NO_ICON",
+    "inputType": "MNK",
+    "isToggle": false,
+    "noTint": false,
+    "scale": 1.33,
+    "sensitivity": 4.5,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "STICK_MOUSE"
   }
 ]

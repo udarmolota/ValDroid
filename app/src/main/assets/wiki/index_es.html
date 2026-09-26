@@ -72,7 +72,7 @@
     <ol>
         <li>Necesitas <b>tu propia copia</b> de Valheim, por ejemplo comprada en <b>Steam</b>.
             ValDroid ejecuta la versión <b>Linux</b> del juego.</li>
-        <li>Mete el juego en la app: abre el menú lateral y toca <b>Descargar juego (Steam)</b>. El
+        <li>Mete el juego en la app: abre el menú lateral y toca <b>Descargas de Steam</b>. El
             juego se descarga directamente en una instancia lista. La otra vía es
             <a href="#zip-archive">un archivo .zip</a> preparado en un PC.</li>
         <li>Una <b>instancia</b> es una copia instalada del juego. Tiene su propia tarjeta en la
@@ -107,7 +107,7 @@
     <section id="steam-in-app">
         <h3>1. Desde Steam, en la app</h3>
         <ol>
-            <li>Abre el menú lateral y toca <b>Descargar juego (Steam)</b>, pestaña
+            <li>Abre el menú lateral y toca <b>Descargas de Steam</b>, pestaña
                 <b>Juego</b>.</li>
             <li>Escribe un nombre para la nueva instancia.</li>
             <li>Inicia sesión con tu cuenta de Steam. Tus datos van solo a Steam y no se guardan
@@ -183,6 +183,9 @@
             la mitad las más grandes, <b>Muy baja</b> las deja en una cuarta parte. Ahorra unos
             cientos de MB de memoria de vídeo, útil en teléfonos con menos RAM, a cambio de algo de
             nitidez de cerca.</li>
+        <li><b>Caché de shaders</b> (activado por defecto) guarda los shaders ya compilados en el
+            teléfono, así un enemigo o un efecto nuevo solo da un tirón la primerísima vez que lo
+            ves, no en cada sesión. Desactívalo si algo se dibuja mal.</li>
         <li><b>Mostrar contador de FPS</b> pone la tasa de fotogramas arriba a la izquierda.</li>
         <li><b>Límite de fotogramas</b> (30, 60 o sin límite) suaviza los altibajos. Unos 30
             estables suelen sentarse mejor que saltar entre 25 y 60.</li>
@@ -199,28 +202,89 @@
 <section id="controls">
     <h2>Controles</h2>
 
-    <h3>Mando en pantalla</h3>
+    <h3>Controles en pantalla</h3>
     <p>
-        Valheim tiene una interfaz completa para mando, así que ValDroid le entrega un mando
-        virtual: para el juego, los controles en pantalla son un mando de verdad, con sus propios
-        iconos de botones.
+        Una instancia nueva empieza con el diseño de <b>mando</b>. Maneja un mando virtual de Xbox,
+        así que para el juego tienes un mando de verdad en las manos, con sus propios iconos de
+        botones. La interfaz de mando de Valheim se encarga entonces del inventario, la construcción
+        y los menús con botones, y nunca tienes que apuntar con un cursor a casillas pequeñas en la
+        pantalla del teléfono.
     </p>
     <ul>
-        <li>El diseño por defecto es el de siempre: <b>dos sticks</b>, una <b>cruceta</b>,
-            <b>A/B/X/Y</b>, <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> y <b>Start</b>, y los clics de
-            stick <b>L</b> y <b>R</b>. <b>V</b> oculta y muestra los controles, <b>KB</b> abre el
-            teclado del teléfono.</li>
-        <li>Edítalo en los ajustes de la instancia, <b>Editar controles en pantalla</b>: toca un
-            elemento para seleccionarlo, arrástralo para moverlo y mantenlo pulsado un momento para
-            abrir sus ajustes (tamaño, opacidad, acción y, en un stick, su <b>sensibilidad</b>; el
-            stick derecho viene al 70%, porque con el dedo sobre el cristal es fácil pasarse).</li>
-        <li><b>Añadir</b> crea sticks, una cruceta o botones asociados a un botón del mando, una
-            tecla o el ratón. Los elementos de teclado y de mando pueden convivir en un mismo
-            diseño: el juego acepta ambos a la vez.</li>
-        <li><b>Restablecer</b> ofrece los dos diseños incluidos: el de <b>mando</b> y el de
-            <b>teclado y ratón</b> (VKBD) con stick de cursor.</li>
-        <li><b>Exportar</b> e <b>importar diseño de controles</b> en el menú lateral lo comparten
-            como archivo .json.</li>
+        <li>El diseño <b>Mando</b>: <b>dos sticks</b>, una <b>cruceta</b>, <b>A/B/X/Y</b>,
+            <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> y <b>Start</b>, y los clics de stick <b>L3</b> y
+            <b>R3</b>.</li>
+        <li>El segundo diseño incluido, <b>Teclado y panel táctil</b>, está en <b>Diseños</b>
+            dentro del editor. Con él se juega con teclas y ratón: un <b>stick WASD</b> para
+            caminar, un <b>stick de ratón</b> para la cámara y el cursor, <b>ATK/R</b> (clic
+            izquierdo: atacar), <b>BLK/L</b> (clic derecho: bloquear), <b>ALT</b> (clic central:
+            ataque secundario), <b>JUMP</b>, <b>RUN</b> (Shift; sigue activo hasta que lo vuelvas a
+            tocar), <b>CROUCH</b> (Ctrl), <b>USE/E</b>, <b>R</b>, <b>F</b>, <b>AUTO</b> (Q, correr
+            automático), <b>Esc</b>, <b>INV</b> (Tab), <b>MAP</b> (M) y las teclas de la barra
+            rápida <b>1</b>–<b>8</b>.</li>
+        <li>Los dos diseños tienen <b>V</b>, que oculta y muestra los controles, y <b>KB</b>, que
+            abre el teclado de Android para escribir.</li>
+        <li>Los elementos de teclado y de mando pueden convivir en un mismo diseño: el juego acepta
+            ambos a la vez.</li>
+    </ul>
+
+    <h3>Cámara y cursor</h3>
+    <ul>
+        <li>Jugando, el <b>panel táctil</b> y el <b>stick de ratón</b> giran la cámara tanto como se
+            mueve tu dedo, y se detienen en cuanto se detiene. En los menús y el inventario mueven el
+            cursor.</li>
+        <li>Un toque en el panel táctil es un clic izquierdo. Se puede desactivar en los ajustes del
+            panel táctil (<b>Toque = clic izquierdo</b>), para que un toque sin querer no pulse
+            nada.</li>
+        <li>Un <b>ratón</b> físico también sirve para mirar alrededor: jugando, la app lo captura, así
+            que la cámara gira libremente en vez de pararse en el borde de la pantalla.</li>
+    </ul>
+
+    <h3>Tipos de elementos</h3>
+    <ul>
+        <li><b>Botón</b>, rectangular o redondo. Estilos: <b>Contorno</b>, <b>Relleno</b> y
+            <b>Cristal</b>. Puede mostrar una imagen tuya (un PNG) en lugar de texto, con <b>Mantener
+            los colores originales</b> si la imagen no debe teñirse. <b>Alternar</b> lo deja
+            enclavado: un toque mantiene la tecla y el siguiente la suelta. Asigna varias teclas a un
+            botón para hacer una combinación.</li>
+        <li><b>Cruceta</b>.</li>
+        <li><b>Stick</b>: un stick de mando, o cuatro teclas a tu elección.</li>
+        <li><b>Stick WASD</b>: pulsa W, A, S y D.</li>
+        <li><b>Stick de ratón</b> y <b>panel táctil</b>: la cámara y el cursor.</li>
+        <li><b>Barra de desplazamiento</b>: la rueda del ratón.</li>
+        <li><b>Menú radial</b>: pon el dedo en el centro y deslízalo hacia uno de los cuatro
+            sectores; cada sector tiene su propia acción.</li>
+    </ul>
+
+    <h3>Editor de controles</h3>
+    <p>
+        En los ajustes de la instancia (engranaje), tarjeta <b>Controles</b>, toca <b>Editar
+        controles en pantalla</b>.
+    </p>
+    <ul>
+        <li><b>Toca un elemento</b> para abrir sus ajustes: tamaño, opacidad (<b>A todos</b> la
+            aplica a todos los elementos), sensibilidad, texto, alternar, estilo, imagen, las
+            asignaciones (puedes añadir y quitar), el tipo de entrada y <b>Eliminar
+            elemento</b>.</li>
+        <li><b>Arrastra</b> un elemento para moverlo.</li>
+        <li><b>Mantén pulsado un sitio vacío</b>, o toca <b>Añadir</b>, para añadir un
+            elemento.</li>
+        <li><b>Diseños</b> carga uno de los dos diseños incluidos en lugar del actual.</li>
+        <li><b>Fondo</b> pone una imagen detrás del diseño — una captura del juego, por ejemplo —
+            para colocar los botones sobre ella. <b>Sin fondo</b> la quita. El fondo es solo para el
+            editor; el juego nunca lo muestra.</li>
+        <li><b>Cuadrícula</b>: mientras está activada, el elemento se ajusta a la cuadrícula al
+            soltarlo.</li>
+        <li><b>Listo</b> cierra el editor. Los cambios se guardan solos.</li>
+    </ul>
+
+    <h3>Guardar y compartir diseños</h3>
+    <ul>
+        <li>Cada instancia guarda su propio diseño.</li>
+        <li><b>Exportar</b> e <b>Importar diseño de controles</b> en el menú lateral guardan y
+            cargan un diseño como .zip, con sus imágenes dentro.</li>
+        <li>Los diseños de versiones anteriores de ValDroid no se pueden importar: crea uno nuevo en
+            el editor.</li>
     </ul>
 
     <h3>Mando físico, ratón y teclado</h3>
@@ -228,7 +292,14 @@
         <li>Un <b>mando</b> físico funciona y alimenta el mismo mando virtual. Mientras esté
             conectado, los elementos de mando en pantalla se ocultan; los botones de ayuda de
             teclado y ratón permanecen.</li>
-        <li>El <b>ratón y el teclado</b> físicos también funcionan.</li>
+        <li>El <b>ratón y el teclado</b> físicos también funcionan. Shift se mantiene pulsado
+            mientras pulsas y sueltas otras teclas, así que correr ya no se corta; Retroceso, Supr y
+            las flechas se repiten al mantenerlas; las teclas del teclado numérico, su Intro
+            incluido, funcionan.</li>
+        <li>Cualquier tecla se puede poner en un botón en pantalla, incluidos Retroceso, la coma, el
+            punto, Ctrl, Alt y Shift derecho.</li>
+        <li>El gesto o el botón <b>Atrás</b> de Android funciona como <b>Esc</b>: abre el menú de
+            Valheim en vez de cerrar el juego.</li>
         <li>El juego siempre va en horizontal. <b>Girar la imagen (180°)</b> la voltea para soportes
             o mandos que sujetan el teléfono al revés. Se aplica en el siguiente arranque.</li>
     </ul>
@@ -298,10 +369,18 @@
 <section id="mods">
     <h2>Mods</h2>
     <p>
-        Los mods de Valheim aún no están soportados. Dependen de <b>BepInEx</b>, que carga su propio
-        runtime en el juego, y eso no está montado aquí. La pantalla <b>Instalar mod / DLC</b> viene
-        del pasado del lanzador con RimWorld y no sirve para Valheim.
+        Los mods se instalan por instancia: abre el menú lateral y toca <b>Mods</b>.
     </p>
+    <ul>
+        <li>Elige la instancia arriba y activa <b>Soporte de mods (BepInEx)</b>: carga BepInEx al
+            iniciar el juego y, con él, los mods activados abajo.</li>
+        <li>Los mods solo funcionan con <a href="#native-mono">Mono ARM64 nativo</a> activado.</li>
+        <li>Para instalar un mod, toca <b>Elegir archivo del mod (zip)</b>, selecciona el .zip y toca
+            <b>Instalar</b>.</li>
+        <li>Cada mod instalado tiene su propio interruptor para activarlo o desactivarlo.</li>
+        <li>Para eliminar un mod, toca la <b>papelera</b> de su fila y confirma. Los archivos del
+            juego que el mod reemplazó se restauran.</li>
+    </ul>
 </section>
 
 <hr>
@@ -398,7 +477,15 @@
     <h3>Teléfonos sin GPU Adreno</h3>
     <p>
         Valheim solo se ha puesto en marcha en teléfonos Snapdragon (Adreno). En Mali y otras GPU
-        puede no arrancar o mostrar una imagen incorrecta. Se agradecen informes con registros.
+        puede no arrancar o mostrar una imagen incorrecta. Envíanos un informe con
+        <a href="#report">Reportar un error</a>.
+    </p>
+
+    <h3>Suelo negro en algunas GPU Mali</h3>
+    <p>
+        En algunas GPU Mali (por ejemplo, la Mali-G615) el suelo puede verse negro. Estamos
+        trabajando en ello. Envíanos un informe con <a href="#report">Reportar un error</a>: nos
+        ayuda a arreglarlo.
     </p>
 </section>
 
@@ -407,12 +494,10 @@
 <section id="report">
     <h2>Informar de un problema</h2>
     <p>
-        Abre el menú lateral y toca <b>Informar de un error</b>, luego elige la instancia donde pasó
+        Abre el menú lateral y toca <b>Reportar un error</b>, luego elige la instancia donde pasó
         el problema. ValDroid adjunta sus registros, tus ajustes gráficos y los datos del teléfono a
         un mensaje para nosotros: elige tu app de correo, describe el problema y envíalo. Informa
-        justo después de que ocurra, mientras el registro aún lo contiene. <b>Exportar registros
-        (ZIP)</b> guarda esos mismos registros como archivo, por ejemplo para adjuntarlos a una
-        issue de GitHub.
+        justo después de que ocurra, mientras el registro aún lo contiene.
     </p>
     <p>
         Los iconos de la parte superior del menú lateral llevan a las nuevas versiones en GitHub y

@@ -38,7 +38,7 @@ import java.util.List;
  * when there is only one); below it the master switch "Mod support (BepInEx)", which decides whether
  * BepInEx is started at launch, and the install button. The second card lists the instance's mods,
  * each with its own switch; with mod support off the list is shown greyed out, since nothing in it
- * loads. A long press deletes a mod.
+ * loads. The trash button on a row deletes that mod (a long press on the row still works).
  */
 public class ModsFragment extends Fragment {
 
@@ -165,6 +165,22 @@ public class ModsFragment extends Fragment {
             refresh();
         });
         row.addView(sw);
+
+        // Delete: a visible button, since a long press on the row was not discoverable. It stays
+        // usable while mod support is off, so a player can clean up the list without enabling it.
+        android.widget.ImageButton del = new android.widget.ImageButton(requireContext());
+        del.setImageResource(R.drawable.mt_icon_delete);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true);
+        del.setImageTintList(android.content.res.ColorStateList.valueOf(tv.data));
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true);
+        del.setBackgroundResource(tv.resourceId);
+        del.setContentDescription(getString(R.string.mod_delete_confirm));
+        int btn = Math.round(40 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(btn, btn);
+        lp.setMarginStart(pad);
+        del.setOnClickListener(x -> confirmDelete(gi, m));
+        row.addView(del, lp);
 
         // Greyed while mod support is off: nothing in the list loads then.
         row.setAlpha(supportOn ? 1f : 0.45f);

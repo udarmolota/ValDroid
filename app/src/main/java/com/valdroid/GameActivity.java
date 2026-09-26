@@ -517,6 +517,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // view, Android silently drops them (buttons still arrive via dispatchKeyEvent, but sticks
         // don't). So make the game surface focusable and grab focus (re-grabbed in onResume).
         surfaceView.setFocusable(true);
+        surfaceView.setOnCapturedPointerListener((v, ev) -> onCapturedMouse(ev));
         surfaceView.setFocusableInTouchMode(true);
         surfaceView.requestFocus();
     }
@@ -731,12 +732,79 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         inputManager = (android.hardware.input.InputManager) getSystemService(INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(deviceListener, null);
         refreshGamepadControls();                     // apply current connection state
+        ui.removeCallbacks(mouseLockTick);
+        ui.post(mouseLockTick);
+    }
+
+    // === Mouse look ===
+    // While the game holds the mouse (see XServer.isMouseLockedByGame) a physical mouse is captured
+    // so it delivers raw deltas instead of an absolute position that stops at the screen edge; the
+    // deltas go through the overlay's moveCursorBy, the same path as the touchpad. Polled because
+    // the lock is decided by the game's X requests, not by any Android event.
+    private final Runnable mouseLockTick = new Runnable() {
+        @Override public void run() {
+            com.valdroid.xserver.XServer xs = com.valdroid.xserver.XServerRunner.getXServer();
+            boolean locked = xs != null && xs.isMouseLockedByGame();
+            boolean mouse = hasPhysicalMouse();
+            if (controls != null) { controls.setMouseLocked(locked); controls.setPhysicalMouse(mouse); }
+            if (surfaceView != null) {
+                boolean want = locked && mouse;
+                if (want && !surfaceView.hasPointerCapture()) surfaceView.requestPointerCapture();
+                else if (!want && surfaceView.hasPointerCapture()) surfaceView.releasePointerCapture();
+            }
+            ui.postDelayed(this, 150);
+        }
+    };
+
+    private static boolean hasPhysicalMouse() {
+        for (int id : android.view.InputDevice.getDeviceIds()) {
+            android.view.InputDevice d = android.view.InputDevice.getDevice(id);
+            if (d != null && !d.isVirtual() && d.supportsSource(android.view.InputDevice.SOURCE_MOUSE)) return true;
+        }
+        return false;
+    }
+
+    /** Captured mouse: relative motion (with its batched history), buttons and wheel. */
+    private boolean onCapturedMouse(MotionEvent e) {
+        if (controls == null) return false;
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_MOVE: {
+                float dx = 0, dy = 0;
+                for (int h = 0; h < e.getHistorySize(); h++) {
+                    dx += e.getHistoricalAxisValue(MotionEvent.AXIS_RELATIVE_X, h);
+                    dy += e.getHistoricalAxisValue(MotionEvent.AXIS_RELATIVE_Y, h);
+                }
+                dx += e.getAxisValue(MotionEvent.AXIS_RELATIVE_X);
+                dy += e.getAxisValue(MotionEvent.AXIS_RELATIVE_Y);
+                if (dx != 0 || dy != 0) controls.moveCursorBy(dx, dy);
+                return true;
+            }
+            case MotionEvent.ACTION_BUTTON_PRESS:
+            case MotionEvent.ACTION_BUTTON_RELEASE: {
+                // GLFW button numbers (0 left, 1 right, 2 middle), pressed where the pointer is
+                int b = e.getActionButton() == MotionEvent.BUTTON_PRIMARY ? 0
+                      : e.getActionButton() == MotionEvent.BUTTON_SECONDARY ? 1
+                      : e.getActionButton() == MotionEvent.BUTTON_TERTIARY ? 2 : -1;
+                if (b >= 0) com.valdroid.controls.InputSink.sendMouseButton(b,
+                        e.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS);
+                return true;
+            }
+            case MotionEvent.ACTION_SCROLL: {
+                float v = e.getAxisValue(MotionEvent.AXIS_VSCROLL);
+                if (v != 0) com.valdroid.controls.InputSink.sendMouseScroll(0, v > 0 ? 1 : -1);
+                return true;
+            }
+            default:
+                return true;
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         ui.removeCallbacks(fpsTextTick);               // no counting in background
+        ui.removeCallbacks(mouseLockTick);
+        if (surfaceView != null && surfaceView.hasPointerCapture()) surfaceView.releasePointerCapture();
         if (perfHandler != null) perfHandler.removeCallbacks(fpsTick);
         if (gamepad != null) gamepad.stop();          // stop the loop, release held gamepad inputs
         if (inputManager != null) inputManager.unregisterInputDeviceListener(deviceListener);

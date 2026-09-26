@@ -72,7 +72,7 @@
     <ol>
         <li>Você precisa da <b>sua própria cópia</b> de Valheim — comprada na <b>Steam</b>, por
             exemplo. O ValDroid roda a versão <b>Linux</b> do jogo.</li>
-        <li>Coloque o jogo no app: abra o menu lateral e toque em <b>Baixar jogo (Steam)</b>. O jogo
+        <li>Coloque o jogo no app: abra o menu lateral e toque em <b>Downloads da Steam</b>. O jogo
             é baixado direto para uma instância pronta. A outra forma é
             <a href="#zip-archive">um arquivo .zip</a> preparado num PC.</li>
         <li>Uma <b>instância</b> é uma cópia instalada do jogo. Ela tem seu próprio cartão na tela
@@ -108,7 +108,7 @@
     <section id="steam-in-app">
         <h3>1. Da Steam, no app</h3>
         <ol>
-            <li>Abra o menu lateral e toque em <b>Baixar jogo (Steam)</b>, aba <b>Jogo</b>.</li>
+            <li>Abra o menu lateral e toque em <b>Downloads da Steam</b>, aba <b>Jogo</b>.</li>
             <li>Digite um nome para a nova instância.</li>
             <li>Entre com a sua conta Steam. O login vai só para a Steam e não é guardado aqui.
                 Aprove o login no app Steam Mobile ou digite o código do Steam Guard.</li>
@@ -180,6 +180,9 @@
             corta as maiores pela metade, <b>Muito baixa</b> deixa um quarto. Economiza algumas
             centenas de MB de memória de vídeo, o que importa em telefones com menos RAM, e custa
             um pouco de nitidez de perto.</li>
+        <li><b>Cache de shaders</b> (ligado por padrão) guarda os shaders já compilados no
+            telefone, então um inimigo ou efeito novo só dá uma travadinha na primeiríssima vez que
+            você o vê, e não em toda sessão. Desligue se algo aparecer desenhado errado.</li>
         <li><b>Mostrar contador de FPS</b> coloca a taxa de quadros no canto superior esquerdo.</li>
         <li><b>Limite de quadros</b> (30, 60 ou sem limite) suaviza as oscilações. Uns 30 estáveis
             costumam agradar mais do que pular entre 25 e 60.</li>
@@ -196,29 +199,89 @@
 <section id="controls">
     <h2>Controles</h2>
 
-    <h3>Controle na tela</h3>
+    <h3>Controles na tela</h3>
     <p>
-        Valheim tem uma interface completa para controle, então o ValDroid entrega a ele um controle
-        virtual: para o jogo, os controles na tela são um gamepad de verdade, com os ícones de botão
-        do próprio jogo.
+        Uma instância nova começa com o layout de <b>gamepad</b>. Ele comanda um controle virtual de
+        Xbox, então, para o jogo, você está segurando um controle de verdade, com os ícones de botão
+        do próprio jogo. A interface de controle do Valheim cuida do inventário, da construção e dos
+        menus com botões, e você nunca precisa mirar um cursor em casinhas pequenas na tela do
+        telefone.
     </p>
     <ul>
-        <li>O layout padrão é o de sempre: <b>dois analógicos</b>, um <b>direcional</b>,
-            <b>A/B/X/Y</b>, <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> e <b>Start</b>, e os cliques dos
-            analógicos <b>L</b> e <b>R</b>. <b>V</b> esconde e mostra os controles, <b>KB</b> abre o
-            teclado do telefone.</li>
-        <li>Edite nas configurações da instância, <b>Editar controles na tela</b>: toque num
-            elemento para selecioná-lo, arraste para mover e segure um instante para abrir as
-            configurações dele (tamanho, opacidade, ação e, num analógico, a
-            <b>sensibilidade</b> — o analógico direito vem em 70%, porque com o dedo no vidro é
-            fácil exagerar).</li>
-        <li><b>Adicionar</b> cria analógicos, um direcional ou botões ligados a um botão do
-            controle, a uma tecla ou ao mouse. Elementos de teclado e de controle podem conviver no
-            mesmo layout: o jogo aceita os dois ao mesmo tempo.</li>
-        <li><b>Restaurar</b> oferece os dois layouts incluídos: o de <b>controle</b> e o de
-            <b>teclado e mouse</b> (VKBD), com analógico de cursor.</li>
-        <li><b>Exportar</b> e <b>importar layout de controles</b> no menu lateral compartilham o
-            layout como arquivo .json.</li>
+        <li>O layout <b>Gamepad</b>: <b>dois analógicos</b>, um <b>direcional</b>, <b>A/B/X/Y</b>,
+            <b>LB/RB</b>, <b>LT/RT</b>, <b>Back</b> e <b>Start</b>, e os cliques dos analógicos
+            <b>L3</b> e <b>R3</b>.</li>
+        <li>O segundo layout incluído, <b>Teclado e touchpad</b>, fica em <b>Layouts</b> no editor.
+            Com ele se joga com teclas e mouse: um <b>analógico WASD</b> para andar, um
+            <b>analógico de mouse</b> para a câmera e o cursor, <b>ATK/R</b> (clique esquerdo:
+            atacar), <b>BLK/L</b> (clique direito: bloquear), <b>ALT</b> (clique do meio: ataque
+            secundário), <b>JUMP</b>, <b>RUN</b> (Shift; fica ligado até você tocar de novo),
+            <b>CROUCH</b> (Ctrl), <b>USE/E</b>, <b>R</b>, <b>F</b>, <b>AUTO</b> (Q, corrida
+            automática), <b>Esc</b>, <b>INV</b> (Tab), <b>MAP</b> (M) e as teclas da barra rápida
+            <b>1</b>–<b>8</b>.</li>
+        <li>Os dois layouts têm <b>V</b>, que esconde e mostra os controles, e <b>KB</b>, que abre o
+            teclado do Android para digitar.</li>
+        <li>Elementos de teclado e de controle podem conviver no mesmo layout: o jogo aceita os dois
+            ao mesmo tempo.</li>
+    </ul>
+
+    <h3>Câmera e cursor</h3>
+    <ul>
+        <li>Durante o jogo, o <b>touchpad</b> e o <b>analógico de mouse</b> giram a câmera o quanto o
+            seu dedo se move, e param assim que ele para. Nos menus e no inventário eles movem o
+            cursor.</li>
+        <li>Um toque no touchpad é um clique esquerdo. Dá para desligar isso nas configurações do
+            touchpad (<b>Toque = clique esquerdo</b>), para que um toque sem querer não clique em
+            nada.</li>
+        <li>Um <b>mouse</b> físico também serve para olhar em volta: durante o jogo o app captura o
+            mouse, então a câmera gira livremente em vez de parar na borda da tela.</li>
+    </ul>
+
+    <h3>Tipos de elemento</h3>
+    <ul>
+        <li><b>Botão</b>, retangular ou redondo. Estilos: <b>Contorno</b>, <b>Preenchido</b> e
+            <b>Vidro</b>. Ele pode mostrar uma imagem sua (um PNG) no lugar do texto, com <b>Manter
+            cores originais</b> se a imagem não deve ser tingida. <b>Alternar</b> deixa o botão
+            travado: um toque segura a tecla e o próximo solta. Coloque várias teclas num botão para
+            fazer uma combinação.</li>
+        <li><b>Direcional</b>.</li>
+        <li><b>Analógico</b>: um analógico de controle, ou quatro teclas à sua escolha.</li>
+        <li><b>Analógico WASD</b>: aperta W, A, S e D.</li>
+        <li><b>Analógico de mouse</b> e <b>touchpad</b>: a câmera e o cursor.</li>
+        <li><b>Barra de rolagem</b>: a roda do mouse.</li>
+        <li><b>Menu radial</b>: ponha o dedo no centro e deslize para um dos quatro setores; cada
+            setor tem a sua ação.</li>
+    </ul>
+
+    <h3>Editor de controles</h3>
+    <p>
+        Nas configurações da instância (engrenagem), cartão <b>Controles</b>, toque em <b>Editar
+        controles na tela</b>.
+    </p>
+    <ul>
+        <li><b>Toque num elemento</b> para abrir as configurações dele: tamanho, opacidade
+            (<b>Para todos</b> aplica a todos os elementos), sensibilidade, texto, alternar, estilo,
+            imagem, os atalhos (dá para adicionar e remover), o tipo de entrada e <b>Excluir
+            item</b>.</li>
+        <li><b>Arraste</b> um elemento para movê-lo.</li>
+        <li><b>Toque e segure num espaço vazio</b>, ou toque em <b>Adicionar</b>, para adicionar um
+            elemento.</li>
+        <li><b>Layouts</b> carrega um dos dois layouts incluídos no lugar do atual.</li>
+        <li><b>Fundo</b> coloca uma imagem atrás do layout — uma captura de tela do jogo, por
+            exemplo — para posicionar os botões em cima dela. <b>Sem fundo</b> tira a imagem. O
+            fundo é só para o editor; o jogo nunca o mostra.</li>
+        <li><b>Grade</b>: enquanto está ligada, o elemento se encaixa na grade quando você o
+            solta.</li>
+        <li><b>Concluir</b> fecha o editor. As mudanças são salvas automaticamente.</li>
+    </ul>
+
+    <h3>Salvar e compartilhar layouts</h3>
+    <ul>
+        <li>Cada instância guarda o próprio layout.</li>
+        <li><b>Exportar</b> e <b>Importar layout dos controles</b> no menu lateral salvam e carregam
+            um layout como .zip, com as imagens dentro.</li>
+        <li>Layouts de versões anteriores do ValDroid não podem ser importados: monte um novo no
+            editor.</li>
     </ul>
 
     <h3>Controle físico, mouse e teclado</h3>
@@ -226,7 +289,14 @@
         <li>Um <b>controle</b> físico funciona e alimenta o mesmo controle virtual. Enquanto ele
             estiver conectado, os elementos de controle na tela ficam escondidos; os botões de apoio
             de teclado e mouse continuam.</li>
-        <li><b>Mouse e teclado</b> físicos também funcionam.</li>
+        <li><b>Mouse e teclado</b> físicos também funcionam. O Shift continua pressionado enquanto
+            você aperta e solta outras teclas, então a corrida não é mais interrompida; Backspace,
+            Delete e as setas se repetem quando seguradas; as teclas do teclado numérico, incluindo
+            o Enter dele, funcionam.</li>
+        <li>Qualquer tecla pode ir para um botão na tela, incluindo Backspace, vírgula, ponto, Ctrl,
+            Alt e Shift direito.</li>
+        <li>O gesto ou botão <b>Voltar</b> do Android funciona como <b>Esc</b>: abre o menu do
+            Valheim em vez de fechar o jogo.</li>
         <li>O jogo sempre roda na horizontal. <b>Espelhar a imagem (180°)</b> a vira para suportes
             ou controles que seguram o telefone ao contrário. Vale a partir do próximo início.</li>
     </ul>
@@ -295,10 +365,18 @@
 <section id="mods">
     <h2>Mods</h2>
     <p>
-        Mods de Valheim ainda não são suportados. Eles dependem do <b>BepInEx</b>, que carrega o
-        próprio runtime no jogo, e isso não está montado aqui. A tela <b>Instalar mod / DLC</b> é
-        herança do passado do launcher com RimWorld e não serve para Valheim.
+        Os mods são instalados por instância: abra o menu lateral e toque em <b>Mods</b>.
     </p>
+    <ul>
+        <li>Escolha a instância no topo e ligue <b>Suporte a mods (BepInEx)</b>: ele carrega o
+            BepInEx quando o jogo inicia e, junto, os mods ligados abaixo.</li>
+        <li>Os mods só funcionam com o <a href="#native-mono">Mono ARM64 nativo</a> ligado.</li>
+        <li>Para instalar um mod, toque em <b>Escolher arquivo do mod (zip)</b>, selecione o .zip e
+            toque em <b>Instalar</b>.</li>
+        <li>Cada mod instalado tem a sua chave para ligar ou desligar.</li>
+        <li>Para excluir um mod, toque na <b>lixeira</b> da linha dele e confirme. Os arquivos do
+            jogo que o mod substituiu voltam ao lugar.</li>
+    </ul>
 </section>
 
 <hr>
@@ -395,7 +473,15 @@
     <h3>Telefones sem GPU Adreno</h3>
     <p>
         Valheim só foi posto para rodar em telefones Snapdragon (Adreno). Em Mali e outras GPUs pode
-        nem iniciar, ou a imagem pode sair errada. Relatos com logs são bem-vindos.
+        nem iniciar, ou a imagem pode sair errada. Mande um relato por
+        <a href="#report">Relatar um problema</a>.
+    </p>
+
+    <h3>Chão preto em algumas GPUs Mali</h3>
+    <p>
+        Em algumas GPUs Mali (a Mali-G615, por exemplo) o chão pode aparecer preto. Estamos
+        trabalhando nisso. Mande um relato por <a href="#report">Relatar um problema</a>: isso nos
+        ajuda a corrigir.
     </p>
 </section>
 
@@ -404,11 +490,10 @@
 <section id="report">
     <h2>Relatar um problema</h2>
     <p>
-        Abra o menu lateral e toque em <b>Relatar um erro</b>, depois escolha a instância onde o
+        Abra o menu lateral e toque em <b>Relatar um problema</b>, depois escolha a instância onde o
         problema aconteceu. O ValDroid anexa os logs, suas configurações gráficas e os dados do
         telefone a uma mensagem para nós: escolha o app de e-mail, descreva o problema e envie.
-        Relate logo depois que acontecer, enquanto o log ainda tem o registro. <b>Exportar logs
-        (ZIP)</b> salva os mesmos logs como arquivo, por exemplo para anexar a uma issue no GitHub.
+        Relate logo depois que acontecer, enquanto o log ainda tem o registro.
     </p>
     <p>
         Os ícones no topo do menu lateral levam às novas versões no GitHub e ao autor no X e no

@@ -107,13 +107,9 @@ public class InputControlsView extends View {
                 if (pointerOverElement == null) return false;
                 dragRawX -= distanceX;
                 dragRawY -= distanceY;
-                if (snapToGrid) {
-                    float step = gridStepPx();
-                    pointerOverElement.setCenterPosition(Math.round(dragRawX / step) * step,
-                            Math.round(dragRawY / step) * step);
-                } else {
-                    pointerOverElement.moveCenterPosition(-distanceX, -distanceY);
-                }
+                // Follow the finger smoothly even with the grid on; snapping on every move made the
+                // element jump from node to node. It lands on the grid when the finger lifts.
+                pointerOverElement.moveCenterPosition(-distanceX, -distanceY);
                 return true;
             }
 
@@ -198,7 +194,7 @@ public class InputControlsView extends View {
             if (!controlElement.isVisible()) continue;
             controlElement.draw(canvas);
         }
-        if (!isEditMode && curX >= 0 && hasMouseElement()) drawCursor(canvas);
+        if (!isEditMode && !mouseLocked && curX >= 0 && (physicalMouse || hasMouseElement())) drawCursor(canvas);
     }
 
     @Override
@@ -224,7 +220,15 @@ public class InputControlsView extends View {
                     }
                 }
             }
-            return gestureDetector.onTouchEvent(e);
+            boolean handled = gestureDetector.onTouchEvent(e);
+            if (snapToGrid && pointerOverElement != null
+                    && (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL)) {
+                float step = gridStepPx();
+                pointerOverElement.setCenterPosition(Math.round(pointerOverElement.getCenterX() / step) * step,
+                        Math.round(pointerOverElement.getCenterY() / step) * step);
+                invalidate();
+            }
+            return handled;
         } else {
             int action = e.getActionMasked();
             // A new gesture: no finger can still be on any element, so drop pointers whose UP never
@@ -579,15 +583,52 @@ public class InputControlsView extends View {
     public float getCursorX() { return curX; }
     public float getCursorY() { return curY; }
 
-    /** Move the shared cursor by a view-px delta (touchpad, mouse stick, a gamepad stick). */
+    private boolean mouseLocked;
+
+    /** Move the shared cursor by a view-px delta (touchpad, mouse stick, a gamepad stick, a captured
+     *  physical mouse). While the game holds the mouse this is mouse look: the delta goes to the X
+     *  pointer as a delta and the overlay cursor stays hidden where it was. */
     public void moveCursorBy(float dx, float dy) {
+        if (InputSink.isMouseLocked()) {
+            setMouseLocked(true);
+            InputSink.sendCursorDelta(dx * renderScale, dy * renderScale);
+            return;
+        }
+        setMouseLocked(false);
         if (curX < 0) centreCursor();
         moveCursorTo(curX + dx, curY + dy);
+    }
+
+    /** Lock state changes: hide the arrow while the game holds the mouse, and afterwards put it
+     *  where the game left the real pointer, so the next touchpad stroke starts from there. */
+    public void setMouseLocked(boolean locked) {
+        if (locked == mouseLocked) return;
+        mouseLocked = locked;
+        if (!locked) {
+            float[] p = InputSink.pointerInView();
+            if (p != null) { curX = p[0]; curY = p[1]; }
+        }
+        invalidate();
+    }
+
+    public boolean isMouseLocked() { return mouseLocked; }
+
+    private boolean physicalMouse;
+
+    /** A physical mouse is connected: draw the arrow even when the layout has no mouse element
+     *  (the default gamepad layout has none, and without it the pointer moved invisibly). */
+    public void setPhysicalMouse(boolean present) {
+        if (present == physicalMouse) return;
+        physicalMouse = present;
+        invalidate();
     }
 
     /** Put the shared cursor at a view position (physical mouse, a tap on the bare game). It stays
      *  inside the game rect, so it lines up with the game's own cursor and never enters the bars. */
     public void moveCursorTo(float x, float y) {
+        // An absolute position would yank the camera during mouse look; a tap there only clicks.
+        if (InputSink.isMouseLocked()) { setMouseLocked(true); return; }
+        setMouseLocked(false);
         float minX = gameW > 0 ? gameLeft : 0;
         float maxX = gameW > 0 ? gameLeft + gameW - 1 : getWidth() - 1;
         float minY = gameH > 0 ? gameTop : 0;

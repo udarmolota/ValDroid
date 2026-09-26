@@ -69,6 +69,35 @@ public final class InputSink {
         else xs.injectKeyRelease(xk);
     }
 
+    private static double pendingDx, pendingDy;   // sub-pixel remainder of mouse-look deltas
+
+    /** True while the game holds the mouse (see XServer.isMouseLockedByGame). */
+    public static boolean isMouseLocked() {
+        XServer xs = XServerRunner.getXServer();
+        return xs != null && xs.isMouseLockedByGame();
+    }
+
+    /** Mouse look: move the X pointer by a delta (view px * renderScale), keeping the fraction for
+     *  the next call so slow finger movement still turns the camera. */
+    public static void sendCursorDelta(double dx, double dy) {
+        XServer xs = XServerRunner.getXServer();
+        if (xs == null) return;
+        pendingDx += dx;
+        pendingDy += dy;
+        int ix = (int) pendingDx, iy = (int) pendingDy;
+        if (ix == 0 && iy == 0) return;
+        pendingDx -= ix;
+        pendingDy -= iy;
+        xs.injectPointerMoveDelta(ix, iy);
+    }
+
+    /** The X pointer position in view px (for re-syncing the overlay cursor after mouse look). */
+    static float[] pointerInView() {
+        XServer xs = XServerRunner.getXServer();
+        if (xs == null) return null;
+        return new float[]{ xs.pointer.getX() / renderScale + gameLeft, xs.pointer.getY() / renderScale + gameTop };
+    }
+
     public static void sendCursorPos(double x, double y) {
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return;

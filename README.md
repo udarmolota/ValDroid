@@ -6,7 +6,17 @@ controls and gamepad support.
 
 > [!NOTE]
 > ValDroid does not include the game. It runs **your own copy** of Valheim's Linux build. You can
-> download it inside the app with your Steam account, or add it as a `.zip` you made yourself.
+> download it inside the app with your Steam account\*, or add it as a `.zip` you made yourself.
+>
+> \* Downloading from Steam needs the **Steam mobile app with Steam Guard turned on**. You enter your
+> Steam login in ValDroid, it goes straight to Steam's servers, and you **approve the sign-in in the
+> Steam mobile app** — the authorisation itself happens there. ValDroid only receives Steam's
+> permission to download the game and to use Steam Cloud; the permission is kept in memory for the
+> session.
+
+> [!TIP]
+> ValDroid was tested with **Valheim 1.0.15**, and that is where it works best — especially on Mali
+> GPUs. Older builds may show problems that are already fixed on the current version.
 
 > [!WARNING]
 > **ValDroid is an early alpha.** It launches and plays on the devices we've tested, but behaviour
@@ -18,10 +28,13 @@ controls and gamepad support.
 - ✔️ **Native ARM64 Mono**: the game's own code runs directly on your phone's CPU and only the Unity
   engine is emulated. That roughly doubles FPS wherever the CPU is the limit.
 - ✔️ **Two renderers**: MobileGlues (OpenGL → OpenGL ES, the default) and Vulkan through Turnip
-- ✔️ **Editable on-screen gamepad**: two sticks, a d-pad and the full set of buttons. Move, resize
-  and set the opacity of each. A keyboard and mouse layout is included, and physical gamepads work too.
-- ✔️ **Steam inside the app**: download the game, and move saves between your phone and PC through
+- ✔️ **On-screen controls with a full editor**: buttons (with styles and your own pictures), sticks,
+  d-pad, touchpad, scroll bar and a radial menu. Two ready-made layouts — gamepad (the default) and
+  keyboard with touchpad — and mouse look with the touchpad or a physical mouse. Physical gamepads and
+  keyboards work too.
+- ✔️ **Steam inside the app**\*: download the game, and move saves between your phone and PC through
   Steam Cloud
+- ✔️ **Mods (experimental)**: BepInEx is built in; install mods from a `.zip` and switch them on and off
 - ✔️ **Graphics presets** (Low and Very low), tuned for emulation rather than for a PC and written into
   the game before it starts
 - ✔️ **Frame-rate modes** (Economy ~30, Balanced ~40, Smooth ~60, or no limit), plus an on-screen
@@ -39,7 +52,8 @@ and shares their approach.
 A few honest notes so expectations land right:
 
 - **Single-player only for now.** Multiplayer, dedicated servers and crossplay are not supported yet.
-- **Mods are not supported yet.** BepInEx support is being worked on, but it isn't ready.
+- **Mods are experimental.** BepInEx is built in and many mods work, but not all of them: very old
+  mods may load and do nothing.
 - **Valheim is demanding.** Most of the engine runs under emulation, so the CPU is often the limit.
   What slows you down depends on where you are: open meadows are light, dense forest is heavy on the
   CPU, and a base full of fires and torches is heavy on the GPU.
