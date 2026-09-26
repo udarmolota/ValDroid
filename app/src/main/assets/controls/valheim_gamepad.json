@@ -9,7 +9,12 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
     "type": "STICK"
   },
   {
@@ -22,7 +27,12 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
+    "sensitivity": 1.4,
+    "style": "OUTLINE",
+    "tapDisabled": false,
     "type": "STICK"
   },
   {
@@ -33,7 +43,12 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
     "type": "DPAD"
   },
   {
@@ -46,9 +61,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "LB",
-    "type": "BUTTON_RECT"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_RECT",
+    "text": "LB"
   },
   {
     "alpha": 128,
@@ -60,9 +80,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "RB",
-    "type": "BUTTON_RECT"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_RECT",
+    "text": "RB"
   },
   {
     "alpha": 128,
@@ -74,9 +99,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "A",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "A"
   },
   {
     "alpha": 128,
@@ -88,9 +118,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "B",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "B"
   },
   {
     "alpha": 128,
@@ -102,9 +137,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "X",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "X"
   },
   {
     "alpha": 128,
@@ -116,9 +156,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "Y",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "Y"
   },
   {
     "alpha": 128,
@@ -130,8 +175,12 @@
     "color": -3355444,
     "icon": "GAMEPAD_BACK_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.75,
-    "text": "A",
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
     "type": "BUTTON_CIRCLE"
   },
   {
@@ -144,8 +193,12 @@
     "color": -3355444,
     "icon": "GAMEPAD_START_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.75,
-    "text": "A",
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
     "type": "BUTTON_CIRCLE"
   },
   {
@@ -158,9 +211,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.75,
-    "text": "L",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "L3"
   },
   {
     "alpha": 128,
@@ -172,9 +230,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.75,
-    "text": "R",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "R3"
   },
   {
     "alpha": 128,
@@ -186,9 +249,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "LT",
-    "type": "BUTTON_RECT"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_RECT",
+    "text": "LT"
   },
   {
     "alpha": 128,
@@ -200,9 +268,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "GAMEPAD",
+    "isToggle": false,
+    "noTint": false,
     "scale": 1.0,
-    "text": "RT",
-    "type": "BUTTON_RECT"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_RECT",
+    "text": "RT"
   },
   {
     "alpha": 128,
@@ -214,9 +287,14 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "MNK",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.6,
-    "text": "V",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "V"
   },
   {
     "alpha": 128,
@@ -228,8 +306,13 @@
     "color": -3355444,
     "icon": "NO_ICON",
     "inputType": "MNK",
+    "isToggle": false,
+    "noTint": false,
     "scale": 0.6,
-    "text": "KB",
-    "type": "BUTTON_CIRCLE"
+    "sensitivity": 2.0,
+    "style": "OUTLINE",
+    "tapDisabled": false,
+    "type": "BUTTON_CIRCLE",
+    "text": "KB"
   }
 ]

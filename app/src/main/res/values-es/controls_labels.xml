@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ctl_type_stick">Stick (mando)</string>
+    <string name="ctl_type_stick_wasd">Stick (teclas WASD)</string>
+    <string name="ctl_type_stick_mouse">Stick (ratón)</string>
+    <string name="ctl_type_dpad">Cruceta</string>
+    <string name="ctl_type_button_rect">Botón (rectangular)</string>
+    <string name="ctl_type_button_circle">Botón (redondo)</string>
+    <string name="ctl_type_touchpad">Panel táctil (ratón)</string>
+    <string name="ctl_type_scroll_bar">Barra de desplazamiento (rueda del ratón)</string>
+    <string name="ctl_type_radial_menu">Menú radial</string>
+    <string name="ctl_input_mnk">Teclado y ratón</string>
+    <string name="ctl_input_gamepad">Mando</string>
+    <string name="ctl_icon_none">Sin icono</string>
+    <string name="ctl_style_outline">Contorno</string>
+    <string name="ctl_style_filled">Relleno</string>
+    <string name="ctl_style_glass">Cristal</string>
+    <string name="ctl_key_space">Espacio</string>
+    <string name="ctl_key_left">%1$s izquierdo</string>
+    <string name="ctl_key_right">%1$s derecho</string>
+    <string name="ctl_mouse_left">Clic izquierdo</string>
+    <string name="ctl_mouse_right">Clic derecho</string>
+    <string name="ctl_mouse_middle">Clic central</string>
+    <string name="ctl_mouse_button">Botón del ratón %1$s</string>
+    <string name="ctl_mouse_wheel_up">Rueda arriba</string>
+    <string name="ctl_mouse_wheel_down">Rueda abajo</string>
+    <string name="ctl_ui_toggle_overlay">Mostrar/ocultar controles en pantalla</string>
+    <string name="ctl_ui_toggle_keyboard">Mostrar/ocultar teclado</string>
+    <string name="ctl_pad_left_stick">Stick izquierdo</string>
+    <string name="ctl_pad_right_stick">Stick derecho</string>
+    <string name="ctl_pad_left_stick_press">Pulsar stick izquierdo (L3)</string>
+    <string name="ctl_pad_right_stick_press">Pulsar stick derecho (R3)</string>
+    <string name="ctl_pad_axis">%1$s (eje)</string>
+    <string name="ctl_pad_dpad">Cruceta %1$s</string>
+
+    <string name="controls_editor_add_element">Añadir elemento de control</string>
+    <string name="controls_editor_instructions">Toca un elemento para editarlo y arrástralo para moverlo. Mantén pulsado un espacio vacío (o toca Añadir) para añadir un elemento. Los cambios se guardan al salir del editor.</string>
+    <string name="controls_editor_vkbd_loaded">Diseño de teclado y panel táctil cargado</string>
+    <string name="controls_editor_gamepad_loaded">Diseño de mando cargado</string>
+    <string name="control_element_scale">Tamaño</string>
+    <string name="control_element_opacity">Opacidad</string>
+    <string name="control_element_opacity_all">A todos</string>
+    <string name="control_element_sensitivity">Sensibilidad</string>
+    <string name="control_element_tap_click">Toque = clic izquierdo</string>
+    <string name="control_element_text">Texto</string>
+    <string name="control_element_text_empty">Vacío</string>
+    <string name="control_element_toggle">Alternar</string>
+    <string name="control_element_icon">Icono</string>
+    <string name="control_element_style">Estilo</string>
+    <string name="control_element_custom_icon">Icono propio…</string>
+    <string name="control_element_icon_no_tint">Mantener los colores originales</string>
+    <string name="control_element_custom_icon_select_button">Selecciona primero un botón</string>
+    <string name="control_element_custom_icon_failed">No se pudo cargar la imagen</string>
+    <string name="control_element_input_type">Tipo de entrada</string>
+    <string name="control_element_bindings">Asignaciones</string>
+    <string name="control_element_binding_left">Izquierda</string>
+    <string name="control_element_binding_up">Arriba</string>
+    <string name="control_element_binding_right">Derecha</string>
+    <string name="control_element_binding_down">Abajo</string>
+    <string name="control_element_stick_binding">Stick</string>
+    <string name="editor_grid_on">Cuadrícula: sí</string>
+    <string name="editor_grid_off">Cuadrícula: no</string>
+
+    <string name="controls_exported">Diseño de controles exportado</string>
+    <string name="controls_export_failed">Error al exportar: %1$s</string>
+    <string name="controls_imported">Diseño de controles importado en %1$s. Reinicia el juego para usarlo.</string>
+    <string name="controls_import_failed">Error al importar: %1$s</string>
+</resources>

@@ -131,7 +131,12 @@ public enum Binding {
 
     // --- Modifiers: held while clicking (Shift = queue orders / multi-select in RimWorld) ---
     // SDL_SCANCODE_LSHIFT=225, SDLK_LSHIFT=225|0x40000000. No text (modifier).
-    KEY_LSHIFT(Kind.KEY, 225, 0x400000E1, null, "Left Shift");
+    KEY_LSHIFT(Kind.KEY, 225, 0x400000E1, null, "Left Shift"),
+    // Valheim: Left Ctrl = crouch, Alt = alternative actions. SDL_SCANCODE_LCTRL=224, LALT=226,
+    // RSHIFT=229; SDLK = scancode|0x40000000. No text (modifiers).
+    KEY_LCTRL(Kind.KEY, 224, 0x400000E0, null, "Left Ctrl"),
+    KEY_LALT(Kind.KEY, 226, 0x400000E2, null, "Left Alt"),
+    KEY_RSHIFT(Kind.KEY, 229, 0x400000E5, null, "Right Shift");
 
     public enum Kind { NONE, MOUSE, SCROLL, KEY, SPECIAL, GP_BUTTON, GP_TRIGGER, GP_DPAD, GP_STICK }
 

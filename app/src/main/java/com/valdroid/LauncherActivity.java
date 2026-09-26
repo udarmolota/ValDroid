@@ -65,7 +65,7 @@ public class LauncherActivity extends AppCompatActivity {
                     });
 
     private final ActivityResultLauncher<String> exportLayoutLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/json"),
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
                     uri -> { if (uri != null) exportLayout(uri); });
 
     private final ActivityResultLauncher<String[]> importLayoutLauncher =
@@ -151,11 +151,12 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_export_layout) {
                 chooseInstanceThen(gi -> { pendingInstance = gi;
-                        exportLayoutLauncher.launch("rimdroid_controls.json"); });
+                        exportLayoutLauncher.launch(dataFileName("controls", gi)); });
                 return true;
             } else if (id == R.id.action_import_layout) {
                 chooseInstanceThen(gi -> { pendingInstance = gi; importLayoutLauncher.launch(new String[]{
-                        "application/json", "text/plain", "application/octet-stream"}); });
+                        "application/zip", "application/x-zip-compressed", "application/json",
+                        "text/plain", "application/octet-stream"}); });
                 return true;
             } else if (id == R.id.action_bug_report) {
                 sendBugReport();
@@ -660,56 +661,35 @@ public class LauncherActivity extends AppCompatActivity {
 
     // ---- On-screen controls layout backup --------------------------------------
 
-    /** Export the current on-screen controls layout (JSON) to a picked file. Falls back
-     *  to the bundled default layout if the user has never customized it. */
+    /** Export the chosen instance's on-screen controls as a zip: controls.json + icons/ (the
+     *  Zomdroid format). An instance still on the bundled default exports that default. */
     private void exportLayout(Uri uri) {
         final GameInstance target = pendingInstance != null ? pendingInstance : currentInstance();
+        final String name = target != null ? target.getName() : null;
         new Thread(() -> {
-            // Controls are per-instance → export the CHOSEN instance's layout
-            // (InstanceSettings falls back to the global/default layout if it has none).
-            String json = (target != null)
-                    ? new InstanceSettings(target.getName()).getControlsJson()
-                    : LauncherPreferences.requireSingleton().getControlsJson();
-            try {
-                if (json == null || json.trim().isEmpty()) {
-                    try (InputStream in = getAssets().open(
-                            com.valdroid.input.InputControlsView.DEFAULT_ASSET);
-                         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
-                        byte[] b = new byte[8192]; int n;
-                        while ((n = in.read(b)) > 0) bos.write(b, 0, n);
-                        json = bos.toString("UTF-8");
-                    }
-                }
-                try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                    if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                    out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                }
-                ui.post(() -> toast("Controls layout exported"));
+            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new java.io.IOException("cannot open the file");
+                com.valdroid.controls.ControlsStorage.exportZip(this, name, out);
+                ui.post(() -> toast(getString(R.string.controls_exported)));
             } catch (Exception ex) {
-                ui.post(() -> toast("Export failed: " + ex.getMessage()));
+                ui.post(() -> toast(getString(R.string.controls_export_failed, String.valueOf(ex.getMessage()))));
             }
         }).start();
     }
 
-    /** Import an on-screen controls layout (JSON) from a picked file. */
+    /** Import a controls zip (controls.json + icons/) or a bare controls .json into the chosen
+     *  instance. Checked to be a layout before anything is written. */
     private void importLayout(Uri uri) {
         final GameInstance target = pendingInstance != null ? pendingInstance : currentInstance();
+        final String name = target != null ? target.getName() : null;
         new Thread(() -> {
-            try (InputStream in = getContentResolver().openInputStream(uri);
-                 java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
-                byte[] b = new byte[8192]; int n;
-                while ((n = in.read(b)) > 0) bos.write(b, 0, n);
-                String json = bos.toString("UTF-8");
-                // Validate it parses as JSON before saving (rejects garbage files).
-                new com.google.gson.Gson().fromJson(json, com.google.gson.JsonElement.class);
-                // Import into the CHOSEN instance's layout (per-instance controls).
-                if (target != null) new InstanceSettings(target.getName()).setControlsJson(json);
-                else LauncherPreferences.requireSingleton().setControlsJson(json);
-                ui.post(() -> toast("Controls layout imported into " + (target != null ? target.getName() : "default")
-                        + " — reopen the game to apply"));
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                if (in == null) throw new java.io.IOException("cannot open the file");
+                com.valdroid.controls.ControlsStorage.importLayout(in, name);
+                ui.post(() -> toast(getString(R.string.controls_imported, name != null ? name : "ValDroid")));
             } catch (Exception ex) {
-                ui.post(() -> toast("Import failed: "
-                        + (ex.getMessage() == null ? "invalid layout file" : ex.getMessage())));
+                ui.post(() -> toast(getString(R.string.controls_import_failed,
+                        ex.getMessage() == null ? "invalid layout file" : ex.getMessage())));
             }
         }).start();
     }

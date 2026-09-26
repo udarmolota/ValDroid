@@ -63,23 +63,52 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         else xs.injectPointerButtonRelease(xBtn(button));
     }
     /** SDL scancode → XKeycode for the on-screen KEY buttons (physical keyboards go through
-     *  Keyboard.onKeyEvent with the full Android map; this covers only what layouts use). */
+     *  Keyboard.onKeyEvent with the full Android map). Must cover every KEY in {@link com.valdroid.input.Binding}:
+     *  a key missing here used to vanish silently (B, H, L, R, Backspace, comma and period did nothing,
+     *  the same bug RimDroid fixed in 89994e7). */
     private static com.valdroid.xserver.XKeycode xKey(int sdlScancode) {
-        switch (sdlScancode) {
-            case 26: return com.valdroid.xserver.XKeycode.KEY_W;
-            case 4:  return com.valdroid.xserver.XKeycode.KEY_A;
-            case 22: return com.valdroid.xserver.XKeycode.KEY_S;
-            case 7:  return com.valdroid.xserver.XKeycode.KEY_D;
+        if (sdlScancode >= 4 && sdlScancode <= 29) {
+            switch (sdlScancode) {
+            case 4: return com.valdroid.xserver.XKeycode.KEY_A;
+            case 5: return com.valdroid.xserver.XKeycode.KEY_B;
+            case 6: return com.valdroid.xserver.XKeycode.KEY_C;
+            case 7: return com.valdroid.xserver.XKeycode.KEY_D;
+            case 8: return com.valdroid.xserver.XKeycode.KEY_E;
+            case 9: return com.valdroid.xserver.XKeycode.KEY_F;
+            case 10: return com.valdroid.xserver.XKeycode.KEY_G;
+            case 11: return com.valdroid.xserver.XKeycode.KEY_H;
+            case 12: return com.valdroid.xserver.XKeycode.KEY_I;
+            case 13: return com.valdroid.xserver.XKeycode.KEY_J;
+            case 14: return com.valdroid.xserver.XKeycode.KEY_K;
+            case 15: return com.valdroid.xserver.XKeycode.KEY_L;
+            case 16: return com.valdroid.xserver.XKeycode.KEY_M;
+            case 17: return com.valdroid.xserver.XKeycode.KEY_N;
+            case 18: return com.valdroid.xserver.XKeycode.KEY_O;
+            case 19: return com.valdroid.xserver.XKeycode.KEY_P;
             case 20: return com.valdroid.xserver.XKeycode.KEY_Q;
-            case 8:  return com.valdroid.xserver.XKeycode.KEY_E;
-            case 6:  return com.valdroid.xserver.XKeycode.KEY_C;
-            case 9:  return com.valdroid.xserver.XKeycode.KEY_F;
+            case 21: return com.valdroid.xserver.XKeycode.KEY_R;
+            case 22: return com.valdroid.xserver.XKeycode.KEY_S;
+            case 23: return com.valdroid.xserver.XKeycode.KEY_T;
+            case 24: return com.valdroid.xserver.XKeycode.KEY_U;
+            case 25: return com.valdroid.xserver.XKeycode.KEY_V;
+            case 26: return com.valdroid.xserver.XKeycode.KEY_W;
+            case 27: return com.valdroid.xserver.XKeycode.KEY_X;
+            case 28: return com.valdroid.xserver.XKeycode.KEY_Y;
+            case 29: return com.valdroid.xserver.XKeycode.KEY_Z;
+            }
+        }
+        switch (sdlScancode) {
             case 44: return com.valdroid.xserver.XKeycode.KEY_SPACE;
             case 41: return com.valdroid.xserver.XKeycode.KEY_ESC;
             case 40: return com.valdroid.xserver.XKeycode.KEY_ENTER;
             case 43: return com.valdroid.xserver.XKeycode.KEY_TAB;
+            case 42: return com.valdroid.xserver.XKeycode.KEY_BKSP;
+            case 54: return com.valdroid.xserver.XKeycode.KEY_COMMA;
+            case 55: return com.valdroid.xserver.XKeycode.KEY_PERIOD;
             case 225: return com.valdroid.xserver.XKeycode.KEY_SHIFT_L;
+            case 229: return com.valdroid.xserver.XKeycode.KEY_SHIFT_R;
             case 224: return com.valdroid.xserver.XKeycode.KEY_CTRL_L;
+            case 226: return com.valdroid.xserver.XKeycode.KEY_ALT_L;
             case 30: return com.valdroid.xserver.XKeycode.KEY_1;
             case 31: return com.valdroid.xserver.XKeycode.KEY_2;
             case 32: return com.valdroid.xserver.XKeycode.KEY_3;
@@ -227,7 +256,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private android.view.ScaleGestureDetector scaleDetector;
     private boolean scaling = false;
     private boolean prefsPinned = false;   // Prefs.xml resolution is pinned ONCE per launch (not per surface-change → no ping-pong)
-    private com.valdroid.input.InputControlsView controls;
+    private com.valdroid.controls.InputControlsView controls;
     private android.widget.TextView fpsText;           // classic "FPS: XX" counter, top-left (optional)
     private long fpsLastCount = 0, fpsLastTimeMs = 0;  // its per-second delta
     private PerfOverlayView fpsView;                   // full performance bar, top-centre (optional)
@@ -389,7 +418,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         surfaceView.getHolder().addCallback(this);
 
         scaleDetector = new android.view.ScaleGestureDetector(this, new ScaleListener());
-        controls = new com.valdroid.input.InputControlsView(this, renderScale, instanceName);
+        controls = new com.valdroid.controls.InputControlsView(this);
+        controls.setInstanceName(instanceName);   // before layout: the layout is read on the first size change
+        controls.setRenderScale(renderScale);
+        controls.setKeyboardToggleListener(this::toggleSoftKeyboard);
         gamepad = new com.valdroid.input.GamepadHandler(this, controls);
         mouseKb = new com.valdroid.input.MouseKeyboardHandler(controls);
 
@@ -551,12 +583,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 // A quick tap = left click. If the long-press already fired a right-click, do NOT
                 // also left-click (that would double-act). tapMoved/scaling still exclude drags/pinch.
                 if (panGestureOwned && !tapMoved && !scaling && !longPressFired
-                        && System.currentTimeMillis() - tapDownT < 250) {
-                    final int gx = gameX(e.getX()), gy = gameY(e.getY());
-                    try {
-                        buttonInput(1, 1, gx, gy);   // direct tap = left click at finger
-                        ui.postDelayed(() -> buttonInput(1, 0, gx, gy), 50);
-                    } catch (UnsatisfiedLinkError ig) {}
+                        && System.currentTimeMillis() - tapDownT < 250 && controls != null) {
+                    // Direct tap = left click at the finger. Through the overlay's shared cursor, so
+                    // the drawn arrow and the touchpad carry on from where the tap left the pointer.
+                    controls.tapAt(e.getX(), e.getY(), com.valdroid.controls.GLFWBinding.MOUSE_BUTTON_LEFT);
                 }
                 panGestureOwned = false;
                 return true;
@@ -601,12 +631,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private final Runnable longPressRunnable = () -> {
         if (!panGestureOwned || tapMoved || scaling || longPressFired) return;
         longPressFired = true;
-        final int gx = gameX(tapDownX), gy = gameY(tapDownY);
-        try {
-            buttonInput(3, 1, gx, gy);   // right button down
-            ui.postDelayed(() -> buttonInput(3, 0, gx, gy), 50);
-        } catch (UnsatisfiedLinkError ig) {}
-        if (controls != null) controls.maybeHaptic();
+        if (controls == null) return;
+        controls.tapAt(tapDownX, tapDownY, com.valdroid.controls.GLFWBinding.MOUSE_BUTTON_RIGHT);
+        controls.maybeHaptic();
     };
 
     private void updateDragPan(float dx, float dy, float dead) {
@@ -637,26 +664,19 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         @Override public boolean onScaleBegin(android.view.ScaleGestureDetector dt) { scaling = true; accum = 0f; return true; }
         @Override public boolean onScale(android.view.ScaleGestureDetector dt) {
             accum += dt.getScaleFactor() - 1f;
-            int fx = gameX(dt.getFocusX()), fy = gameY(dt.getFocusY());
-            while (accum >  0.15f) { accum -= 0.15f; safeScroll(fx, fy, +1); }
-            while (accum < -0.15f) { accum += 0.15f; safeScroll(fx, fy, -1); }
+            while (accum >  0.15f) { accum -= 0.15f; pinchScroll(dt.getFocusX(), dt.getFocusY(), +1); }
+            while (accum < -0.15f) { accum += 0.15f; pinchScroll(dt.getFocusX(), dt.getFocusY(), -1); }
             return true;
         }
         @Override public void onScaleEnd(android.view.ScaleGestureDetector dt) { scaling = false; }
     }
-    private void safeScroll(int x, int y, int dy) { scrollInput(x, y, dy); }
 
-    // Map a screen coordinate (px) to a game/buffer coordinate, accounting for the letterbox
-    // offset + render scale, clamped to the buffer (taps in the black bars clamp to the edge).
-    private int gameX(float screenX) {
-        int max = Math.max(1, Math.round(boxW * renderScale)) - 1;
-        int v = Math.round((screenX - boxLeft) * renderScale);
-        return v < 0 ? 0 : (v > max ? max : v);
-    }
-    private int gameY(float screenY) {
-        int max = Math.max(1, Math.round(boxH * renderScale)) - 1;
-        int v = Math.round((screenY - boxTop) * renderScale);
-        return v < 0 ? 0 : (v > max ? max : v);
+    /** One wheel notch at the pinch focus. The pointer goes there through the overlay's shared
+     *  cursor (which maps screen to game coordinates), so cursor and pointer stay together. */
+    private void pinchScroll(float screenX, float screenY, int dy) {
+        if (controls == null) return;
+        controls.moveCursorTo(screenX, screenY);
+        com.valdroid.controls.InputSink.sendMouseScroll(0, dy);
     }
 
     // === Performance overlay: sample once a second on its own thread, show on the UI thread ===
@@ -741,7 +761,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         boolean pad = isGamepadConnected();
         if (pad == lastPadConnected) return;
         lastPadConnected = pad;
-        if (controls != null) controls.setGamepadElementsHidden(pad);
+        if (controls != null) controls.setGamepadConnected(pad);
     }
 
     private boolean isGamepadConnected() {
@@ -761,11 +781,33 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // Winlator's Keyboard.onKeyEvent carries the full Android→XKeycode map and was never wired.
         com.valdroid.xserver.XServer xs = com.valdroid.xserver.XServerRunner.getXServer();
         if (xs != null) {
-            try { xs.keyboard.onKeyEvent(event); } catch (Throwable ignored) {}
-        }
-        if (mouseKb != null && mouseKb.onKey(event)) return true;   // physical keyboard
+            // Back (the system back gesture / button, or a keyboard's Back key) is Esc in the game:
+            // Valheim opens its menu on Esc, and letting Android handle Back closed the whole game.
+            // A gamepad's Back stays its B button in GamepadHandler.
+            if (event.getKeyCode() == android.view.KeyEvent.KEYCODE_BACK && !isFromGamepad(event)) {
+                int a = event.getAction();
+                if (a == android.view.KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0)
+                    xs.injectKeyPress(com.valdroid.xserver.XKeycode.KEY_ESC, 0);
+                else if (a == android.view.KeyEvent.ACTION_UP)
+                    xs.injectKeyRelease(com.valdroid.xserver.XKeycode.KEY_ESC);
+                return true;
+            }
+            // Physical (and IME key-event) keys go ONLY through the X keyboard, which has the full
+            // Android map. It used to be mirrored through MouseKeyboardHandler as well, whose partial
+            // scancode table and dead SDL ring added nothing but a second copy of every key. A key the
+            // X keyboard maps is consumed, so Android does not also act on it (focus moves, etc.).
+            boolean handled = false;
+            try { handled = xs.keyboard.onKeyEvent(event); } catch (Throwable ignored) {}
+            if (handled) return true;
+        } else if (mouseKb != null && mouseKb.onKey(event)) return true;   // no X server (not Valheim)
         if (gamepad != null && gamepad.onKey(event)) return true;
         return super.dispatchKeyEvent(event);
+    }
+
+    private static boolean isFromGamepad(android.view.KeyEvent e) {
+        int src = e.getSource();
+        return (src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+            || (src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK;
     }
 
     @Override

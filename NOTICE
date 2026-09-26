@@ -1,4 +1,4 @@
-RimDroid
+ValDroid
 Copyright (c) 2026 udarmolota
 
 This program is free software: you can redistribute it and/or modify it under
@@ -10,75 +10,141 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-RimDroid is an unofficial, community-developed compatibility launcher for running
-the Linux x86_64 version of RimWorld on ARM64 Android devices.
+ValDroid is an unofficial, community-developed compatibility launcher for running
+the Linux x86_64 version of Valheim on ARM64 Android devices. It grew out of
+RimDroid (github.com/udarmolota/RimDroid) by the same author.
 
-Using RimDroid requires a complete Linux installation of RimWorld and any DLC the
-user chooses to enable. RimWorld and its related names and trademarks belong to
-Ludeon Studios Inc.
-
-"Portions of the materials used to create this content/mod are trademarks and/or
-copyrighted works of Ludeon Studios Inc. All rights reserved by Ludeon. This
-content/mod is not official and is not endorsed by Ludeon."
+Using ValDroid requires the user's own copy of Valheim. Valheim and its related
+names and trademarks belong to Iron Gate AB; the game is published by Coffee Stain
+Publishing. ValDroid is not affiliated with, endorsed by or supported by Iron Gate
+or Coffee Stain, and it contains no game files.
 
 ================================================================================
 THIRD-PARTY COMPONENTS
 ================================================================================
 
-RimDroid's own source code is licensed under GPL-3.0 unless a source file states
-otherwise. RimDroid also bundles and/or uses third-party components under their
-respective open-source or proprietary licenses.
+ValDroid's own source code is licensed under GPL-3.0 unless a source file or a
+section below states otherwise. ValDroid also bundles and/or uses third-party
+components under their respective open-source or proprietary licenses.
 
 Third-party components remain the property of their respective copyright holders
-and are not relicensed under GPL-3.0 by their inclusion in RimDroid.
+and are not relicensed under GPL-3.0 by their inclusion in ValDroid.
 
 Per-file exception (MIT, not GPL-3.0): the anonymous Steam Workshop mod-download
-mechanism — app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
-app/src/main/java/com/rimdroid/SteamAnonModSpike.java (original work by udarmolota) —
+mechanism — app/src/main/java/com/valdroid/SteamAnonModDownloader.java and
+app/src/main/java/com/valdroid/SteamAnonModSpike.java (original work by udarmolota) —
 is licensed under the MIT License. The author may reuse it in her other projects
-(e.g. Zomdroid) and others may reuse it too, provided the copyright notice is preserved.
-MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of RimDroid.
+and others may reuse it too, provided the copyright notice is preserved.
+MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of ValDroid.
 
---- Native (bundled .so / linked / git submodules) ---
+--- Derived source code ---
+
+Winlator X server      LGPL-2.1             Copyright (c) BrunoSX (brunodev85)
+                       https://github.com/brunodev85/winlator-app
+                       (main project: https://github.com/brunodev85/winlator)
+                       The in-process X11 server Valheim draws and gets input through:
+                       app/src/main/java/com/valdroid/xserver/,
+                       app/src/main/java/com/valdroid/xconnector/,
+                       app/src/main/java/com/valdroid/sysvshm/ and app/src/main/cpp/xserver/.
+                       Modified (2026, via RimDroid): packages and JNI symbols renamed from
+                       com.winlator, reduced to what the games need, and changed for input,
+                       soft-keyboard text and stability fixes. These files remain under
+                       LGPL-2.1 (full text: LICENSES/LGPL-2.1.txt), which allows their use in
+                       a GPL-3.0 program.
+
+The on-screen controls (app/src/main/java/com/valdroid/controls/) are derived from
+Zomdroid (https://github.com/udarmolota/zomdroid, a fork of liamelui's Zomdroid),
+MIT licence. Original Zomdroid code Copyright (c) 2025 liamelui; touchpad, radial
+menu, scroll bar, mouse and WASD sticks and later changes Copyright (c) 2025-2026
+udarmolota and contributors.
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+--- Native (built into the APK) ---
 
 box64                  MIT License          Copyright (c) 2020 ptitSeb
-                       (RimDroid uses a fork: github.com/udarmolota/rimdroid-box64,
+                       (ValDroid uses a private fork with Android/Unity changes,
                         which remains MIT, same as upstream.)
 
 liblinkernsbypass      BSD 2-Clause License Copyright (c) 2021 Billy Laws
 
-Mesa (libOSMesa,       MIT License          Copyright (c) The Mesa 3D Graphics
-libzfa / Zink,                              Library contributors
-softpipe, freedreno)
-
-SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
-                       (statically linked inside the user-supplied game)
-
-MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
-                       https://github.com/MobileGL-Dev/MobileGlues
-
 Mono (Unity fork)      MIT License          Copyright (c) .NET Foundation and Contributors;
 (libmonobdwgc-2.0.so,                       fork by Unity Technologies
- libmono-native.so)                         github.com/Unity-Technologies/mono, commit c11bc9adba,
-                                            built for Android ARM64 by RimDroid
+ libmono-native.so,                         github.com/Unity-Technologies/mono,
+ libMonoPosixHelper.so)                     built for Android ARM64 by udarmolota
                        Includes the Boehm-Demers-Weiser garbage collector (MIT-style license),
                        Copyright (c) 1988-1989 Hans-J. Boehm, Alan J. Demers; 1991-1995 Xerox
                        Corporation; 1996-1999 Silicon Graphics; 1999-2001 Hewlett-Packard.
 
-libsteam_api.so        RimDroid original work (GPL-3.0): an ARM64 stub that only exports the
-(arm64 stub)           Steamworks function names and returns 0; contains no Valve code.
+libsteam_api.so        ValDroid original work (GPL-3.0): an ARM64 stub that only exports the
+(arm64 stub)           Steamworks function names; contains no Valve code.
+
+libDiskSpacePlugin.so  ValDroid original work (GPL-3.0): ARM64 replacement for the game's
+                       free-disk-space plugin.
+
+--- Bundled runtime libraries (assets/bundles/libs.tar.xz) ---
+
+MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
+                       https://github.com/MobileGL-Dev/MobileGlues
+
+Mesa (libOSMesa,       MIT License          Copyright (c) The Mesa 3D Graphics
+libzfa / Zink,                              Library contributors
+Turnip / freedreno
+Vulkan drivers)
+
+SDL2 (x86_64)          zlib License         Copyright (c) 1997-2024 Sam Lantinga
+                       (the game also links its own copy statically)
+
+GNU C Library (x86_64) LGPL-2.1             Copyright (c) Free Software Foundation, Inc.
+(ld-linux-x86-64.so.2, libc.so.6)
+
+libstdc++, libgcc_s    GPL-3.0 with the GCC Runtime Library Exception
+(x86_64)                                    Copyright (c) Free Software Foundation, Inc.
+
+X.Org client libraries MIT / X11 License    Copyright (c) The X.Org Foundation and contributors
+(libX11, libxcb and
+extensions, libXau,
+libXdmcp, libXext, ...)
+
+libxkbcommon           MIT License          Copyright (c) libxkbcommon contributors
+
+Qualcomm Adreno Vulkan Proprietary          Copyright (c) Qualcomm Technologies, Inc.
+drivers (vulkan.ad06XX.so,                  Not covered by ValDroid's GPL-3.0 license.
+libvulkan.ad07XX_regular.so)
+
+--- Mods support ---
+
+BepInExPack Valheim    LGPL-2.1             Copyright (c) BepInEx contributors; Valheim pack by
+(assets/bepinex/)                           denikson, Azumatt, Vapok, Margmas
+                       Includes HarmonyX (MIT, Copyright (c) Andreas Pardeike, BepInEx) and
+                       MonoMod (MIT, Copyright (c) 0x0ade and contributors).
+
+--- Downloaded on demand, not bundled ---
+
+gbe_fork (Goldberg     LGPL-3.0             Copyright (c) Mr_Goldberg, Detanup01 and contributors
+Steam emulator)                             https://github.com/Detanup01/gbe_fork
 
 --- Proprietary runtime components ---
 
-FMOD Engine runtimes   FMOD EULA            Copyright (c) Firelight Technologies Pty Ltd.
-Versions: 2.02.06, 2.02.24, and 2.03.09
-Used by RimDroid's on-device audio decoding path.
-Audio engine: FMOD by Firelight Technologies Pty Ltd.
-https://www.fmod.com/legal
-
-Steamworks API runtime (libsteam_api.so)
+Steamworks API runtime (libsteam_api.so from the game)
 Copyright (c) Valve Corporation.
-Valve proprietary software; not covered by RimDroid's GPL-3.0 license.
+Valve proprietary software; not covered by ValDroid's GPL-3.0 license.
 
 --- Java / Gradle dependencies ---
 
@@ -108,6 +174,6 @@ above identify the applicable upstream projects and terms; components distribute
 in binary form remain subject to any notice and redistribution requirements of
 their respective licenses.
 
-The presence of a component in this list does not imply endorsement of RimDroid
+The presence of a component in this list does not imply endorsement of ValDroid
 by its copyright holder.
 ================================================================================

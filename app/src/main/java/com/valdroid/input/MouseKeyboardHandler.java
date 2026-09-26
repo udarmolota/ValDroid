@@ -5,6 +5,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 
 import com.valdroid.GameActivity;
+import com.valdroid.controls.InputControlsView;
 
 /**
  * Physical keyboard + mouse support. RimWorld is a native mouse+keyboard (SDL) game, so hardware

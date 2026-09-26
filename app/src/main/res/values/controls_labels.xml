@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- On-screen controls editor (com.valdroid.controls, derived from Zomdroid). Readable names for
+     element types, input types, icons, styles and the words inside binding names (see
+     ControlLabels). Layouts keep storing the enum names; only the labels change. Keys, symbols and
+     gamepad button names stay as printed on the hardware. -->
+<resources>
+    <string name="ctl_type_stick">Stick (gamepad)</string>
+    <string name="ctl_type_stick_wasd">Stick (WASD keys)</string>
+    <string name="ctl_type_stick_mouse">Stick (mouse)</string>
+    <string name="ctl_type_dpad">D-pad</string>
+    <string name="ctl_type_button_rect">Button (rectangle)</string>
+    <string name="ctl_type_button_circle">Button (round)</string>
+    <string name="ctl_type_touchpad">Touchpad (mouse)</string>
+    <string name="ctl_type_scroll_bar">Scroll bar (mouse wheel)</string>
+    <string name="ctl_type_radial_menu">Radial menu</string>
+    <string name="ctl_input_mnk">Keyboard &amp; mouse</string>
+    <string name="ctl_input_gamepad">Gamepad</string>
+    <string name="ctl_icon_none">No icon</string>
+    <string name="ctl_style_outline">Outline</string>
+    <string name="ctl_style_filled">Filled</string>
+    <string name="ctl_style_glass">Glass</string>
+    <string name="ctl_key_space">Space</string>
+    <string name="ctl_key_left">Left %1$s</string>
+    <string name="ctl_key_right">Right %1$s</string>
+    <string name="ctl_mouse_left">Left click</string>
+    <string name="ctl_mouse_right">Right click</string>
+    <string name="ctl_mouse_middle">Middle click</string>
+    <string name="ctl_mouse_button">Mouse button %1$s</string>
+    <string name="ctl_mouse_wheel_up">Wheel up</string>
+    <string name="ctl_mouse_wheel_down">Wheel down</string>
+    <string name="ctl_ui_toggle_overlay">Show/hide on-screen controls</string>
+    <string name="ctl_ui_toggle_keyboard">Show/hide keyboard</string>
+    <string name="ctl_pad_left_stick">Left stick</string>
+    <string name="ctl_pad_right_stick">Right stick</string>
+    <string name="ctl_pad_left_stick_press">Left stick press (L3)</string>
+    <string name="ctl_pad_right_stick_press">Right stick press (R3)</string>
+    <string name="ctl_pad_axis">%1$s (axis)</string>
+    <string name="ctl_pad_dpad">D-pad %1$s</string>
+
+    <string name="percentage_format" translatable="false">%d%%</string>
+    <string name="controls_editor_add_element">Add control element</string>
+    <string name="controls_editor_instructions">Tap an element to edit it, drag it to move it. Long-press an empty spot (or tap Add) to add an element. Changes are saved when you leave the editor.</string>
+    <string name="controls_editor_vkbd_loaded">Keyboard and touchpad layout loaded</string>
+    <string name="controls_editor_gamepad_loaded">Gamepad layout loaded</string>
+    <string name="control_element_scale">Size</string>
+    <string name="control_element_opacity">Opacity</string>
+    <string name="control_element_opacity_all">To all</string>
+    <string name="control_element_sensitivity">Sensitivity</string>
+    <string name="control_element_tap_click">Tap = left click</string>
+    <string name="control_element_text">Text</string>
+    <string name="control_element_text_empty">Empty</string>
+    <string name="control_element_toggle">Toggle</string>
+    <string name="control_element_icon">Icon</string>
+    <string name="control_element_style">Style</string>
+    <string name="control_element_custom_icon">Custom icon…</string>
+    <string name="control_element_icon_no_tint">Keep original colors</string>
+    <string name="control_element_custom_icon_select_button">Select a button first</string>
+    <string name="control_element_custom_icon_failed">Could not load the image</string>
+    <string name="control_element_input_type">Input type</string>
+    <string name="control_element_bindings">Bindings</string>
+    <string name="control_element_binding_left">Left</string>
+    <string name="control_element_binding_up">Up</string>
+    <string name="control_element_binding_right">Right</string>
+    <string name="control_element_binding_down">Down</string>
+    <string name="control_element_stick_binding">Stick</string>
+    <string name="editor_grid_on">Grid: on</string>
+    <string name="editor_grid_off">Grid: off</string>
+
+    <string name="controls_exported">Controls layout exported</string>
+    <string name="controls_export_failed">Export failed: %1$s</string>
+    <string name="controls_imported">Controls layout imported into %1$s. Restart the game to use it.</string>
+    <string name="controls_import_failed">Import failed: %1$s</string>
+</resources>

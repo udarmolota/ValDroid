@@ -6,6 +6,8 @@ import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
+import com.valdroid.controls.InputControlsView;
+
 import java.util.EnumSet;
 
 /**

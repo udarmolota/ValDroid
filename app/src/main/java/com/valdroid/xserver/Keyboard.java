@@ -19,6 +19,9 @@ public class Keyboard {
     private final ArraySet<Byte> pressedKeys = new ArraySet<>();
     private final ArrayList<OnKeyboardListener> onKeyboardListeners = new ArrayList<>();
     private final XServer xServer;
+    /** Android keyCode that made us press a synthetic Shift (@ * # + on keyboards that send them as
+     *  their own key codes), or -1. Only that key's release lets the synthetic Shift go. */
+    private int syntheticShiftFor = -1;
 
     public interface OnKeyboardListener {
         void onKeyPress(byte keycode, int keysym);
@@ -108,13 +111,34 @@ public class Keyboard {
             if (xKeycode == null) return false;
 
             if (action == KeyEvent.ACTION_DOWN) {
-                boolean shiftPressed = event.isShiftPressed() || keyCode == KeyEvent.KEYCODE_AT || keyCode == KeyEvent.KEYCODE_STAR || keyCode == KeyEvent.KEYCODE_POUND || keyCode == KeyEvent.KEYCODE_PLUS;
-                if (shiftPressed) xServer.injectKeyPress(XKeycode.KEY_SHIFT_L);
-                xServer.injectKeyPress(xKeycode, xKeycode != XKeycode.KEY_ENTER ? event.getUnicodeChar() : 0);
+                if (event.getRepeatCount() > 0) {
+                    // Auto-repeat: only for the editing keys, as a fresh press, so holding Backspace or
+                    // an arrow keeps working in a text field. Movement and hotkeys must not repeat:
+                    // SDL would see a release + press each time and a held W would stutter.
+                    if (isEditingKey(keyCode)) {
+                        xServer.injectKeyRelease(xKeycode);
+                        xServer.injectKeyPress(xKeycode, 0);
+                    }
+                    return true;
+                }
+                // Keyboards that send @ * # + as their own key codes need Shift for the X key that
+                // carries them. Press it only if the user is not already holding Shift: pressing and
+                // then releasing it on every key-up let go of a Shift the user still held (Valheim's
+                // sprint broke whenever another key was released).
+                boolean needsShift = keyCode == KeyEvent.KEYCODE_AT || keyCode == KeyEvent.KEYCODE_STAR
+                        || keyCode == KeyEvent.KEYCODE_POUND || keyCode == KeyEvent.KEYCODE_PLUS;
+                if (needsShift && !event.isShiftPressed()) {
+                    xServer.injectKeyPress(XKeycode.KEY_SHIFT_L);
+                    syntheticShiftFor = keyCode;
+                }
+                xServer.injectKeyPress(xKeycode, xKeycode != XKeycode.KEY_ENTER && xKeycode != XKeycode.KEY_KP_ENTER ? event.getUnicodeChar() : 0);
             }
             else if (action == KeyEvent.ACTION_UP) {
-                xServer.injectKeyRelease(XKeycode.KEY_SHIFT_L);
                 xServer.injectKeyRelease(xKeycode);
+                if (syntheticShiftFor == keyCode) {
+                    xServer.injectKeyRelease(XKeycode.KEY_SHIFT_L);
+                    syntheticShiftFor = -1;
+                }
             }
         }
         else if (action == KeyEvent.ACTION_MULTIPLE) {
@@ -128,6 +152,17 @@ public class Keyboard {
             }
         }
         return true;
+    }
+
+    private static boolean isEditingKey(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DEL: case KeyEvent.KEYCODE_FORWARD_DEL:
+            case KeyEvent.KEYCODE_DPAD_LEFT: case KeyEvent.KEYCODE_DPAD_RIGHT:
+            case KeyEvent.KEYCODE_DPAD_UP: case KeyEvent.KEYCODE_DPAD_DOWN:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /** Public entry for the soft-keyboard text path (XServer.injectText). */
@@ -171,7 +206,8 @@ public class Keyboard {
     }
 
     private static XKeycode[] createKeycodeMap() {
-        XKeycode[] keycodeMap = new XKeycode[159];
+        // Sized to every Android key code: NUMPAD_ENTER (160) and the like used to fall off the end.
+        XKeycode[] keycodeMap = new XKeycode[KeyEvent.getMaxKeyCode() + 1];
         keycodeMap[KeyEvent.KEYCODE_ENTER] = XKeycode.KEY_ENTER;
         keycodeMap[KeyEvent.KEYCODE_ESCAPE] = XKeycode.KEY_ESC;
         keycodeMap[KeyEvent.KEYCODE_DPAD_LEFT] = XKeycode.KEY_LEFT;
@@ -273,6 +309,10 @@ public class Keyboard {
         keycodeMap[KeyEvent.KEYCODE_F12] = XKeycode.KEY_F12;
         keycodeMap[KeyEvent.KEYCODE_NUM_LOCK] = XKeycode.KEY_NUM_LOCK;
         keycodeMap[KeyEvent.KEYCODE_CAPS_LOCK] = XKeycode.KEY_CAPS_LOCK;
+        keycodeMap[KeyEvent.KEYCODE_NUMPAD_ENTER] = XKeycode.KEY_KP_ENTER;
+        keycodeMap[KeyEvent.KEYCODE_NUMPAD_EQUALS] = XKeycode.KEY_EQUAL;
+        keycodeMap[KeyEvent.KEYCODE_SCROLL_LOCK] = XKeycode.KEY_SCROLL_LOCK;
+        keycodeMap[KeyEvent.KEYCODE_SYSRQ] = XKeycode.KEY_PRTSCN;
         return keycodeMap;
     }
 
@@ -373,6 +413,11 @@ public class Keyboard {
         keyboard.setKeysyms(XKeycode.KEY_F10.id, 65479, 0);
         keyboard.setKeysyms(XKeycode.KEY_F11.id, 65480, 0);
         keyboard.setKeysyms(XKeycode.KEY_F12.id, 65481, 0);
+        keyboard.setKeysyms(XKeycode.KEY_KP_ENTER.id, 65421, 0);    // XK_KP_Enter
+        keyboard.setKeysyms(XKeycode.KEY_SCROLL_LOCK.id, 65300, 0); // XK_Scroll_Lock
+        keyboard.setKeysyms(XKeycode.KEY_PRTSCN.id, 65377, 0);      // XK_Print
+        keyboard.setKeysyms(XKeycode.KEY_CAPS_LOCK.id, 65509, 0);   // XK_Caps_Lock
+        keyboard.setKeysyms(XKeycode.KEY_NUM_LOCK.id, 65407, 0);    // XK_Num_Lock
         return keyboard;
     }
 

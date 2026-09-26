@@ -146,13 +146,11 @@ In the cloud: %2$s
     <string name="editor_bg_set">Background</string>
     <string name="editor_bg_clear">No BG</string>
     <string name="editor_add">Add</string>
-    <string name="editor_reset">Reset</string>
+    <string name="editor_reset">Layouts</string>
     <string name="editor_done">Done</string>
     <string name="editor_delete">Delete element</string>
-    <string name="editor_hint">Tap to select • drag to move</string>
-    <string name="editor_reset_confirm">Reset all on-screen controls to the default layout?</string>
-    <string name="editor_layout_gamepad">Gamepad layout (default)</string>
-    <string name="editor_layout_vkbd">Keyboard and mouse layout (VKBD)</string>
+    <string name="editor_layout_gamepad">Gamepad</string>
+    <string name="editor_layout_vkbd">Keyboard and touchpad (default)</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="app_settings_theme">Theme</string>

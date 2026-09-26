@@ -126,13 +126,11 @@
     <string name="editor_bg_set">Фон</string>
     <string name="editor_bg_clear">Без фона</string>
     <string name="editor_add">Добавить</string>
-    <string name="editor_reset">Сброс</string>
+    <string name="editor_reset">Раскладки</string>
     <string name="editor_done">Готово</string>
     <string name="editor_delete">Удалить элемент</string>
-    <string name="editor_hint">Тап — выбрать • перетащить — двигать</string>
-    <string name="editor_reset_confirm">Сбросить все экранные кнопки к раскладке по умолчанию?</string>
-    <string name="editor_layout_gamepad">Раскладка геймпада (по умолчанию)</string>
-    <string name="editor_layout_vkbd">Клавиатура и мышь (VKBD)</string>
+    <string name="editor_layout_gamepad">Геймпад</string>
+    <string name="editor_layout_vkbd">Клавиатура и тачпад (по умолчанию)</string>
     <string name="nav_launcher">Лаунчер</string>
     <string name="nav_settings">Настройки</string>
     <string name="app_settings_theme">Тема</string>

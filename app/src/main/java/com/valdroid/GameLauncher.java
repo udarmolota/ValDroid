@@ -180,12 +180,28 @@ public class GameLauncher {
         return sb.toString();
     }
 
+    private static void deleteTree(java.io.File f) {
+        java.io.File[] kids = f.listFiles();
+        if (kids != null) for (java.io.File k : kids) deleteTree(k);
+        //noinspection ResultOfMethodCallIgnored
+        f.delete();
+    }
+
     public static void launch(GameInstance gameInstance) throws ErrnoException {
 
-        // Reconcile immediately before every launch too: this covers a freshly downloaded 1.5
-        // instance and repairs a controller mod/config removed after Application startup.
-        BuiltinControllerUiMod.install(ValDroidApplication.APP,
-                new java.io.File(gameInstance.getGamePath()));
+        // RimDroid's controller-UI mod (a RimWorld mod) used to be copied into every instance on
+        // each launch. Valheim never loads it; remove the copy an older ValDroid left behind, and
+        // the Mods folder with it if nothing else is in there.
+        {
+            java.io.File mods = new java.io.File(gameInstance.getGamePath(), "Mods");
+            java.io.File stale = new java.io.File(mods, "RimDroidControllerUI");
+            if (stale.isDirectory()) {
+                deleteTree(stale);
+                String[] left = mods.list();
+                if (left != null && left.length == 0) //noinspection ResultOfMethodCallIgnored
+                    mods.delete();
+            }
+        }
 
         // Rotate box64's per-fault SIGSEGV log. box64 opens it O_APPEND and never truncates, and a
         // GC-heavy modded game repeats the same protected-page fault forever — one field device had
@@ -870,12 +886,6 @@ public class GameLauncher {
                 }
             }
         }
-
-        // Keep the built-in mod out of ordinary keyboard/touch save metadata. It is activated
-        // only for launches where the final env value (including a user override) requests the
-        // game's controller-oriented UI.
-        BuiltinControllerUiMod.setActive(new java.io.File(gameInstance.getGamePath()),
-                "1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")));
 
         // No release-build clamp of the box64 dynarec knobs here (RimDroid re-pinned BIGBLOCK/FASTNAN/
         // FASTROUND/STRONGMEM after the Extra env field to protect RimWorld saves): the field is the

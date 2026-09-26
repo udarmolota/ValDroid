@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Controls editor. The element settings card is Zomdroid's (MIT, see NOTICE); the toolbar and
+     the reference background are ValDroid's. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#202830">
@@ -7,83 +11,546 @@
     <!-- Optional reference image behind the controls: load a game screenshot so buttons can be
          placed against what they'll actually sit on top of. Editor-only, never shown in-game. -->
     <ImageView
-        android:id="@+id/editor_bg"
+        android:id="@+id/controls_editor_bg_iv"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
         android:contentDescription="@string/editor_bg_set" />
 
-    <!-- The on-screen controls (edit mode) are added here programmatically -->
-    <FrameLayout
-        android:id="@+id/controls_host"
+    <com.valdroid.controls.InputControlsView
+        android:id="@+id/input_controls_v"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top toolbar -->
+    <!-- Toolbar: a compact centred row, so it covers as little of the layout as possible. -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/editor_toolbar_ll"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="8dp"
+        android:background="#99000000"
         android:gravity="center_vertical"
-        android:background="#80000000"
-        android:padding="8dp">
+        android:orientation="horizontal"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
 
         <Button
-            android:id="@+id/btn_add"
+            android:id="@+id/add_btn"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/editor_add" />
 
         <Button
-            android:id="@+id/btn_reset"
+            android:id="@+id/layouts_btn"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:text="@string/editor_reset" />
 
         <Button
-            android:id="@+id/btn_bg_set"
+            android:id="@+id/bg_set_btn"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:text="@string/editor_bg_set" />
 
         <Button
-            android:id="@+id/btn_bg_clear"
+            android:id="@+id/bg_clear_btn"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:text="@string/editor_bg_clear" />
 
-        <TextView
-            android:layout_width="0dp"
+        <ToggleButton
+            android:id="@+id/grid_tb"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:text="@string/editor_hint" />
+            android:layout_marginStart="4dp"
+            android:textOn="@string/editor_grid_on"
+            android:textOff="@string/editor_grid_off" />
 
         <Button
-            android:id="@+id/btn_done"
+            android:id="@+id/done_btn"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/editor_done" />
     </LinearLayout>
 
-    <!-- Per-element settings panel (right side; shown when an element is selected) -->
-    <ScrollView
-        android:id="@+id/panel"
-        android:layout_width="300dp"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/control_element_settings_cv"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:background="#CC101820"
-        android:visibility="gone">
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="8dp"
+        tools:visibility="visible">
 
-        <LinearLayout
-            android:id="@+id/panel_container"
+        <ScrollView
+            android:id="@+id/control_element_settings_sv"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp" />
-    </ScrollView>
+            android:layout_height="match_parent"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:clickable="true"
+            tools:visibility="visible">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/control_element_settings_cl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp">
+
+                <TextView
+                    android:id="@+id/element_scale_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:gravity="start"
+                    android:text="@string/control_element_scale"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/element_scale_percent_tv" />
+
+                <TextView
+                    android:id="@+id/element_scale_percent_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    app:layout_constraintStart_toEndOf="@+id/element_scale_tv"
+                    app:layout_constraintTop_toTopOf="@+id/element_scale_tv"
+                    app:layout_constraintEnd_toStartOf="@+id/element_opacity_all_btn" />
+
+                <SeekBar
+                    android:id="@+id/element_scale_sb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:min="50"
+                    android:max="200"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_scale_tv"
+                    app:layout_constraintEnd_toStartOf="@+id/element_opacity_all_btn" />
+
+                <TextView
+                    android:id="@+id/element_transparency_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:gravity="start"
+                    android:text="@string/control_element_opacity"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_scale_sb"
+                    app:layout_constraintEnd_toStartOf="@+id/element_opacity_percent_tv"/>
+
+                <TextView
+                    android:id="@+id/element_opacity_percent_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    app:layout_constraintStart_toEndOf="@+id/element_transparency_tv"
+                    app:layout_constraintTop_toTopOf="@+id/element_transparency_tv"
+                    app:layout_constraintEnd_toStartOf="@+id/element_opacity_all_btn"/>
+
+                <Button
+                    android:id="@+id/element_opacity_all_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textSize="11sp"
+                    android:paddingTop="8dp"
+                    android:text="@string/control_element_opacity_all"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/element_opacity_sb"
+                    app:layout_constraintBottom_toBottomOf="@+id/element_opacity_sb"/>
+
+                <SeekBar
+                    android:id="@+id/element_opacity_sb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:min="1"
+                    android:max="100"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_transparency_tv"
+                    app:layout_constraintEnd_toStartOf="@+id/element_opacity_all_btn"/>
+
+                <!-- Sensitivity (only for TOUCHPAD / STICK_MOUSE) -->
+                <TextView
+                    android:id="@+id/element_sensitivity_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:gravity="start"
+                    android:text="@string/control_element_sensitivity"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_opacity_sb"
+                    app:layout_constraintEnd_toStartOf="@+id/element_sensitivity_percent_tv"/>
+
+                <TextView
+                    android:id="@+id/element_sensitivity_percent_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toEndOf="@+id/element_sensitivity_tv"
+                    app:layout_constraintTop_toTopOf="@+id/element_sensitivity_tv"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <SeekBar
+                    android:id="@+id/element_sensitivity_sb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:min="25"
+                    android:max="800"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_sensitivity_tv"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <CheckBox
+                    android:id="@+id/element_tap_click_cb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/control_element_tap_click"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_sensitivity_sb"/>
+
+                <!-- Text + Toggle -->
+                <LinearLayout
+                    android:id="@+id/element_toggle_text_row_ll"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="16dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_tap_click_cb">
+
+                    <TextView
+                        android:id="@+id/element_text_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/control_element_text" />
+
+                    <TextView
+                        android:id="@+id/element_toggling_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/control_element_toggle" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/element_toggle_text_fields_ll"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="-8dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_toggle_text_row_ll">
+
+                    <EditText
+                        android:id="@+id/element_text_et"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:hint="@string/control_element_text_empty"
+                        android:imeOptions="actionDone"
+                        android:inputType="text|textNoSuggestions"
+                        android:maxLength="11"
+                        android:maxLines="1" />
+
+                    <CheckBox
+                        android:id="@+id/element_toggling_cb"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@null" />
+
+                </LinearLayout>
+                <!-- Icon -->
+                <TextView
+                    android:id="@+id/element_icon_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="start|center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:text="@string/control_element_icon"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_toggle_text_fields_ll"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <Spinner
+                    android:textSize="12sp"
+                    android:id="@+id/element_icon_s"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_icon_tv"/>
+
+                <!-- Style -->
+                <TextView
+                    android:id="@+id/element_style_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="start|center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:text="@string/control_element_style"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_icon_s"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <Spinner
+                    android:textSize="12sp"
+                    android:id="@+id/element_style_s"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_style_tv"/>
+
+                <!-- Custom image icon -->
+                <Button
+                    android:id="@+id/element_custom_icon_b"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textSize="12sp"
+                    android:text="@string/control_element_custom_icon"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_style_s"/>
+
+                <CheckBox
+                    android:id="@+id/element_icon_no_tint_cb"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:text="@string/control_element_icon_no_tint"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_custom_icon_b"/>
+
+                <TextView
+                    android:id="@+id/element_input_type_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:text="@string/control_element_input_type"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_icon_no_tint_cb"/>
+
+
+                <Spinner
+                    android:textSize="12sp"
+                    android:id="@+id/element_input_type_s"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_input_type_tv"/>
+
+                <TextView
+                    android:id="@+id/element_bindings_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:gravity="start|center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:text="@string/control_element_bindings"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/element_bindings_add_ib"
+                    app:layout_constraintEnd_toStartOf="@+id/element_bindings_add_ib"
+                    app:layout_constraintBottom_toBottomOf="@id/element_bindings_add_ib"/>
+
+                <ImageButton
+                    style="@style/AppTheme.ImageButton"
+                    android:id="@+id/element_bindings_add_ib"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:src="@drawable/mt_icon_add"
+                    app:layout_constraintTop_toBottomOf="@+id/element_input_type_s"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <LinearLayout
+                    android:id="@+id/element_bindings_container_ll"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_bindings_tv"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/element_directional_bindings_cl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_bindings_container_ll"
+                    app:layout_constraintEnd_toEndOf="parent">
+
+                    <TextView
+                        android:id="@+id/element_binding_left_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:text="@string/control_element_binding_left"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <Spinner
+                        android:textSize="12sp"
+                        android:id="@+id/element_binding_left_s"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:spinnerMode="dialog"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_left_tv"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <TextView
+                        android:id="@+id/element_binding_up_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:text="@string/control_element_binding_up"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_left_s"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <Spinner
+                        android:textSize="12sp"
+                        android:id="@+id/element_binding_up_s"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:spinnerMode="dialog"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_up_tv"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <TextView
+                        android:id="@+id/element_binding_right_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:text="@string/control_element_binding_right"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_up_s"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <Spinner
+                        android:textSize="12sp"
+                        android:id="@+id/element_binding_right_s"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:spinnerMode="dialog"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_right_tv"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                    <TextView
+                        android:id="@+id/element_binding_down_tv"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:text="@string/control_element_binding_down"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_right_s"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+
+                    <Spinner
+                        android:textSize="12sp"
+                        android:id="@+id/element_binding_down_s"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:spinnerMode="dialog"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/element_binding_down_tv"
+                        app:layout_constraintEnd_toEndOf="parent"/>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <TextView
+                    android:id="@+id/element_stick_binding_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="start|center_vertical"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:text="@string/control_element_stick_binding"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_directional_bindings_cl"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+
+                <Spinner
+                    android:textSize="12sp"
+                    android:id="@+id/element_stick_binding_s"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_stick_binding_tv"/>
+
+                <Button
+                    android:id="@+id/element_delete_b"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_stick_binding_s"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/editor_delete"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </ScrollView>
+    </com.google.android.material.card.MaterialCardView>
 </FrameLayout>
