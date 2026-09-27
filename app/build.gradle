@@ -2,6 +2,26 @@ plugins {
     id 'com.android.application'
 }
 
+// Short commit hash of the tree the APK was built from, with "+" when it had uncommitted changes.
+// versionName/versionCode repeat across test builds, so without this a bug report cannot say which
+// binary produced it. Computed at build time; any failure (no git, not a checkout) gives "unknown"
+// so the build never depends on it.
+def gitBuildId = { ->
+    try {
+        def hash = providers.exec {
+            commandLine 'git', 'rev-parse', '--short', 'HEAD'
+            workingDir rootProject.projectDir
+        }.standardOutput.asText.get().trim()
+        def dirty = !providers.exec {
+            commandLine 'git', 'status', '--porcelain'
+            workingDir rootProject.projectDir
+        }.standardOutput.asText.get().trim().isEmpty()
+        return hash.isEmpty() ? 'unknown' : hash + (dirty ? '+' : '')
+    } catch (Exception ignored) {
+        return 'unknown'
+    }
+}()
+
 android {
     namespace 'com.valdroid'
     compileSdk 35
@@ -13,11 +33,13 @@ android {
         applicationId "com.valdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 11
+        versionCode 12
         versionName "0.1.1"
         // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
         // native multidex, but the build still needs this flag to split the dex.
         multiDexEnabled true
+        // Identifies the exact build in launch logs and bug reports (see gitBuildId above).
+        buildConfigField "String", "GIT_BUILD_ID", "\"${gitBuildId}\""
 
         externalNativeBuild {
             cmake {

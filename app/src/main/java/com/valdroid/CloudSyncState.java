@@ -29,7 +29,14 @@ public final class CloudSyncState {
     private static final String TAG = "ValDroid/CloudSync";
     private static final String FILE = "rd_cloud_sync.json";
 
-    /** filename -> SHA-1 (hex) of the copy that both sides agreed on at the last sync. */
+    /**
+     * Save path -> SHA-1 (hex) of the copy that both sides agreed on at the last sync.
+     *
+     * The key is the path below Valheim's worlds/ or characters/ folder: a bare name for a flat
+     * save ("Vikingworld.fwl", "wetsnow.fch" — exactly what records written before Valheim 1.0
+     * hold, so they keep working unchanged) and "World/file" for a file of a 1.0 world folder
+     * ("Snowhalla/_main.2.fwl2"). Bare chunk names would collide between worlds.
+     */
     private final Map<String, String> synced;
     private final File file;
 
@@ -72,6 +79,11 @@ public final class CloudSyncState {
     }
 
     public void forget(String filename) { synced.remove(filename); }
+
+    /** Drop every record under a path prefix — e.g. "Snowhalla/" for a whole 1.0 world. */
+    public void forgetUnder(String prefix) {
+        synced.keySet().removeIf(k -> k.startsWith(prefix));
+    }
 
     public void save() {
         try (java.io.Writer w = new java.io.OutputStreamWriter(

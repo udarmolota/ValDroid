@@ -30,8 +30,10 @@ import java.util.ArrayList;
 
 public class NewInstanceFragment extends Fragment {
 
-    // The instance name is a directory name inside the built-in X server's Unix-socket path
-    // (<home>/instances/<name>/tmp/.X11-unix/X0). Android's sun_path is only 108 bytes and our
+    // The instance name used to be a directory name inside the built-in X server's Unix-socket path
+    // (<home>/instances/<name>/tmp/.X11-unix/X0); since 2026-09-27 the socket lives in the app's own
+    // files dir, so the name no longer counts, but the cap stays for other long paths. History:
+    // Android's sun_path is only 108 bytes and our
     // native binder silently truncates an over-long path, so a long name makes the X server fail
     // to bind and the whole launch crashes with "Failed to allocate XConnectorEpoll" — the game
     // never starts (seen on a Mi 10T Pro, 2026-07-23, whose name was auto-filled from a long zip

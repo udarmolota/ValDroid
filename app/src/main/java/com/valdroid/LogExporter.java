@@ -24,6 +24,11 @@ import java.util.zip.ZipOutputStream;
  * exit_info.txt — the system's record of WHY our previous processes died (ANR / native
  * crash / LMK / user swipe), with the stored ANR thread dump when one exists. Missing
  * files are skipped silently.
+ *
+ * <p>The first entry is report.txt ({@link ReportInfo}: device, build id, install location,
+ * RAM, instance state), followed by the launcher's own session logs ({@link LauncherLog}), so a
+ * launcher that crashed before the game ever started still produces a useful zip — with or
+ * without a game instance. Files are added by name only; directories are never swept.
  */
 public final class LogExporter {
 
@@ -43,27 +48,54 @@ public final class LogExporter {
         public boolean ok() { return error == null && !items.isEmpty(); }
     }
 
-    public static Result export(android.content.Context ctx, GameInstance gi, OutputStream rawOut) {
+    /** launcher.log copies: the head (the device header) plus this much of the end. */
+    private static final long LAUNCHER_TAIL_BYTES = 2L * 1024 * 1024;
+    private static final long LAUNCHER_HEAD_BYTES = 32 * 1024;
+
+    /**
+     * Build the report zip. {@code gi} may be null — no instance yet, or the player has none — and
+     * the zip is still worth sending then: report.txt and launcher.log are exactly what a launcher
+     * that crashed before the game started leaves behind. Instance-scoped files are skipped then.
+     */
+    public static Result export(android.content.Context ctx, @androidx.annotation.Nullable GameInstance gi,
+                                OutputStream rawOut) {
         Result r = new Result();
-        if (gi == null) { r.error = "No game instance selected."; return r; }
 
-        File gamePath = new File(gi.getGamePath());
-        File userDir  = gi.getUserDataDir();
-
+        File home = new File(AppStorage.requireSingleton().getHomePath());
         // Global (not instance-scoped) uncaught-crash log — e.g. an in-app Steam download that
         // hard-crashed the app. Lives in the app's private files dir.
-        File crashLog = new File(AppStorage.requireSingleton().getHomePath(),
-                ValDroidApplication.CRASH_LOG);
+        File crashLog = new File(home, ValDroidApplication.CRASH_LOG);
 
         // Zip entry name -> file. Names are explicit because two of the files are both called
         // "prefs" (Unity writes one set under the game's company/product and, under box64, one under
         // "unknown/unknown" — which is the set the game actually reads here).
         java.util.LinkedHashMap<String, File> candidates = new java.util.LinkedHashMap<>();
-        {
+        // Entry name -> {head bytes, tail bytes} for files shipped only in part.
+        java.util.HashMap<String, long[]> caps = new java.util.HashMap<>();
+        // The launcher's session logs (LauncherLog): header + logcat from app start + launch
+        // milestones. The only record of a launcher that died before the game started. The .prev
+        // generations matter because players relaunch the app after a crash before reporting it.
+        for (String n : new String[] { LauncherLog.FILE, LauncherLog.PREV, LauncherLog.PREV2 }) {
+            put(candidates, n, new File(home, n));
+            caps.put(n, new long[] { LAUNCHER_HEAD_BYTES, LAUNCHER_TAIL_BYTES });
+        }
+        if (gi != null) {
+                File gamePath = new File(gi.getGamePath());
+                File userDir  = gi.getUserDataDir();
                 put(candidates, "Player.log", new File(userDir, "Player.log"));
                 put(candidates, "Player-prev.log", new File(userDir, "Player-prev.log"));
                 put(candidates, "box64.log", new File(gamePath, "box64.log"));
                 put(candidates, "rimdroid.log", new File(gamePath, "rimdroid.log"));
+                // The previous run's copies, rotated by GameLauncher.launch(): a player who
+                // relaunches to reproduce a crash no longer overwrites the crashed run's logs.
+                put(candidates, "box64.prev.log", new File(gamePath, "box64.prev.log"));
+                put(candidates, "rimdroid.prev.log", new File(gamePath, "rimdroid.prev.log"));
+                // Standalone-exec path's stderr (unused today, kept so a switch back is covered).
+                put(candidates, "rimdroid_game.log", new File(gamePath, "rimdroid_game.log"));
+                // box64 emulate() milestones (core.c, raw write(), survives SIGKILL): shows how far
+                // the emulated start got. Reset per launch; capped in case a build appends in a loop.
+                put(candidates, "emulate_trace.log", new File(gamePath, "emulate_trace.log"));
+                caps.put("emulate_trace.log", new long[] { 0, SIGSEGV_TAIL_BYTES });
                 // box64 appends one line per SIGSEGV here (raw write(), so it survives a hard crash)
                 // with the guest RIP/RSP, the native pc and the tid — often the only crash locator we
                 // get, since rimdroid.log can lose its tail and a non-root app cannot read the system
@@ -73,10 +105,19 @@ public final class LogExporter {
                 // crash locator only the end of the file matters.
                 put(candidates, "sigsegv_fault.log", new File(gamePath, "sigsegv_fault.log"));
                 put(candidates, "sigsegv_fault.prev.log", new File(gamePath, "sigsegv_fault.prev.log"));
+                caps.put("sigsegv_fault.log", new long[] { 0, SIGSEGV_TAIL_BYTES });
+                caps.put("sigsegv_fault.prev.log", new long[] { 0, SIGSEGV_TAIL_BYTES });
                 // The game's own settings: graphics preset, resolution, VSync, FPS limit, tessellation…
                 put(candidates, "prefs-game.xml", new File(userDir, "prefs"));
                 put(candidates, "prefs-unknown.xml", new File(gamePath, "unity3d/unknown/unknown/prefs"));
+                // RIMDROID_STUTTER_DIAG=1: long frames, Mono collections and slow shader compiles,
+                // all with wall-clock times, to see what each stutter was.
+                put(candidates, "stutter_diag.log", new File(gamePath, "stutter_diag.log"));
+        }
+        {
+                // Appended forever (every uncaught exception of every session): the newest are at the end.
                 put(candidates, ValDroidApplication.CRASH_LOG, crashLog);
+                caps.put(ValDroidApplication.CRASH_LOG, new long[] { 0, SIGSEGV_TAIL_BYTES });
                 // MobileGlues' own log and the config we wrote for it (MG_DIR_PATH = the app cache
                 // dir, see GameLauncher). The log is where a translator failure actually shows:
                 // "Failed to get OpenGL function <name>" for every entry point the game asks for
@@ -90,41 +131,42 @@ public final class LogExporter {
                 // when one material renders wrong on one GPU (black terrain on Mali): the source
                 // tells which features that shader uses. Plain text, compresses well in the zip.
                 put(candidates, "rd_shaders.txt", new File(mgDir, "rd_shaders.txt"));
-                // RIMDROID_STUTTER_DIAG=1: long frames, Mono collections and slow shader compiles,
-                // all with wall-clock times, to see what each stutter was.
-                put(candidates, "stutter_diag.log", new File(gamePath, "stutter_diag.log"));
+                // MobileGlues reports a shader that fails to translate every time it is used.
+                caps.put("mobileglues.log", new long[] { 0, SIGSEGV_TAIL_BYTES });
         }
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
             byte[] buf = new byte[65536];
+            // report.txt FIRST: device, build id, install location (adoptable storage!), X socket
+            // length, RAM, free space, instance state and log ages — the facts every report used to
+            // need a round trip for. Built here, on the export worker thread (it probes the GPU).
+            if (ctx != null) addReport(ctx, zos, gi, r);
             for (java.util.Map.Entry<String, File> e : candidates.entrySet()) {
                 File f = e.getValue();
                 if (f == null || !f.isFile()) continue;
                 zos.putNextEntry(new ZipEntry(e.getKey()));
                 try (FileInputStream in = new FileInputStream(f)) {
-                    // Tail cap for the per-fault SIGSEGV logs (see the candidates note above), and for
-                    // MobileGlues' log, where a shader that fails to translate is reported every
-                    // time it is used.
-                    boolean tailOnly = e.getKey().startsWith("sigsegv_fault")
-                            || e.getKey().equals("mobileglues.log");
-                    if (tailOnly && f.length() > SIGSEGV_TAIL_BYTES) {
-                        long skip = f.length() - SIGSEGV_TAIL_BYTES;
+                    long[] cap = caps.get(e.getKey());
+                    long len = f.length();
+                    if (cap != null && len > cap[0] + cap[1]) {
+                        // Head (e.g. launcher.log's device header) + marker + tail.
+                        r.bytes += copy(in, zos, buf, cap[0]);
+                        long skip = len - cap[1] - cap[0];
+                        byte[] mark = ("\n... [" + skip + " bytes skipped by the report] ...\n")
+                                .getBytes(StandardCharsets.UTF_8);
+                        if (cap[0] > 0) { zos.write(mark); r.bytes += mark.length; }
                         while (skip > 0) {
                             long s = in.skip(skip);
                             if (s <= 0) break;
                             skip -= s;
                         }
                     }
-                    int n;
-                    while ((n = in.read(buf)) > 0) {
-                        zos.write(buf, 0, n);
-                        r.bytes += n;
-                    }
+                    r.bytes += copy(in, zos, buf, Long.MAX_VALUE);
                 }
                 zos.closeEntry();
                 r.items.add(e.getKey());
             }
-            addInstanceSettings(zos, gi, r);
+            if (gi != null) addInstanceSettings(zos, gi, r);
             addLogcat(zos, buf, r);
             if (ctx != null) addExitInfo(ctx, zos, buf, r);
         } catch (Exception e) {
@@ -257,8 +299,7 @@ public final class LogExporter {
         com.valdroid.InstanceSettings s = gi.settings();
         StringBuilder sb = new StringBuilder();
         line(sb, "instance", gi.getName());
-        line(sb, "app version", BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE
-                + (BuildConfig.DEBUG ? ", debug)" : ")"));
+        line(sb, "app version", ReportInfo.buildId());
         line(sb, "device", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + ", Android " + android.os.Build.VERSION.RELEASE);
         line(sb, "renderer", String.valueOf(s.getRenderer()));
@@ -281,7 +322,6 @@ public final class LogExporter {
         }
         line(sb, "mod support", mods.toString());
         line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));
-        line(sb, "interpreter", String.valueOf(s.isInterpreter()));
         line(sb, "drag pan", String.valueOf(s.isDragPan()));
         line(sb, "shader cache", String.valueOf(s.isShaderCache()));
         line(sb, "extra env", s.getEnvVars() == null ? "" : s.getEnvVars());
@@ -300,43 +340,101 @@ public final class LogExporter {
         sb.append(": ").append(value).append((char) 10);
     }
 
+    /** Copy at most {@code max} bytes of {@code in} into the zip; returns the bytes written. */
+    private static long copy(InputStream in, ZipOutputStream zos, byte[] buf, long max)
+            throws java.io.IOException {
+        long done = 0;
+        while (done < max) {
+            int n = in.read(buf, 0, (int) Math.min(buf.length, max - done));
+            if (n <= 0) break;
+            zos.write(buf, 0, n);
+            done += n;
+        }
+        return done;
+    }
+
+    /** report.txt: the ReportInfo header. A failing probe is written into the entry, never thrown. */
+    private static void addReport(android.content.Context ctx, ZipOutputStream zos, GameInstance gi,
+                                  Result r) throws java.io.IOException {
+        final String name = "report.txt";
+        String text;
+        try {
+            text = ReportInfo.header(ctx, gi);
+        } catch (Throwable t) {
+            text = "report header failed: " + android.util.Log.getStackTraceString(t);
+        }
+        byte[] out = text.getBytes(StandardCharsets.UTF_8);
+        zos.putNextEntry(new ZipEntry(name));
+        zos.write(out);
+        zos.closeEntry();
+        r.bytes += out.length;
+        r.items.add(name);
+    }
+
+    /** A logcat snapshot this few lines long means the command was refused or the ROM hides the buffers. */
+    private static final int LOGCAT_MIN_LINES = 100;
+
+    /**
+     * Export-time logcat snapshot. "-b all" is refused outright on some strict ROMs (it asks for
+     * buffers that need READ_LOGS) or returns next to nothing; then the default buffer set is tried,
+     * which logcat filters to what this UID may read. The command that produced the entry is its
+     * first line, so an empty-looking snapshot says why. The live session record is launcher.log.
+     */
     private static void addLogcat(ZipOutputStream zos, byte[] buf, Result r)
             throws java.io.IOException {
         final String name = "logcat.txt";
-        Process process = null;
+        String[][] commands = {
+                { "logcat", "-b", "all", "-d", "-v", "threadtime", "-t", "8000" },
+                { "logcat", "-d", "-v", "threadtime", "-t", "8000" },
+        };
+        StringBuilder notes = new StringBuilder();
+        byte[] best = null;
+        String bestCmd = null;
+        int bestLines = -1;
+        for (String[] cmd : commands) {
+            String cmdStr = String.join(" ", cmd);
+            Process process = null;
+            try {
+                process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(1 << 20);
+                try (InputStream in = process.getInputStream()) {
+                    int n;
+                    while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
+                }
+                int exitCode = process.waitFor();
+                byte[] data = bo.toByteArray();
+                int lines = 0;
+                for (byte b : data) if (b == '\n') lines++;
+                notes.append("# ").append(cmdStr).append(" -> exit ").append(exitCode)
+                     .append(", ").append(lines).append(" lines\n");
+                if (lines > bestLines) { best = data; bestCmd = cmdStr; bestLines = lines; }
+                if (exitCode == 0 && lines >= LOGCAT_MIN_LINES) break;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                notes.append("# ").append(cmdStr).append(" -> interrupted\n");
+                break;
+            } catch (Exception e) {
+                notes.append("# ").append(cmdStr).append(" -> failed: ").append(e).append('\n');
+            } finally {
+                if (process != null) process.destroy();
+            }
+        }
         long written = 0;
         zos.putNextEntry(new ZipEntry(name));
         try {
-            process = new ProcessBuilder(
-                    "logcat", "-b", "all", "-d", "-v", "threadtime", "-t", "8000")
-                    .redirectErrorStream(true)
-                    .start();
-            try (InputStream in = process.getInputStream()) {
-                int n;
-                while ((n = in.read(buf)) > 0) {
-                    zos.write(buf, 0, n);
-                    written += n;
-                }
+            byte[] head = ("# command: " + (bestCmd != null ? bestCmd : "(none succeeded)") + "\n"
+                    + notes).getBytes(StandardCharsets.UTF_8);
+            zos.write(head);
+            written += head.length;
+            if (best != null && best.length > 0) {
+                zos.write(best);
+                written += best.length;
+            } else {
+                byte[] msg = "logcat returned no accessible entries.\n".getBytes(StandardCharsets.UTF_8);
+                zos.write(msg);
+                written += msg.length;
             }
-            int exitCode = process.waitFor();
-            if (written == 0) {
-                byte[] message = ("logcat returned no accessible entries (exit "
-                        + exitCode + ").\n").getBytes(StandardCharsets.UTF_8);
-                zos.write(message);
-                written += message.length;
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            byte[] message = "logcat capture interrupted.\n".getBytes(StandardCharsets.UTF_8);
-            zos.write(message);
-            written += message.length;
-        } catch (Exception e) {
-            byte[] message = ("logcat capture failed: " + e + "\n")
-                    .getBytes(StandardCharsets.UTF_8);
-            zos.write(message);
-            written += message.length;
         } finally {
-            if (process != null) process.destroy();
             zos.closeEntry();
         }
         r.bytes += written;

@@ -8,7 +8,7 @@ import com.valdroid.LauncherPreferences.VulkanDriverOption;
 import java.util.List;
 
 /**
- * Per-instance launch settings: renderer, Vulkan driver, debug, interpreter mode. Each instance
+ * Per-instance launch settings: renderer, Vulkan driver, debug, compatibility mode. Each instance
  * keeps its own (e.g. one instance on the System driver, another on Turnip; debug only on a test
  * instance). Stored in the shared prefs under an {@code inst:<name>:} prefix.
  *
@@ -240,15 +240,6 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "haptic", v).apply();
     }
 
-    // --- Interpreter mode (BOX64_DYNAREC=0 diagnostic; pref key kept for back-compat as "interpreter") ---
-    public boolean isInterpreter() {
-        return p.getBoolean(pfx + "interpreter", global.isStrictBarriers());
-    }
-
-    public void setInterpreter(boolean v) {
-        p.edit().putBoolean(pfx + "interpreter", v).apply();
-    }
-
     // --- Compatibility mode: box64 dynarec tuning that dodges the deep "won't launch past the loading
     // dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Discovered via a
     // tester: sets BOX64_DYNAREC_WEAKBARRIER=2 + BOX64_DYNAREC_X87DOUBLE=1 in GameLauncher (reshapes the
@@ -369,7 +360,7 @@ public class InstanceSettings {
                 .remove(pfx + "renderer")
                 .remove(pfx + "driver_so")
                 .remove(pfx + "debug")
-                .remove(pfx + "interpreter")
+                .remove(pfx + "interpreter")   // retired setting; still cleaned from old installs
                 .remove(pfx + "compat_mode")
                 .remove(pfx + "native_mono")
                 .remove(pfx + "native_mono_launch_ms")

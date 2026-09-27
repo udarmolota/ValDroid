@@ -48,6 +48,14 @@
     <string name="cloud_saves_clash_in_cloud">в облаке: %1$s</string>
     <string name="cloud_saves_clash_on_phone">на телефоне: %1$s</string>
     <string name="cloud_saves_from_cloud_suffix">(из облака)</string>
+    <string name="cloud_saves_world_label">мир %1$s (файлов: %2$d)</string>
+    <string name="cloud_saves_world_clash_title">Мир %1$s уже есть</string>
+    <string name="cloud_saves_world_clash_note">Если взять из облака, мир с телефона будет отложен в папку %1$s — ничего не удаляется.</string>
+    <string name="cloud_saves_log_world_placed">Скопирован: мир %1$s (файлов: %2$d)</string>
+    <string name="cloud_saves_log_world_moved_aside">Мир %1$s с телефона отложен в %2$s</string>
+    <string name="cloud_saves_log_world_kept">Оставлен свой мир: %1$s</string>
+    <string name="cloud_saves_log_world_failed">Не удалось установить мир %1$s — копия на телефоне не тронута.</string>
+    <string name="cloud_saves_log_world_restored">Мир %1$s с телефона возвращён на место.</string>
     <string name="cloud_saves_push_replace">Заменить</string>
     <string name="cloud_saves_push_only_new">Только новые</string>
     <string name="cloud_saves_dir_pull">Из облака</string>
@@ -186,11 +194,8 @@
     <string name="download_cancel_confirm">Отменить текущее скачивание?</string>
     <string name="gl4es_label">GL4ES (совместимый, старые GPU)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
-    <string name="zink_osmesa_label">Zink OSMesa (Vulkan, запасной)</string>
-    <string name="softpipe_label">Программный (медленный, любой GPU — для Mali/PowerVR)</string>
     <string name="mobileglues_label">MobileGlues (GL через GLES — экспериментальный, без Vulkan)</string>
     <string name="debug_mode">Режим отладки (подробный лог)</string>
-    <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
     <string name="env_vars_title">Дополнительно: переменные запуска</string>
     <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>
     <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
@@ -209,7 +214,6 @@
     <string name="sound_failed">Не удалось создать звуковой пак. Подробности в Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Переменные окружения</string>
 
-    <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Отладочная загрузка из Steam (Valheim)</string>
     <string name="pick_zip">Выбрать ZIP-файл</string>

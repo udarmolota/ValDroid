@@ -29,6 +29,13 @@ public final class XServerRunner {
 
         xServer = new XServer(new ScreenInfo(screenWidth, screenHeight));
         UnixSocketConfig socketConfig = UnixSocketConfig.create(rootDir, UnixSocketConfig.XSERVER_PATH);
+        // sun_path is 108 bytes including the terminating NUL; a longer path is silently cut and
+        // bind() fails with nothing but "Failed to allocate XConnectorEpoll". Say what happened.
+        int pathBytes = socketConfig.path.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        if (pathBytes > 107) {
+            throw new IllegalStateException("X server socket path is too long (" + pathBytes
+                    + " bytes, the limit is 107): " + socketConfig.path);
+        }
         connector = new XConnectorEpoll(socketConfig,
                 new XClientConnectionHandler(xServer), new XClientRequestHandler());
         connector.setInitialInputBufferCapacity(4096);

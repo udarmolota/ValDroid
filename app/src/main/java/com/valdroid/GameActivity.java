@@ -17,12 +17,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
     private SurfaceView surfaceView;
 
-    // When launched with this extra = true, GameActivity does NOT start the game: it just
-    // provides a surface and runs the OSMesa software-renderer smoke test on it (dev/tester).
-    public static final String EXTRA_SMOKETEST = "rimdroid_osmesa_smoketest";
     /** Which instance is launching — selects its per-instance render scale + controls layout. */
     public static final String EXTRA_INSTANCE_NAME = "instance_name";
-    private boolean smokeTest;
 
     // Native input injection (valdroid_jni.c → box64). action 0=move,1=Ldown,2=Lup.
     public static native void nativeTouch(int action, int x, int y);
@@ -265,7 +261,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private android.os.Handler perfHandler;
     private com.valdroid.input.GamepadHandler gamepad;   // physical controller -> MNK injection
     private com.valdroid.input.MouseKeyboardHandler mouseKb;  // physical mouse + keyboard -> SDL injection
-    private String instanceName;   // the launched instance (null for the smoke test)
+    private String instanceName;   // the launched instance (null if the intent carries none)
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private float tapDownX, tapDownY; private long tapDownT; private boolean tapMoved;
 
@@ -273,7 +269,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        smokeTest = getIntent().getBooleanExtra(EXTRA_SMOKETEST, false);
         instanceName = getIntent().getStringExtra(EXTRA_INSTANCE_NAME);
 
         // adb-driven test runs (debug builds export this activity): "autolaunch" makes this
@@ -300,7 +295,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                         }
                         GameLauncher.launch(gi);
                     }
-                    catch (Throwable t) { android.util.Log.e("ValDroid", "autolaunch failed", t); }
+                    catch (Throwable t) {
+                        android.util.Log.e("ValDroid", "autolaunch failed", t);
+                        LauncherLog.line("LAUNCH FAILED (autolaunch): "
+                                + android.util.Log.getStackTraceString(t));
+                    }
                 }, "rd-autolaunch").start();
             }
         }
@@ -337,7 +336,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         int sh = Math.min(usableW, usableH);   // landscape height (full screen)
         // Effective render scale = stored value raised to the per-device floor, so RimWorld's UI
         // never drops below 1280x720. Per-instance when launched from a card; global as a fallback
-        // (e.g. the smoke test, which has no instance).
+        // (an intent without an instance name).
         if (instanceName != null) {
             com.valdroid.InstanceSettings is = new com.valdroid.InstanceSettings(instanceName);
             renderScale = is.getEffectiveRenderScale(sw, sh);
@@ -920,18 +919,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged: " + width + "x" + height);
         GameLauncher.setSurfaceTracked(holder.getSurface(), width, height);
-        if (smokeTest) {
-            // Software-renderer smoke test: render+blit one OSMesa frame, no game launch.
-            try {
-                String osmesa = com.valdroid.AppStorage.requireSingleton().getGl4esLibsPath()
-                        + "/libOSMesa.so";
-                int rc = GameLauncher.nativeOsmesaSmokeTest(osmesa);
-                Log.i(TAG, "OSMesa smoke test rc=" + rc + " (" + osmesa + ")");
-            } catch (Throwable t) {
-                Log.w(TAG, "OSMesa smoke test failed: " + t.getMessage());
-            }
-            return;
-        }
         // Pin RimWorld's Prefs.xml to fullscreen at EXACTLY the buffer resolution we
         // pass the game here (= surface * render scale). RimWorld re-applies its saved
         // Prefs resolution shortly after launch, overriding -screen-width; if that saved
@@ -943,16 +930,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // RimWorld doesn't override -screen-width with its own saved/default resolution (the cause of
         // the small / doubled / "warping" render seen on the 725 and flagships).
         //
-        // ONE formula for ALL renderers (2026-08-09). Softpipe used to pin to the raw callback
-        // width/height ("buffer sized to THIS surface") — that dates from its scale-1.0 era and
-        // turned into a RACE once render scale existed: pin fires on the FIRST surfaceChanged,
-        // which can be the native size from before setFixedSize shrinks the surface, so the game
-        // pinned 2340x1080 while the OSMesa buffer followed the tracked surface to 72% → viewport
-        // off the buffer → black screen with live sound (S25 field test). The OSMesa CPU buffer
-        // resizes itself to the tracked surface (= boxW*renderScale once the fixed size lands),
-        // which is exactly what this formula computes — deterministically, no callback-order luck.
-        // Side effect: selecting Software on a 1.6 instance (where the rd_force_gles marker forces
-        // ZFA back on) no longer mis-pins geometry either — the 3/4-picture bug of the same day.
+        // ONE formula for ALL renderers: pin to boxW/boxH * renderScale, never to the raw callback
+        // width/height. The first surfaceChanged can report the native size from before
+        // setFixedSize shrinks the surface, so pinning to the callback size races the fixed size;
+        // this formula gives the final buffer size deterministically, no callback-order luck.
         if (!prefsPinned) {
             prefsPinned = true;
             pinGamePrefs(Math.max(1, Math.round(boxW * renderScale)),

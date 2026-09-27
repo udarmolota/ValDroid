@@ -49,6 +49,14 @@ In the cloud: %2$s
     <string name="cloud_saves_clash_in_cloud">in the cloud: %1$s</string>
     <string name="cloud_saves_clash_on_phone">on this phone: %1$s</string>
     <string name="cloud_saves_from_cloud_suffix">(from cloud)</string>
+    <string name="cloud_saves_world_label">world %1$s (%2$d files)</string>
+    <string name="cloud_saves_world_clash_title">World %1$s is already here</string>
+    <string name="cloud_saves_world_clash_note">Using the cloud one moves this phone\'s world aside to %1$s — nothing is deleted.</string>
+    <string name="cloud_saves_log_world_placed">Copied in: world %1$s (%2$d files)</string>
+    <string name="cloud_saves_log_world_moved_aside">This phone\'s copy of %1$s was moved aside to %2$s</string>
+    <string name="cloud_saves_log_world_kept">Kept this phone\'s world: %1$s</string>
+    <string name="cloud_saves_log_world_failed">Could not install world %1$s — the phone\'s copy was left as it was.</string>
+    <string name="cloud_saves_log_world_restored">Put this phone\'s copy of %1$s back.</string>
     <string name="cloud_saves_push_replace">Replace them</string>
     <string name="cloud_saves_push_only_new">Only send new ones</string>
     <string name="cloud_saves_dir_pull">From cloud</string>
@@ -209,11 +217,8 @@ In the cloud: %2$s
     <string name="download_cancel_confirm">Cancel the download in progress?</string>
     <string name="gl4es_label">GL4ES (compatible, older GPUs)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
-    <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
-    <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
     <string name="mobileglues_label">MobileGlues (GL over GLES — experimental, no Vulkan)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
-    <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
     <string name="env_vars_title">Advanced: extra launch variables</string>
     <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics tests — leave empty unless you know what you\'re doing. </string>
     <string name="env_vars_hint_example">e.g. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
@@ -231,7 +236,6 @@ In the cloud: %2$s
     <string name="sound_done">Sound pack ready! Turn on \"Game sound\" in Settings to use it.</string>
     <string name="sound_failed">Sound pack generation failed. See Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Environment variables</string>
-    <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (Valheim)</string>
     <string name="pick_zip">Pick ZIP file</string>

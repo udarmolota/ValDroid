@@ -371,8 +371,13 @@ public class LauncherFragment extends Fragment {
         new Thread(() -> {
             try {
                 GameLauncher.launch(gi);
-            } catch (ErrnoException e) {
+            } catch (Throwable e) {
+                // A failed launch must not take the whole app down: log it where "Report a bug"
+                // picks it up instead of crashing with no game logs at all. Throwable, not just
+                // RuntimeException: an Error (UnsatisfiedLinkError, OOM) killed the app with nothing
+                // in launcher.log. The stack goes in synchronously — the logcat stream may lag.
                 Log.e(TAG, "Launch failed", e);
+                com.valdroid.LauncherLog.line("LAUNCH FAILED: " + Log.getStackTraceString(e));
                 appendLog("ERROR: " + e.getMessage());
             }
         }).start();

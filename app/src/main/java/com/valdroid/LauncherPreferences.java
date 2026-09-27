@@ -15,8 +15,6 @@ public class LauncherPreferences {
     public enum Renderer {
         GL4ES("libGL.so.1"),
         ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window (GPU, Vulkan)
-        ZINK_OSMESA("libGL.so.1"),    // Mesa Zink via OSMesa (unused fallback)
-        SOFTPIPE("libGL.so.1"),       // Mesa softpipe (CPU) via OSMesa + blit — works on any GPU
         // MobileGlues: desktop GL 4.0 translated to the phone's own GLES 3.2 driver — hardware
         // rendering with ZERO Vulkan involved. First full RimWorld 1.5 session 2026-08-09 (S25,
         // 62 fps single-thread, see memory gl_translator_smoke). Launch-wise it is the GL4ES/EGL
@@ -26,16 +24,6 @@ public class LauncherPreferences {
 
         public final String libName;
         Renderer(String libName) { this.libName = libName; }
-    }
-
-    public enum VulkanDriver {
-        SYSTEM(null),
-        CUSTOM("custom_driver.so"),
-        TURNIP_ADRENO("libvulkan_freedreno.so"),
-        MALEOON("libvulkan_maleoon.so");
-
-        @Nullable public final String libName;
-        VulkanDriver(@Nullable String libName) { this.libName = libName; }
     }
 
     /** One selectable Vulkan/Turnip driver: the .so file name in the deps dir + a UI label. */
@@ -156,15 +144,6 @@ public class LauncherPreferences {
     }
 
     // --- Vulkan driver ---
-
-    public VulkanDriver getVulkanDriver() {
-        String name = prefs.getString("vulkan_driver", VulkanDriver.SYSTEM.name());
-        try { return VulkanDriver.valueOf(name); } catch (Exception e) { return VulkanDriver.SYSTEM; }
-    }
-
-    public void setVulkanDriver(VulkanDriver driver) {
-        prefs.edit().putString("vulkan_driver", driver.name()).apply();
-    }
 
     /** Selected driver .so file name (used by the ZINK_ZFA path). */
     public String getVulkanDriverSo() {
@@ -299,18 +278,6 @@ public class LauncherPreferences {
 
     public boolean isDebug() {
         return prefs.getBoolean("debug_mode", false);
-    }
-
-    // --- Interpreter mode (test) ---
-    // When on, GameLauncher sets BOX64_DYNAREC=0 (disable the dynarec, interpret x86_64).
-    // VERY slow — a one-off DECISIVE diagnostic for the save corruption on MediaTek/Cortex:
-    // pawns serialize as empty <li/> (colonists vanish on reload). If the interpreter saves
-    // them correctly → dynarec codegen bug; if still empty → box64 wrapper/atomic emulation.
-    // (Pref key kept as "strict_barriers" for back-compat; earlier WEAKBARRIER=0 and DF=0
-    // levers both did NOT fix the save.) HIDE this toggle before any public release.
-
-    public boolean isStrictBarriers() {
-        return prefs.getBoolean("strict_barriers", false);
     }
 
     // --- Daily update check (GitHub latest release vs installed version) ---

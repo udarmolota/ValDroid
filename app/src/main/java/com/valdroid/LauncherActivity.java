@@ -146,7 +146,10 @@ public class LauncherActivity extends AppCompatActivity {
                         importDataLauncher.launch(ZIP_MIME); });
                 return true;
             } else if (id == R.id.action_export_logs) {
+                // No instance yet still exports: report.txt and launcher.log need none.
                 chooseInstanceThen(gi -> { pendingLogInstanceName = gi.getName();
+                        exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); },
+                        () -> { pendingLogInstanceName = null;
                         exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); });
                 return true;
             } else if (id == R.id.action_export_layout) {
@@ -240,7 +243,8 @@ public class LauncherActivity extends AppCompatActivity {
      * Open the user's email app pre-filled with a bug report to the maintainer — with the same log
      * bundle that "Export logs" produces attached, so a report arrives diagnosable. Building the zip
      * can touch multi-MB Player.logs, so it runs off the UI thread; the intent fires once it's ready.
-     * If there's no instance (nothing to log) it falls back to a text-only mailto.
+     * With no instance the zip is still built (report.txt + launcher.log + crash log): a launcher
+     * that crashes before any game starts is exactly the case where those are all there is.
      */
     private void sendBugReport() {
         chooseInstanceThen(this::sendBugReport, () -> sendBugReport(null));
@@ -253,14 +257,16 @@ public class LauncherActivity extends AppCompatActivity {
         final String reportName = "valdroid_report_"
                 + new java.text.SimpleDateFormat("ddMMyyyy_HHmm", java.util.Locale.US).format(now)
                 + ".zip";
-        final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
-                + "\nAndroid: " + android.os.Build.VERSION.RELEASE
-                + "\nValDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"
-                + (instance != null ? "\nInstance: " + instance.getName() : "");
-        if (instance == null) { startBugReportEmail(date, device, null); return; }
-
         toast("Preparing bug report…");
         new Thread(() -> {
+            // Built on the worker thread: the GPU line creates a throwaway EGL context. Storage and
+            // build id sit in the mail itself so they are visible even if the zip gets lost.
+            final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                    + "\nAndroid: " + android.os.Build.VERSION.RELEASE
+                    + "\nGPU: " + ReportInfo.gpu()
+                    + "\nValDroid: " + ReportInfo.buildId()
+                    + "\nStorage: " + (ReportInfo.isAdoptable(this) ? "adoptable (SD card used as internal)" : "internal")
+                    + "\nInstance: " + (instance != null ? instance.getName() : "(none)");
             Uri attach = null;
             try {
                 java.io.File dir = new java.io.File(getCacheDir(), "reports");
@@ -629,7 +635,7 @@ public class LauncherActivity extends AppCompatActivity {
         final String name = pendingLogInstanceName;
         pendingLogInstanceName = null;
         if (name == null) {
-            chooseInstanceThen(instance -> exportLogs(uri, instance));
+            chooseInstanceThen(instance -> exportLogs(uri, instance), () -> exportLogs(uri, null));
             return;
         }
         GameInstanceManager mgr = GameInstanceManager.requireSingleton();

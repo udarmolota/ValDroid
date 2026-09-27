@@ -41,9 +41,11 @@ import java.util.concurrent.CompletableFuture;
  * plus a Steam-Mobile approval, token in memory only, never stored.
  *
  * Deliberately NO per-file picking. Getting saves fetches everything in one connection into a scratch
- * folder and then hangs up; only afterwards — offline, unhurried — are the files moved into Saves/,
- * asking only where a name already exists. Sending mirrors that: new names go up silently, existing
- * ones are asked about once. Choosing files up front would mean holding the Steam session open while
+ * folder and then hangs up; only afterwards — offline, unhurried — are the saves moved into place,
+ * asking only where one already exists. Flat saves (pre-1.0 .fwl/.db worlds, .fch characters,
+ * backups, server lists) are placed file by file; a Valheim 1.0 world FOLDER (worlds/<World>/…) is
+ * placed and asked about as one unit. Sending mirrors that: new saves go up silently, existing ones
+ * are asked about once (one line per world, not per chunk). Choosing files up front would mean holding the Steam session open while
  * a human deliberates (the connection dies if the app is backgrounded) and a second sign-in approval.
  */
 public class CloudSavesFragment extends Fragment {
@@ -82,8 +84,9 @@ public class CloudSavesFragment extends Fragment {
         log = view.findViewById(R.id.tv_cloud_log);
         log.setMovementMethod(new ScrollingMovementMethod());
 
-        // Position 0 is a PROMPT, never a real instance: a pre-selected default lets the user move
-        // saves in or out of the wrong game without ever touching the spinner.
+        // Position 0 is a PROMPT, never a real instance: with several instances a pre-selected
+        // default would let the user move saves in or out of the wrong game without ever touching
+        // the spinner.
         instances = GameInstanceManager.requireSingleton().getInstances();
         List<String> names = new ArrayList<>();
         names.add(getString(instances.isEmpty()
@@ -91,6 +94,8 @@ public class CloudSavesFragment extends Fragment {
         for (GameInstance gi : instances) names.add(gi.getName());
         spInstance.setAdapter(new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_dropdown_item, names));
+        // With exactly one instance there is no wrong game to pick, so select it up front.
+        if (instances.size() == 1) spInstance.setSelection(1);
 
         MaterialButtonToggleGroup toggle = view.findViewById(R.id.toggle_cloud_dir);
         toggle.check(R.id.btn_dir_pull);
@@ -162,11 +167,42 @@ public class CloudSavesFragment extends Fragment {
 
     // ===== placement: runs offline, after the Steam session is gone =====
 
-    /** Move every downloaded file into its folder, asking only where the name already exists. */
+    /** A whole Valheim 1.0 world folder waiting in the scratch dir — placed as one unit. */
+    private static final class WorldUnit {
+        final File dir;
+        WorldUnit(File dir) { this.dir = dir; }
+    }
+
+    /**
+     * What the pull left in the scratch dir, as placement units. The scratch mirrors the cloud:
+     * {@code worlds/<World>/} folders (1.0 worlds, one unit each), and flat files under
+     * {@code worlds/}, {@code characters/}, {@code serverlist/} or {@code other/} (one unit per
+     * file, placed by name exactly as before 1.0).
+     */
+    private static List<Object> collectPulled(File temp) {
+        List<Object> units = new ArrayList<>();
+        List<Object> flat = new ArrayList<>();
+        File[] cats = temp.listFiles();
+        if (cats == null) return units;
+        java.util.Arrays.sort(cats);
+        for (File cat : cats) {
+            if (cat.isFile()) { flat.add(cat); continue; }
+            File[] fs = cat.listFiles();
+            if (fs == null) continue;
+            java.util.Arrays.sort(fs);
+            for (File f : fs) {
+                if (f.isFile()) flat.add(f);
+                else if (f.isDirectory() && SteamCloudSpike.CAT_WORLDS.equals(cat.getName()))
+                    units.add(new WorldUnit(f));
+            }
+        }
+        units.addAll(flat);   // worlds first: they are what a 1.0 player came for
+        return units;
+    }
+
+    /** Move every downloaded save into place, asking only where it already exists. */
     private void placeAll(File temp, File savesDir) {
-        List<File> pending = new ArrayList<>();
-        File[] fs = temp.listFiles();
-        if (fs != null) for (File f : fs) pending.add(f);
+        List<Object> pending = collectPulled(temp);
         if (pending.isEmpty()) { busy(false); return; }
         if (!savesDir.isDirectory() && !savesDir.mkdirs()) {
             appendLog("Cannot create " + savesDir);
@@ -186,8 +222,8 @@ public class CloudSavesFragment extends Fragment {
                 new int[]{0, 0});   // {copied, kept}
     }
 
-    /** One file at a time, because a clash needs an answer before the next one is touched. */
-    private void placeNext(List<File> pending, int i, File savesDir,
+    /** One unit at a time, because a clash needs an answer before the next one is touched. */
+    private void placeNext(List<Object> pending, int i, File savesDir,
                            com.valdroid.CloudSyncState state, int[] tally) {
         if (!isAdded()) return;
         if (i >= pending.size()) {
@@ -196,7 +232,12 @@ public class CloudSavesFragment extends Fragment {
             busy(false);
             return;
         }
-        File src = pending.get(i);
+        if (pending.get(i) instanceof WorldUnit) {
+            placeWorld((WorldUnit) pending.get(i), savesDir, state, tally,
+                    () -> placeNext(pending, i + 1, savesDir, state, tally));
+            return;
+        }
+        File src = (File) pending.get(i);
         File dest = new File(destDirFor(savesDir, src.getName()), src.getName());
         if (!dest.exists()) {
             copyInto(src, dest, tally, state);
@@ -232,6 +273,109 @@ public class CloudSavesFragment extends Fragment {
                     placeNext(pending, i + 1, savesDir, state, tally);
                 })
                 .show();
+    }
+
+    /**
+     * Place one Valheim 1.0 world folder. Not on the phone yet → copied in. Already here → asked
+     * ONCE for the whole world, showing the newest file on each side like the per-file dialog.
+     * "Use the cloud one" moves this phone's folder aside to
+     * {@code <World>_backup_valdroid-<yyyyMMdd-HHmmss>/} and then installs the cloud folder whole.
+     *
+     * Never file by file: a world is one {@code _main.N} save set plus the chunk files it names, and
+     * mixing files of two save numbers produces a world whose metadata and chunks disagree.
+     * Moving the old folder aside (rather than deleting it) keeps the phone's progress recoverable —
+     * the game lists "_backup_" folders as backups, and the push never uploads them.
+     */
+    private void placeWorld(WorldUnit unit, File savesDir, com.valdroid.CloudSyncState state,
+                            int[] tally, Runnable next) {
+        File worldsDir = new File(savesDir, SteamCloudSpike.WORLDS_DIR);
+        //noinspection ResultOfMethodCallIgnored
+        worldsDir.mkdirs();
+        String name = unit.dir.getName();
+        File dest = new File(worldsDir, name);
+        if (!dest.exists()) {
+            installWorld(unit.dir, dest, tally, state);
+            next.run();
+            return;
+        }
+        long localMs = SteamCloudSpike.newestMtime(dest);
+        long cloudMs = SteamCloudSpike.newestMtime(unit.dir);
+        String aside = name + SteamCloudSpike.VALDROID_BACKUP_TAG
+                + new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.ROOT).format(new Date());
+        String msg = getString(R.string.cloud_saves_clash_msg,
+                fmtDate(localMs), fmtDate(cloudMs),
+                getString(cloudMs > localMs ? R.string.cloud_saves_clash_cloud_newer
+                                            : R.string.cloud_saves_clash_local_newer))
+                + "\n\n" + getString(R.string.cloud_saves_world_clash_note, aside);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.cloud_saves_world_clash_title, name))
+                .setMessage(msg)
+                .setCancelable(false)
+                .setPositiveButton(R.string.cloud_saves_clash_replace, (d, w) -> {
+                    File asideDir = new File(worldsDir, aside);
+                    if (!dest.renameTo(asideDir)) {
+                        appendLog(getString(R.string.cloud_saves_log_world_failed, name));
+                        tally[1]++;
+                        next.run();
+                        return;
+                    }
+                    appendLog(getString(R.string.cloud_saves_log_world_moved_aside, name, aside));
+                    if (!installWorld(unit.dir, dest, tally, state)) {
+                        // Put the phone's world back where the game looks for it: a failed install
+                        // must not leave the player with neither copy under the world's name.
+                        SteamCloudSpike.deleteRecursive(dest);
+                        if (asideDir.renameTo(dest))
+                            appendLog(getString(R.string.cloud_saves_log_world_restored, name));
+                        tally[1]++;
+                    }
+                    next.run();
+                })
+                .setNegativeButton(R.string.cloud_saves_clash_keep, (d, w) -> {
+                    // Sides deliberately left different — drop the world's records, so none of its
+                    // files is mistaken later for "the user deleted it" and removed from the cloud.
+                    if (state != null) state.forgetUnder(name + "/");
+                    appendLog(getString(R.string.cloud_saves_log_world_kept, name));
+                    tally[1]++;
+                    next.run();
+                })
+                .show();
+    }
+
+    /**
+     * Copy a pulled world folder in as a whole: into a hidden sibling first, then one rename, so the
+     * game never sees a half-copied world under the real name. Returns false (nothing left behind)
+     * on any failure.
+     */
+    private boolean installWorld(File src, File dest, int[] tally, com.valdroid.CloudSyncState state) {
+        String name = dest.getName();
+        File tmp = new File(dest.getParentFile(), "." + name + ".valdroid-partial");
+        SteamCloudSpike.deleteRecursive(tmp);
+        List<String> rels = SteamCloudSpike.worldFiles(src);
+        boolean ok = tmp.mkdirs();
+        for (String rel : rels) {
+            if (!ok) break;
+            File to = new File(tmp, rel);
+            File parent = to.getParentFile();
+            if (parent != null && !parent.isDirectory()) //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            ok = SteamCloudSpike.copyFile(new File(src, rel), to);
+        }
+        if (ok) ok = tmp.renameTo(dest);
+        if (!ok) {
+            SteamCloudSpike.deleteRecursive(tmp);
+            appendLog(getString(R.string.cloud_saves_log_world_failed, name));
+            return false;
+        }
+        if (state != null) {
+            // Exactly this world's files now match the cloud; records of an older save set go.
+            state.forgetUnder(name + "/");
+            for (String rel : rels)
+                state.remember(name + "/" + rel, SteamCloudSpike.sha1Hex(new File(dest, rel)));
+        }
+        tally[0]++;
+        appendLog(getString(R.string.cloud_saves_log_world_placed, name, rels.size()));
+        SteamCloudSpike.deleteRecursive(src);
+        return true;
     }
 
     /** "Vikingworld.fwl" -> "Vikingworld (from cloud).fwl", and "… 2" etc. if that is taken too.
@@ -276,17 +420,20 @@ public class CloudSavesFragment extends Fragment {
             final CompletableFuture<Integer> fut = new CompletableFuture<>();
             ui.post(() -> {
                 if (!isAdded()) { fut.complete(SteamCloudSpike.PUSH_CANCEL); return; }
-                GameInstance gi = chosenInstance();
-                File savesDir = gi == null ? null : savesDirOf(gi);
                 StringBuilder sb = new StringBuilder();
                 for (SteamCloudSpike.CloudFile cf : clashes) {
-                    File local = savesDir == null ? null : new File(savesDir, cf.filename);
-                    sb.append("\n• ").append(cf.filename)
+                    // A 1.0 world is one line for the whole folder, never a list of its chunks.
+                    String label = cf.worldName != null
+                            ? getString(R.string.cloud_saves_world_label, cf.worldName, cf.fileCount)
+                            : cf.filename;
+                    sb.append("\n• ").append(label)
                       .append("\n   ").append(getString(R.string.cloud_saves_clash_in_cloud,
                               fmtDate(cf.timestampMs)));
-                    if (local != null && local.isFile())
+                    // The worker knows where the local copy lives (a world folder, or a file in
+                    // worlds_local/ or characters_local/), so it hands us the date directly.
+                    if (cf.localTimestampMs > 0)
                         sb.append("\n   ").append(getString(R.string.cloud_saves_clash_on_phone,
-                                fmtDate(local.lastModified())));
+                                fmtDate(cf.localTimestampMs)));
                 }
                 new MaterialAlertDialogBuilder(requireContext())
                         .setTitle(R.string.cloud_saves_push_confirm_title)

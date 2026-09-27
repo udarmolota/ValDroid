@@ -26,19 +26,35 @@ public class GameLauncher {
         logCallback = callback;
     }
 
+    /** A launcher line: to the on-screen log AND to launcher.log (which survives a pre-game crash). */
     public static void postLog(String line) {
+        LauncherLog.line(line);
+        postUi(line);
+    }
+
+    /** On-screen only. For lines that already come FROM logcat, which launcher.log streams itself. */
+    private static void postUi(String line) {
         if (logCallback != null) logCallback.onLogLine(line);
     }
 
-    /** Device SoC fingerprint for the log: chip maker/model (API 31+) + the always-available hardware
-     *  string. Together with the GL_RENDERER line (GPU) this identifies a tester's device at a glance —
-     *  no more guessing which device a log came from. */
-    private static String deviceSoc() {
-        StringBuilder sb = new StringBuilder();
-        if (android.os.Build.VERSION.SDK_INT >= 31)
-            sb.append(android.os.Build.SOC_MANUFACTURER).append(' ').append(android.os.Build.SOC_MODEL).append(' ');
-        sb.append("[hw=").append(android.os.Build.HARDWARE).append(']');
-        return sb.toString().trim();
+    /** "internal" or the adoptable-storage flag, for the launch header and rimdroid.log. */
+    private static String storageReport() {
+        return ReportInfo.storageKind(ValDroidApplication.APP);
+    }
+
+    /**
+     * Move {@code name} to {@code prevName} (replacing the older one) so the previous run's copy
+     * survives into a bug report after a relaunch. Used for logs the game side opens with "w" or
+     * O_APPEND: without it, relaunching to reproduce a crash overwrote the only evidence.
+     */
+    private static void rotateLog(String dir, String name, String prevName) {
+        java.io.File cur = new java.io.File(dir, name);
+        if (!cur.isFile()) return;
+        java.io.File prev = new java.io.File(dir, prevName);
+        //noinspection ResultOfMethodCallIgnored
+        prev.delete();
+        if (!cur.renameTo(prev)) //noinspection ResultOfMethodCallIgnored
+            cur.delete();
     }
 
     /** Active mods in load order, parsed from the instance's Config/ModsConfig.xml. Logged in the launch
@@ -80,13 +96,18 @@ public class GameLauncher {
         if (!actualSo.equals(policySo)) {
             decisionReason += "; overridden by Extra env vars";
         }
-        boolean interp = s.isInterpreter();
+        // Read back after the Extra env field has been applied, so an override shows up here.
+        String dynarec = Os.getenv("BOX64_DYNAREC");
         return "=== ValDroid launch config ===\n"
             + "instance      : " + gi.getName() + "\n"
-            + "app version   : " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
+            + "app version   : " + ReportInfo.buildId() + "\n"
             + "device        : " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + " (Android " + android.os.Build.VERSION.RELEASE + ", API " + android.os.Build.VERSION.SDK_INT + ")\n"
-            + "soc           : " + deviceSoc() + "\n"
+            + "soc           : " + ReportInfo.deviceSoc() + "\n"
+            // Where the app lives: adoptable storage (an SD card formatted as internal) gives much
+            // longer paths — the X socket no longer fit in sun_path on one such device.
+            + "data dir      : " + ValDroidApplication.APP.getApplicationInfo().dataDir + "\n"
+            + "storage       : " + storageReport() + "\n"
             // Report the renderer the USER picked, not just the internal token. MOBILEGLUES (and the
             // RIMDROID_GLT harness) are remapped onto the GL4ES/EGL plumbing before launch, so printing
             // only `actualRenderer` showed "GL4ES" for a MobileGlues run and made tester reports read as
@@ -108,7 +129,6 @@ public class GameLauncher {
             + "resolution    : " + fixedResReport(s) + fixedGeomReport() + "\n"
             + "texture compr : " + texTierReport(s) + "\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
-            + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
                     ? "ON (ARM64 Mono, Burst " + ("1".equals(Os.getenv("RIMDROID_NO_BURST")) ? "off" : "on") + ") " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
@@ -118,7 +138,7 @@ public class GameLauncher {
                     : (s.isModSupport() ? "off (needs native Mono)" : "off")) + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
-            + "box64         : DYNAREC=" + (interp ? "0" : "1")
+            + "box64         : DYNAREC=" + (dynarec != null ? dynarec : "1")
                 + " (box64 defaults + CALLRET=1" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1" : "")
                 + "; Extra env overrides)\n"
             + "extra env     : " + envFieldReport(s) + "\n"
@@ -189,6 +209,18 @@ public class GameLauncher {
 
     public static void launch(GameInstance gameInstance) throws ErrnoException {
 
+        // launcher.log markers. The pre-header identifies the configuration even when launch()
+        // throws long before the full launch-config header below is built (the X socket crash
+        // did exactly that). launcher.log only — the on-screen log gets the full header later.
+        LauncherLog.line("=== launch " + gameInstance.getName() + " "
+                + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                        .format(new java.util.Date()) + " ===");
+        LauncherLog.line("pre-launch: instance=" + gameInstance.getName()
+                + ", renderer=" + gameInstance.settings().getRenderer().name()
+                + ", game path=" + gameInstance.getGamePath()
+                + ", storage=" + storageReport()
+                + ", build=" + ReportInfo.buildId());
+
         // RimDroid's controller-UI mod (a RimWorld mod) used to be copied into every instance on
         // each launch. Valheim never loads it; remove the copy an older ValDroid left behind, and
         // the Mods folder with it if nothing else is in there.
@@ -207,13 +239,17 @@ public class GameLauncher {
         // GC-heavy modded game repeats the same protected-page fault forever — one field device had
         // grown it to 91 MB / 704k lines (Tecno, 2026-08-30). One .prev generation keeps the
         // previous run's tail available to Export logs after a relaunch.
+        // rimdroid.log and box64.log are reopened with "w" by every run, so a relaunch to
+        // reproduce a crash used to overwrite the crashed run's logs; one .prev generation each.
         {
-            java.io.File segv = new java.io.File(gameInstance.getGamePath(), "sigsegv_fault.log");
-            if (segv.isFile()) {
-                java.io.File prev = new java.io.File(gameInstance.getGamePath(), "sigsegv_fault.prev.log");
-                prev.delete();
-                if (!segv.renameTo(prev)) segv.delete();
-            }
+            String dir = gameInstance.getGamePath();
+            rotateLog(dir, "sigsegv_fault.log", "sigsegv_fault.prev.log");
+            rotateLog(dir, "rimdroid.log", "rimdroid.prev.log");
+            rotateLog(dir, "box64.log", "box64.prev.log");
+            // box64's emulate() milestones (core.c _EMTRACE) are appended with O_APPEND forever;
+            // start each run empty so the exported file describes this run only.
+            //noinspection ResultOfMethodCallIgnored
+            new java.io.File(dir, "emulate_trace.log").delete();
         }
 
         // --- Audio (always on) ---
@@ -293,21 +329,11 @@ public class GameLauncher {
         // "unaligned atomic" fallback (marked "not enough" in box64 source) → corrupting Pawn objects →
         // pawns serialize as empty <li/>. Debug-only so the signed release is unaffected. If this fixes
         // the save bug on the affected device, we make it a proper per-device default. Remove afterwards.
-        // (Ruled out as the softpipe "all-zero buffer" cause — re-enabled for the Mali/Cortex test.)
         if (BuildConfig.DEBUG) {
             Os.setenv("BOX64_DYNAREC_ALIGNED_ATOMICS", "1", true);
         }
         // BOX64_DYNAREC_DIRTY=2 TESTED 2026-06-03 (Adreno 830): REJECTED. FPS collapsed to 12→7 (got WORSE over
         // time, opposite of cold-cache warmup) — NEVERCLEAN hotpages break Mono-JIT SMC handling. Keep default (0).
-        // "Interpreter mode" test toggle → disable box64 dynarec entirely (BOX64_DYNAREC=0,
-        // run x86_64 via the interpreter). VERY slow, but the DECISIVE diagnostic for the save
-        // corruption: if pawns serialize correctly with the dynarec OFF, the bug is a dynarec
-        // codegen miscompile (fixable via a box64 flag/patch); if they're STILL empty, it's in
-        // box64's wrapper / atomic emulation (common to both paths). Earlier this toggle tried
-        // WEAKBARRIER=0 and DF=0 — neither fixed the save, so we go to the interpreter.
-        if (gameInstance.settings().isInterpreter()) {
-            Os.setenv("BOX64_DYNAREC", "0", true);
-        }
         // Compatibility mode → box64 dynarec FP/barrier tuning that dodges the deep "won't launch past the
         // loading dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Tester-
         // discovered: WEAKBARRIER=2 (looser memory barriers) + X87DOUBLE=1 (64-bit x87, no 80↔64 spill) →
@@ -543,7 +569,7 @@ public class GameLauncher {
             }
         }
         // The enum name maps 1:1 to the native renderer token parsed in valdroid.c
-        // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
+        // (GL4ES / ZINK_ZFA).
         Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by valdroid.c on init
         Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
         Os.unsetenv("RIMDROID_MG_STORAGE_EXT");
@@ -636,15 +662,12 @@ public class GameLauncher {
                     true);
                 break;
             case ZINK_ZFA: {
-                // GPU path: Zink (GL-on-Vulkan) via libzfa. (SOFTPIPE has its own
-                // case below — it uses OSMesa, NOT libzfa, because the zfa frontend
-                // hardcodes a Zink screen and ignores GALLIUM_DRIVER.)
-                boolean soft = false;
+                // GPU path: Zink (GL-on-Vulkan) via libzfa.
                 // Absolute path so host dlopen() in the parent finds libzfa.so
                 // (the isolated namespace does not resolve it by bare soname).
                 String arm64Dir = AppStorage.requireSingleton().getGl4esLibsPath();
                 Os.setenv("BOX64_LIBGL", arm64Dir + "/libzfa.so", true);
-                Os.setenv("GALLIUM_DRIVER", soft ? "softpipe" : "zink", true);
+                Os.setenv("GALLIUM_DRIVER", "zink", true);
                 Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
                 Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
                 // DEBUG: surface Zink/Mesa shader compile/link errors + GL errors
@@ -652,7 +675,7 @@ public class GameLauncher {
                 // the GfxDevice device-lost teardown loop (SDL_GL_DeleteContext loop).
                 Os.setenv("MESA_DEBUG", "1", true);          // GL errors + warnings to stderr
                 Os.setenv("MESA_GLSL", "errors", true);      // GLSL compile/link errors
-                if (!soft) Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
+                Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
                 // libzfa.so exports a fixed classic-GL symbol set but is MISSING the
                 // entry points for several advertised extensions (whole DSA family,
                 // internalformat_query, timer_query, sparse_texture, blend_equation_
@@ -681,15 +704,13 @@ public class GameLauncher {
                 // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
                 // Empty string = "System" option = use the phone's own Vulkan driver
                 // (valdroid.c treats empty as NULL and skips the bundled Turnip ICD).
-                // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
-                String configuredDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
+                String configuredDriver = gameInstance.settings().getVulkanDriverSo();
                 launchGpu = GpuInfo.query();
                 // A stored, empty driver = the player deliberately picked "System" in the spinner
                 // (instance creation always writes the advised driver, so an empty stored value is
                 // a conscious override). Honour it instead of re-imposing a Turnip — Adreno 640
                 // crashes on every bundled Turnip, so System is its only working path.
-                boolean explicitSystem = !soft
-                        && gameInstance.settings().hasExplicitDriver()
+                boolean explicitSystem = gameInstance.settings().hasExplicitDriver()
                         && configuredDriver.isEmpty();
                 driverDecision = VulkanDriverPolicy.resolve(
                         configuredDriver, launchGpu, forceGlesZfa, explicitSystem);
@@ -709,49 +730,6 @@ public class GameLauncher {
                     true);
                 break;
             }
-            case SOFTPIPE: {
-                // CPU software renderer: Mesa softpipe via OSMesa (OFFSCREEN) + a
-                // manual blit to the surface (valdroid.c). Bypasses GPU/Vulkan/EGL
-                // entirely → works on ANY device (Mali/PowerVR/old Mali where Zink
-                // fails or mis-renders), supports all texture formats incl. BC, but
-                // is slower (CPU). Unlike Zink it does NOT go through libzfa (the zfa
-                // frontend hardcodes a Zink screen and ignores GALLIUM_DRIVER), so we
-                // load libOSMesa directly. libOSMesa.so is loaded by valdroid.c via
-                // the rimdroid linker namespace (so libcutils/liblog resolve); box64
-                // resolves GL entry points from that handle (g_osmesa_handle).
-                Os.setenv("BOX64_LIBGL", "libOSMesa.so", true);
-                Os.setenv("GALLIUM_DRIVER", "softpipe", true);
-                // softpipe caps at GL 3.3 (RimWorld/Unity need only 3.2 core).
-                Os.setenv("MESA_GL_VERSION_OVERRIDE", "3.3", true);
-                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "330", true);
-                // NOTE: large textures (BC7 hero-art) render BLACK on softpipe — but
-                // on-device testing proved this is NOT a compression issue: disabling
-                // all compression so Unity CPU-decompresses to RGBA still rendered
-                // black (and forced slow emulated decompress). So we DON'T override
-                // texture-compression extensions here — softpipe uses its native set
-                // (faster). The black-large-texture bug is tracked separately (likely a
-                // softpipe mip/sampling issue). softpipe also has the full libOSMesa, so
-                // unlike ZFA we don't need the DSA/query-disable overrides either.
-                // Pure CPU → no Vulkan ICD. Empty = valdroid.c skips the Turnip inject.
-                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", "", true);
-                // Same SDL_DYNAPI interception as GL4ES/ZFA so the game's static SDL2
-                // loads our stub and box64's my2_SDL_GL_* (CreateContext / MakeCurrent
-                // / SwapWindow / GetProcAddress) route to the OSMesa softpipe path.
-                Os.setenv("SDL_DYNAMIC_API",
-                    AppStorage.requireSingleton().getLibsLinuxX86Path() + "/libSDL2-2.0.so.0",
-                    true);
-                break;
-            }
-            case ZINK_OSMESA:
-                Os.setenv("BOX64_LIBGL", "libOSMesa.so", true);
-                Os.setenv("GALLIUM_DRIVER", "zink", true);
-                Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
-                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
-                String vulkanDriverName = LauncherPreferences.requireSingleton().getVulkanDriver().libName;
-                if (vulkanDriverName != null) {
-                    Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vulkanDriverName, true);
-                }
-                break;
         }
 
         // RimWorld 1.6 GLES pivot — AI-consensus one-run Zink diagnostics (brief v12). Applied
@@ -868,8 +846,11 @@ public class GameLauncher {
                 Os.setenv("VALDROID_BEPINEX_PRELOADER", ModManager.preloader(gameDir).getAbsolutePath(), true);
                 Log.i(TAG, "Mods: BepInEx " + ModManager.BEPINEX_VERSION + ", "
                         + ModManager.countEnabled(gameDir) + " mod(s) enabled");
+                LauncherLog.line("Mods: BepInEx " + ModManager.BEPINEX_VERSION + " ready, "
+                        + ModManager.countEnabled(gameDir) + " mod(s) enabled");
             } catch (java.io.IOException e) {
                 Log.e(TAG, "Mods: could not set up BepInEx, starting without mods", e);
+                LauncherLog.line("Mods: BepInEx setup FAILED, starting without mods: " + e);
             }
         }
 
@@ -993,8 +974,16 @@ public class GameLauncher {
             } catch (InterruptedException ignored) {}
             int xw = lastSurfaceWidth  > 0 ? lastSurfaceWidth  : 1280;
             int xh = lastSurfaceHeight > 0 ? lastSurfaceHeight : 720;
+            // The socket lives in the app's own files dir, not in the instance: sun_path holds only
+            // 107 characters, and <instance>/tmp/.X11-unix/X0 went past that when the app sits on
+            // an SD card formatted as internal storage (/mnt/expand/<uuid>/user/0/..., AYN Thor,
+            // 2026-09-27) — bind() failed and the launcher crashed before the game started.
+            // box64's connect() redirect follows RIMDROID_X11_SOCKET_DIR, so nothing else moves.
+            LauncherLog.line("X server: starting " + xw + "x" + xh + ", socket "
+                    + ReportInfo.describeSocketPath(ReportInfo.x11SocketPath(ValDroidApplication.APP)));
             String sock = com.valdroid.xserver.XServerRunner.start(
-                    gameInstance.getGamePath(), xw, xh);
+                    ValDroidApplication.APP.getFilesDir().getAbsolutePath(), xw, xh);
+            LauncherLog.line("X server: listening on " + sock);
             Os.setenv("DISPLAY", ":0", true);
             Os.setenv("RIMDROID_X11_SOCKET_DIR", new java.io.File(sock).getParent(), true);
             // Unity 2022's STATIC SDL (no dynapi) must use its x11 video driver against OUR
@@ -1081,6 +1070,9 @@ public class GameLauncher {
         } else {
             // Legacy JNI in-process + fork path (known to crash at first GPU
             // texture upload due to GPU-after-fork; kept for comparison).
+            // Last launcher milestone before native code takes over: if a report has this line and
+            // no rimdroid.log of the same time, the crash is in the native start itself.
+            LauncherLog.line("starting game (native startGame), rimdroid.log takes over from here");
             startGame(
                     gameInstance.getGamePath(),
                     gameInstance.getNativeLibraryPath(),
@@ -1102,7 +1094,8 @@ public class GameLauncher {
 
     private static void startLogcatReader() {
         stopLogcatReader();
-        logcatReader = new LogcatReader(line -> postLog(line));
+        // postUi, not postLog: these lines come from logcat, which launcher.log already streams.
+        logcatReader = new LogcatReader(GameLauncher::postUi);
         logcatReader.start();
     }
 
@@ -1172,10 +1165,6 @@ public class GameLauncher {
     public static native int setSurface(Surface surface, int width, int height);
     public static native void destroySurface();
 
-    /** Software-renderer (OSMesa + softpipe) smoke test: render a test frame on the CPU and
-     *  blit it to the current surface. Returns 0 on success. Requires a live surface
-     *  (call after setSurface). osmesaLibPath = absolute path to libOSMesa.so. */
-    public static native int nativeOsmesaSmokeTest(String osmesaLibPath);
     static native void startGame(String gameDirPath, String libraryDirPath, String[] args);
 
     /**

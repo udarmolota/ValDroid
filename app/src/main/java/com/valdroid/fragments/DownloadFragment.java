@@ -106,6 +106,11 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             btnInstallContent.setVisibility(game ? View.GONE : View.VISIBLE);
         });
         toggle.check(R.id.btn_type_game);   // default to Game
+        // Valheim has no Steam Workshop mods: the Mods tab (RimDroid's anonymous Workshop download) and
+        // its "install downloaded content" button, which opens RimWorld's installer asking for
+        // About/About.xml, only sent players the wrong way (2026-09-27). Valheim mods are installed on
+        // the Mods screen from the side menu, so the selector stays on Game and is hidden.
+        toggle.setVisibility(View.GONE);
 
         // Re-attach to a download already running in the background (the worker thread outlives this
         // fragment via SteamDownloadState), restoring the log + progress + "busy" state on return.

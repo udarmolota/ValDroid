@@ -18,6 +18,14 @@ public class ValDroidApplication extends Application {
         super.onCreate();
         APP = this;
         installCrashLogger();          // FIRST — so even early-startup crashes get recorded
+        // Main process vs ":fmoddec" (the offline FMOD audio decoder), decided up front: both the
+        // native libraries below and the session log must stay out of the secondary process.
+        String proc = getProcessName();
+        boolean mainProcess = (proc == null) || proc.equals(getPackageName());
+        // The launcher's session log (launcher.log): header + live logcat from app start, so a
+        // launcher that dies before the game starts still leaves a log for "Report a bug". Main
+        // process only — a second process would rotate the live file away.
+        if (mainProcess) LauncherLog.init(this);
         installFullBouncyCastle();
         AppStorage.init(this);
         LauncherPreferences.init(this);
@@ -41,8 +49,6 @@ public class ValDroidApplication extends Application {
         // interposes dlopen process-wide and loads normal arm64 libs (libfmod) into box64's
         // namespace, crashing them. In :fmoddec, dlopen stays the real bionic one. See
         // FmodDecodeService / [[audio_fmod_plan]].
-        String proc = getProcessName();
-        boolean mainProcess = (proc == null) || proc.equals(getPackageName());
         if (mainProcess) {
             System.loadLibrary("valdroid");
             System.loadLibrary("valdroidlinker");
@@ -97,6 +103,13 @@ public class ValDroidApplication extends Application {
                 ex.printStackTrace(w);
                 w.println();
             } catch (Throwable ignored) { /* never make crash-logging itself crash */ }
+            // Also into launcher.log, synchronously: the logcat stream thread may not get to copy
+            // the fatal Log.e below before the process dies.
+            try {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                ex.printStackTrace(new java.io.PrintWriter(sw));
+                LauncherLog.line("UNCAUGHT on thread '" + thread.getName() + "': " + sw);
+            } catch (Throwable ignored) {}
             Log.e("ValDroid", "Uncaught exception on thread '" + thread.getName() + "'", ex);
             if (prev != null) prev.uncaughtException(thread, ex);   // keep default crash behaviour
         });
