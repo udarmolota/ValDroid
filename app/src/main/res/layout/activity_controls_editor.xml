@@ -185,13 +185,25 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:background="@null"
-                    android:min="1"
+                    android:min="0"
                     android:max="100"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/element_transparency_tv"
                     app:layout_constraintEnd_toStartOf="@+id/element_opacity_all_btn"/>
 
-                <!-- Sensitivity (only for TOUCHPAD / STICK_MOUSE) -->
+                <!-- Drag to look (buttons only); sits above the sensitivity slider it enables -->
+                <CheckBox
+                    android:id="@+id/element_drag_look_cb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/control_element_drag_look"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_opacity_sb"/>
+
+                <!-- Sensitivity (touchpad, sticks, scroll bar, radial menu, drag-to-look buttons) -->
                 <TextView
                     android:id="@+id/element_sensitivity_tv"
                     android:layout_width="0dp"
@@ -203,7 +215,7 @@
                     android:text="@string/control_element_sensitivity"
                     android:visibility="gone"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/element_opacity_sb"
+                    app:layout_constraintTop_toBottomOf="@+id/element_drag_look_cb"
                     app:layout_constraintEnd_toStartOf="@+id/element_sensitivity_percent_tv"/>
 
                 <TextView

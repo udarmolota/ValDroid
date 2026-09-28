@@ -282,7 +282,91 @@ static void rd_stutter_frame(void) {
     }
 }
 
+// ---- Background pause (hold the frame while the app is not visible) ----------
+// Valheim runs in-process under box64 and knows nothing about Android's lifecycle: with the screen
+// off or the app in the background it kept simulating, rendering and playing sound — players came
+// back to a dead character, a hot phone and a drained battery (and on handhelds the fans and music
+// kept going after the power button). Mobile games pause in the background, so we do it for them.
+//
+// The mechanism: every present of every renderer (SDL/GLX swap, vkQueuePresentKHR) reaches
+// rimdroid_frame_tick() on the presenting thread. While paused we simply do not return from it.
+// Holding the present stops Unity's render thread; the main thread then blocks on its frame sync
+// with the render thread, so the simulation, physics and job workers stop too — no game-side
+// cooperation needed, and CPU/GPU go idle. On resume Unity sees one long frame, which it (and
+// Valheim) clamp. Audio is gated separately in the libasound/libpulse-simple shims, because FMOD
+// mixes on its own thread and would keep playing the current music and ambience.
+//
+// Deadlock safety: the wait is a condition variable re-checked every second, and the flag is
+// cleared by GameActivity.onStart, by GameActivity.onDestroy, when GameLauncher.launch() returns,
+// and from our atexit handler (so threads Unity joins while quitting are never left parked).
+// The flag acts only here and in the audio shims' write calls, so it never blocks anything outside
+// a running game: set before the first present, it simply takes effect at that present.
+static pthread_mutex_t g_rd_bg_mx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  g_rd_bg_cv = PTHREAD_COND_INITIALIZER;
+static volatile int    g_rd_bg_paused = 0;   // written under g_rd_bg_mx; read racily as a fast path
+
+// The audio shims are separate libraries (sonames libasound.so.2 / libpulse-simple.so.0) that
+// System.loadLibrary opened RTLD_LOCAL, so dlsym(RTLD_DEFAULT) cannot see them. Look each one up
+// by file name with RTLD_NOLOAD: bionic matches the already-loaded file, and a shim that was
+// never loaded stays unloaded. A shim found once is cached (the atexit path never calls dlopen);
+// one not found yet is looked up again on the next lifecycle call, since GameLauncher loads the
+// ALSA shim only when a launch starts.
+typedef void (*rd_audio_pause_fn)(int);
+static rd_audio_pause_fn g_rd_audio_pause_fns[2];
+
+static void rd_bg_resolve_audio(void) {
+    // File name first (System.loadLibrary's name), then the soname the guest's FMOD asks for.
+    static const char* const libs[2]  = { "libasoundshim.so", "libpulsesimpleshim.so" };
+    static const char* const sonames[2] = { "libasound.so.2", "libpulse-simple.so.0" };
+    for (int i = 0; i < 2; i++) {
+        if (g_rd_audio_pause_fns[i]) continue;
+        void* h = dlopen(libs[i], RTLD_NOW | RTLD_NOLOAD);
+        if (!h) h = dlopen(sonames[i], RTLD_NOW | RTLD_NOLOAD);
+        g_rd_audio_pause_fns[i] = h ? (rd_audio_pause_fn)dlsym(h, "valdroid_audio_set_paused") : NULL;
+        LOGI("background pause: %s audio gate %s", libs[i],
+             g_rd_audio_pause_fns[i] ? "found" : (h ? "missing symbol" : "not loaded"));
+    }
+}
+
+static void rd_bg_apply(int paused, int resolve) {
+    pthread_mutex_lock(&g_rd_bg_mx);
+    int was = g_rd_bg_paused;
+    g_rd_bg_paused = paused ? 1 : 0;
+    if (!paused) pthread_cond_broadcast(&g_rd_bg_cv);
+    pthread_mutex_unlock(&g_rd_bg_mx);
+    if (resolve) rd_bg_resolve_audio();
+    for (int i = 0; i < 2; i++)
+        if (g_rd_audio_pause_fns[i]) g_rd_audio_pause_fns[i](paused ? 1 : 0);
+    if (was != (paused ? 1 : 0))
+        LOGI("%s (frames presented so far: %llu)", paused ? "paused (background)" : "resumed",
+             (unsigned long long)g_rimdroid_frame_count);
+}
+
+/** JNI entry (GameActivity.onStop/onStart/onDestroy, GameLauncher after the game returns). */
+void rimdroid_set_background_paused(int paused) {
+    rd_bg_apply(paused, 1);
+}
+
+// Park the presenting thread while paused. Called at the top of rimdroid_frame_tick.
+static void rd_bg_gate(void) {
+    if (!g_rd_bg_paused) return;   // fast path: one load per frame
+    pthread_mutex_lock(&g_rd_bg_mx);
+    if (g_rd_bg_paused) {
+        LOGI("background pause: frame held on tid=%ld", (long)gettid());
+        while (g_rd_bg_paused) {
+            struct timespec until;
+            clock_gettime(CLOCK_REALTIME, &until);
+            until.tv_sec += 1;   // periodic re-check: never rely on a single wake-up
+            pthread_cond_timedwait(&g_rd_bg_cv, &g_rd_bg_mx, &until);
+        }
+        LOGI("background pause: frame released on tid=%ld", (long)gettid());
+        g_rd_last_present_ns = 0;   // the frame cap must not "catch up" on the paused time
+    }
+    pthread_mutex_unlock(&g_rd_bg_mx);
+}
+
 void rimdroid_frame_tick(void) {
+    rd_bg_gate();
     g_rimdroid_frame_count++;
     rd_stutter_frame();
     uint64_t cap = g_rimdroid_frame_min_ns;
@@ -1183,6 +1267,10 @@ static void rimdroid_atexit_handler(void) {
     // This gives us a native-side confirmation that exit() was the cause of death
     // (as opposed to a signal, which would not call atexit handlers).
     LOGE("=== atexit handler fired: process is exiting via exit() ===");
+    // Never leave a presenting or audio thread parked by the background pause while the process
+    // tears down: a destructor that joins one of them would hang the exit. No dlopen here — only
+    // the audio gates already resolved are released.
+    rd_bg_apply(0, 0);
 }
 
 static void handle_abort(int sig) {

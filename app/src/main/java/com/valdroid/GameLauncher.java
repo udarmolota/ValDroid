@@ -130,6 +130,8 @@ public class GameLauncher {
             + "texture compr : " + texTierReport(s) + "\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
+            + "background    : " + (s.isKeepRunningInBackground()
+                    ? "keep running (pause disabled)" : "pause when not visible") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
                     ? "ON (ARM64 Mono, Burst " + ("1".equals(Os.getenv("RIMDROID_NO_BURST")) ? "off" : "on") + ") " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
             + "mods          : " + (Os.getenv("VALDROID_BEPINEX_PRELOADER") != null
@@ -1073,11 +1075,19 @@ public class GameLauncher {
             // Last launcher milestone before native code takes over: if a report has this line and
             // no rimdroid.log of the same time, the crash is in the native start itself.
             LauncherLog.line("starting game (native startGame), rimdroid.log takes over from here");
-            startGame(
-                    gameInstance.getGamePath(),
-                    gameInstance.getNativeLibraryPath(),
-                    gameInstance.getArgs()
-            );
+            gameRunning = true;
+            try {
+                startGame(
+                        gameInstance.getGamePath(),
+                        gameInstance.getNativeLibraryPath(),
+                        gameInstance.getArgs()
+                );
+            } finally {
+                // The game is gone: nothing may stay parked on the background pause, and a later
+                // onStop must not arm it for a game that no longer runs.
+                gameRunning = false;
+                setBackgroundPaused(false);
+            }
         }
 
         postLog("Game process ended.");
@@ -1164,6 +1174,36 @@ public class GameLauncher {
 
     public static native int setSurface(Surface surface, int width, int height);
     public static native void destroySurface();
+
+    // ---- Background pause ---------------------------------------------------------------------
+    // The game runs in-process and ignores Android's lifecycle, so GameActivity asks native code to
+    // hold its next frame (which stops the whole Unity loop) and to silence the audio shims while
+    // the app is not visible. See rd_bg_gate in valdroid.c.
+
+    /** True while native startGame runs, i.e. while there is a game to pause. */
+    private static volatile boolean gameRunning;
+    private static boolean bgPaused;   // guarded by the class lock
+
+    static native void nativeSetBackgroundPaused(boolean paused);
+
+    /**
+     * Pause (true) or resume (false) the running game. A pause with no game running is ignored;
+     * a resume is always passed through, so nothing can stay parked. Logged to launcher.log and
+     * logcat on each change.
+     */
+    public static synchronized void setBackgroundPaused(boolean paused) {
+        if (paused && !gameRunning) return;
+        if (paused == bgPaused) return;
+        try {
+            nativeSetBackgroundPaused(paused);
+        } catch (UnsatisfiedLinkError e) {
+            return;   // native library not loaded: there is no game to pause
+        }
+        bgPaused = paused;
+        String msg = paused ? "paused (background)" : "resumed";
+        Log.i(TAG, msg);
+        LauncherLog.line(msg);
+    }
 
     static native void startGame(String gameDirPath, String libraryDirPath, String[] args);
 

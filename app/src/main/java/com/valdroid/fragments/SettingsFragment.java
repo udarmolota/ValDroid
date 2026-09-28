@@ -96,6 +96,11 @@ public class SettingsFragment extends Fragment {
         // Takes effect on the next launch (orientation is requested once in GameActivity.onCreate).
         swReverse.setChecked(inst.isReverseLandscape());
         swReverse.setOnCheckedChangeListener((btn, checked) -> inst.setReverseLandscape(checked));
+        // Background pause opt-out. Off (the default) = the game is held while the app is not
+        // visible; GameActivity reads it on every onStop, so it applies from the next time.
+        Switch swKeepBg = view.findViewById(R.id.sw_keep_running_bg);
+        swKeepBg.setChecked(inst.isKeepRunningInBackground());
+        swKeepBg.setOnCheckedChangeListener((btn, checked) -> inst.setKeepRunningInBackground(checked));
         // Compatibility mode: box64 FP/barrier tuning (WEAKBARRIER=2 + X87DOUBLE=1) that lets the game launch
         // on devices hit by the deep "won't start / black screen" bug (Adreno 610/725, weak-Vulkan Mali).
         swCompat.setChecked(inst.isCompatibilityMode());

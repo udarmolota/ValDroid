@@ -193,6 +193,9 @@ public class InputControlsView extends View {
         for (AbstractControlElement controlElement : controlElements) {
             if (!controlElement.isVisible()) continue;
             controlElement.draw(canvas);
+            // A fully transparent element still works in the game (touches don't depend on alpha),
+            // but in the editor it would be impossible to find: mark where it is.
+            if (isEditMode && controlElement.getAlpha() == 0) drawHiddenMarker(canvas, controlElement);
         }
         if (!isEditMode && !mouseLocked && curX >= 0 && (physicalMouse || hasMouseElement())) drawCursor(canvas);
     }
@@ -299,6 +302,18 @@ public class InputControlsView extends View {
 
     public boolean isEditMode() {
         return isEditMode;
+    }
+
+    private final Paint hiddenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    private void drawHiddenMarker(Canvas c, AbstractControlElement el) {
+        float r = 80f * pixelScale * el.getScale();
+        hiddenPaint.setStyle(Paint.Style.STROKE);
+        hiddenPaint.setStrokeWidth(Math.max(2f, 3f * pixelScale));
+        hiddenPaint.setColor(0xCCFFFFFF);
+        hiddenPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{ 12f * pixelScale + 4f, 8f * pixelScale + 3f }, 0f));
+        c.drawCircle(el.getCenterX(), el.getCenterY(), r, hiddenPaint);
+        hiddenPaint.setPathEffect(null);
     }
 
     public void setSnapToGrid(boolean on) {

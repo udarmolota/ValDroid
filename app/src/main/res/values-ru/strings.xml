@@ -70,6 +70,8 @@
     <string name="cloud_saves_code">Код Steam Guard</string>
     <string name="cloud_saves_code_email">Код отправлен на %1$s</string>
     <string name="reverse_landscape_hint">Разворачивает картинку в противоположную сторону — тоже фиксированно, без свободного вращения. Включи, если геймпад или держатель фиксирует телефон «вверх ногами».</string>
+    <string name="keep_running_bg_label">Не ставить на паузу в фоне</string>
+    <string name="keep_running_bg_hint">Выключено: игра замирает (картинка, звук и мир), пока ValDroid не на экране — экран погашен, «Домой», другое приложение — и продолжается, когда вернёшься. Включай, только если держишь мир для друзей.</string>
     <string name="compat_mode_label">Режим совместимости</string>
     <string name="compat_mode_hint">Включи, если игра не запускается (чёрный экран / зависает на загрузке). Чуть медленнее, но помогает запуститься на некоторых устройствах.</string>
     <string name="native_mono_label">Нативный ARM64 Mono (экспериментально)</string>

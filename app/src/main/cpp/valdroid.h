@@ -9,6 +9,10 @@
 extern volatile uint64_t g_rimdroid_frame_count;
 void rimdroid_frame_tick(void);
 
+/* Background pause: 1 = hold the game at its next present and silence the audio shims,
+ * 0 = release. Safe to call at any time, including before the game starts or after it ended. */
+void rimdroid_set_background_paused(int paused);
+
 /**
  * Called from JNI before startGame.
  * Reads RIMDROID_RENDERER env var, initialises surface state.

@@ -498,6 +498,22 @@
             android:textSize="12sp"
             android:alpha="0.7"
             android:text="@string/reverse_landscape_hint" />
+
+        <Switch
+            android:id="@+id/sw_keep_running_bg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp"
+            android:text="@string/keep_running_bg_label" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:alpha="0.7"
+            android:text="@string/keep_running_bg_hint" />
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

@@ -811,6 +811,27 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         if (controls != null) controls.resetAll();   // release any held buttons/keys
     }
 
+    // === Background pause ===
+    // onStop/onStart, not onPause/onResume: a dialog, the notification shade or split screen only
+    // pause the activity while the game stays on screen, and freezing it there would look like a
+    // hang. onStop means we are really gone: screen off, Home, another app on top, a full-screen
+    // call. Held inputs were already released in onPause. Skipped when the instance opts out
+    // (Settings -> Keep running in the background) or when the activity is finishing anyway.
+    @Override
+    protected void onStart() {
+        super.onStart();
+        GameLauncher.setBackgroundPaused(false);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isFinishing()) return;
+        boolean keepRunning = instanceName != null
+                && new com.valdroid.InstanceSettings(instanceName).isKeepRunningInBackground();
+        if (!keepRunning) GameLauncher.setBackgroundPaused(true);
+    }
+
     // === physical gamepad detection -> auto hide/show on-screen controls ===
     private android.hardware.input.InputManager inputManager;
     private boolean lastPadConnected = false;
@@ -895,6 +916,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Never leave the game parked behind an activity that no longer exists.
+        GameLauncher.setBackgroundPaused(false);
         if (perfThread != null) { perfThread.quitSafely(); perfThread = null; perfHandler = null; }
         GameLauncher.destroyValDroidWindow();
     }

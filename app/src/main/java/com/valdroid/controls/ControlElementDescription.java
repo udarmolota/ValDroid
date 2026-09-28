@@ -51,6 +51,14 @@ public class ControlElementDescription {
      * fills absent booleans with false.
      */
     public final boolean tapDisabled;
+    /**
+     * Buttons only: while the button is held, moving the same finger turns the camera, like the
+     * fire button in mobile shooters (hold attack/block/draw the bow and aim with one thumb).
+     * Keyboard/mouse buttons move the mouse, gamepad buttons deflect a virtual right stick; the
+     * element's {@link #sensitivity} sets the speed. Default false so layouts saved before this
+     * field existed load unchanged (Gson fills absent booleans with false).
+     */
+    public final boolean dragLook;
 
     public static final float DEFAULT_SENSITIVITY = 2.0f;
     public static final Style DEFAULT_STYLE = Style.OUTLINE;
@@ -99,6 +107,17 @@ public class ControlElementDescription {
                                      AbstractControlElement.InputType inputType, @NonNull Icon icon,
                                      boolean isToggle, float sensitivity, Style style,
                                      String iconFile, boolean noTint, boolean tapDisabled) {
+        this(centerXRelative, centerYRelative, scale, type, bindings, text, color, alpha,
+                inputType, icon, isToggle, sensitivity, style, iconFile, noTint, tapDisabled, false);
+    }
+
+    public ControlElementDescription(float centerXRelative, float centerYRelative, float scale,
+                                     @NonNull AbstractControlElement.Type type, @NonNull GLFWBinding[] bindings,
+                                     String text, int color, int alpha,
+                                     AbstractControlElement.InputType inputType, @NonNull Icon icon,
+                                     boolean isToggle, float sensitivity, Style style,
+                                     String iconFile, boolean noTint, boolean tapDisabled,
+                                     boolean dragLook) {
         // Clamped rather than rejected: describe() runs on every save, and an element dragged to
         // the very edge (or a hand-edited file) must not make saving throw and lose the layout.
         this.centerXRelative = clampF(centerXRelative, 0.001f, 0.999f);
@@ -117,6 +136,7 @@ public class ControlElementDescription {
         this.iconFile = iconFile;
         this.noTint = noTint;
         this.tapDisabled = tapDisabled;
+        this.dragLook = dragLook;
         validate();
     }
 
@@ -223,7 +243,8 @@ public class ControlElementDescription {
             return new ControlElementDescription(d.centerXRelative, d.centerYRelative,
                     d.scale > 0f ? d.scale : 1f, d.type, nonNull.toArray(new GLFWBinding[0]),
                     d.text, d.color, d.alpha, it, d.icon != null ? d.icon : Icon.NO_ICON,
-                    d.isToggle, d.sensitivity, d.style, d.iconFile, d.noTint, d.tapDisabled);
+                    d.isToggle, d.sensitivity, d.style, d.iconFile, d.noTint, d.tapDisabled,
+                    d.dragLook);
         } catch (RuntimeException e) {
             return null;
         }

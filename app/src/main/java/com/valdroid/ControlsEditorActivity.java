@@ -132,6 +132,82 @@ public class ControlsEditorActivity extends AppCompatActivity {
         });
 
         binding.inputControlsV.setElementSettingsController(new InputControlsView.ElementSettingsController() {
+            /** Shows (or hides) the sensitivity slider for the element; re-run when the
+             *  drag-to-look checkbox changes, since that decides whether a button has one. */
+            private void loadSensitivity(AbstractControlElement element) {
+                // Sensitivity: touchpad, mouse stick, scroll bar, radial menu, gamepad stick, and a
+                // button with drag-to-look on (its look speed; the same scale as the touchpad).
+                final boolean isLookButton = element instanceof com.valdroid.controls.ButtonControlElement
+                        && ((com.valdroid.controls.ButtonControlElement) element).isDragLook();
+                boolean hasSensitivity = (element.getType() == AbstractControlElement.Type.TOUCHPAD
+                        || element.getType() == AbstractControlElement.Type.STICK_MOUSE
+                        || element.getType() == AbstractControlElement.Type.SCROLL_BAR
+                        || element.getType() == AbstractControlElement.Type.RADIAL_MENU
+                        || element.getType() == AbstractControlElement.Type.STICK
+                        || isLookButton);
+                // A gamepad stick's gain is shown as a plain percentage (100% = 1:1, stored as 2.0,
+                // see StickControlElement), on a 25-200% slider; the others keep Zomdroid's scale.
+                final boolean isStick = element instanceof com.valdroid.controls.StickControlElement;
+                final float sensUnit = isStick ? 50f : 100f;
+                binding.elementSensitivitySb.setMin(25);
+                binding.elementSensitivitySb.setMax(isStick ? 200 : 800);
+
+                if (hasSensitivity) {
+                    final float currentSens;
+                    if (element instanceof com.valdroid.controls.TouchpadControlElement) {
+                        currentSens = ((com.valdroid.controls.TouchpadControlElement) element).getSensitivity();
+                    } else if (element instanceof com.valdroid.controls.MouseStickControlElement) {
+                        currentSens = ((com.valdroid.controls.MouseStickControlElement) element).getSensitivity();
+                    } else if (element instanceof com.valdroid.controls.ScrollBarControlElement) {
+                        currentSens = ((com.valdroid.controls.ScrollBarControlElement) element).getSensitivity();
+                    } else if (element instanceof com.valdroid.controls.RadialMenuControlElement) {
+                        currentSens = ((com.valdroid.controls.RadialMenuControlElement) element).getSensitivity();
+                    } else if (isStick) {
+                        currentSens = ((com.valdroid.controls.StickControlElement) element).getSensitivity();
+                    } else if (isLookButton) {
+                        currentSens = ((com.valdroid.controls.ButtonControlElement) element).getSensitivity();
+                    } else {
+                        currentSens = ControlElementDescription.DEFAULT_SENSITIVITY;
+                    }
+
+                    int sensProgress = Math.round(currentSens * sensUnit);
+                    binding.elementSensitivityTv.setVisibility(View.VISIBLE);
+                    binding.elementSensitivityPercentTv.setVisibility(View.VISIBLE);
+                    binding.elementSensitivityPercentTv.setText(
+                            getResources().getString(R.string.percentage_format, sensProgress));
+                    binding.elementSensitivitySb.setVisibility(View.VISIBLE);
+                    binding.elementSensitivitySb.setOnSeekBarChangeListener(null);
+                    binding.elementSensitivitySb.setProgress(sensProgress);
+                    binding.elementSensitivitySb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                        @Override
+                        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                            binding.elementSensitivityPercentTv.setText(
+                                    getResources().getString(R.string.percentage_format, progress));
+                            float s = progress / sensUnit;
+                            if (element instanceof com.valdroid.controls.TouchpadControlElement) {
+                                ((com.valdroid.controls.TouchpadControlElement) element).setSensitivity(s);
+                            } else if (element instanceof com.valdroid.controls.MouseStickControlElement) {
+                                ((com.valdroid.controls.MouseStickControlElement) element).setSensitivity(s);
+                            } else if (element instanceof com.valdroid.controls.ScrollBarControlElement) {
+                                ((com.valdroid.controls.ScrollBarControlElement) element).setSensitivity(s);
+                            } else if (element instanceof com.valdroid.controls.RadialMenuControlElement) {
+                                ((com.valdroid.controls.RadialMenuControlElement) element).setSensitivity(s);
+                            } else if (isStick) {
+                                ((com.valdroid.controls.StickControlElement) element).setSensitivity(s);
+                            } else if (isLookButton) {
+                                ((com.valdroid.controls.ButtonControlElement) element).setSensitivity(s);
+                            }
+                        }
+                        @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                        @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+                    });
+                } else {
+                    binding.elementSensitivityTv.setVisibility(View.GONE);
+                    binding.elementSensitivityPercentTv.setVisibility(View.GONE);
+                    binding.elementSensitivitySb.setVisibility(View.GONE);
+                }
+            }
+
             private void loadElement(AbstractControlElement element) {
 
                 int scaleProgressValue = Math.round(element.getScale() * 100);
@@ -172,69 +248,23 @@ public class ControlsEditorActivity extends AppCompatActivity {
                     binding.inputControlsV.invalidate();
                 });
 
-                // Sensitivity — only for TOUCHPAD, STICK_MOUSE and SCROLL_BAR
-                boolean hasSensitivity = (element.getType() == AbstractControlElement.Type.TOUCHPAD
-                        || element.getType() == AbstractControlElement.Type.STICK_MOUSE
-                        || element.getType() == AbstractControlElement.Type.SCROLL_BAR
-                        || element.getType() == AbstractControlElement.Type.RADIAL_MENU
-                        || element.getType() == AbstractControlElement.Type.STICK);
-                // A gamepad stick's gain is shown as a plain percentage (100% = 1:1, stored as 2.0,
-                // see StickControlElement), on a 25-200% slider; the others keep Zomdroid's scale.
-                final boolean isStick = element instanceof com.valdroid.controls.StickControlElement;
-                final float sensUnit = isStick ? 50f : 100f;
-                binding.elementSensitivitySb.setMin(25);
-                binding.elementSensitivitySb.setMax(isStick ? 200 : 800);
-
-                if (hasSensitivity) {
-                    final float currentSens;
-                    if (element instanceof com.valdroid.controls.TouchpadControlElement) {
-                        currentSens = ((com.valdroid.controls.TouchpadControlElement) element).getSensitivity();
-                    } else if (element instanceof com.valdroid.controls.MouseStickControlElement) {
-                        currentSens = ((com.valdroid.controls.MouseStickControlElement) element).getSensitivity();
-                    } else if (element instanceof com.valdroid.controls.ScrollBarControlElement) {
-                        currentSens = ((com.valdroid.controls.ScrollBarControlElement) element).getSensitivity();
-                    } else if (element instanceof com.valdroid.controls.RadialMenuControlElement) {
-                        currentSens = ((com.valdroid.controls.RadialMenuControlElement) element).getSensitivity();
-                    } else if (isStick) {
-                        currentSens = ((com.valdroid.controls.StickControlElement) element).getSensitivity();
-                    } else {
-                        currentSens = ControlElementDescription.DEFAULT_SENSITIVITY;
-                    }
-
-                    int sensProgress = Math.round(currentSens * sensUnit);
-                    binding.elementSensitivityTv.setVisibility(View.VISIBLE);
-                    binding.elementSensitivityPercentTv.setVisibility(View.VISIBLE);
-                    binding.elementSensitivityPercentTv.setText(
-                            getResources().getString(R.string.percentage_format, sensProgress));
-                    binding.elementSensitivitySb.setVisibility(View.VISIBLE);
-                    binding.elementSensitivitySb.setOnSeekBarChangeListener(null);
-                    binding.elementSensitivitySb.setProgress(sensProgress);
-                    binding.elementSensitivitySb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                        @Override
-                        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                            binding.elementSensitivityPercentTv.setText(
-                                    getResources().getString(R.string.percentage_format, progress));
-                            float s = progress / sensUnit;
-                            if (element instanceof com.valdroid.controls.TouchpadControlElement) {
-                                ((com.valdroid.controls.TouchpadControlElement) element).setSensitivity(s);
-                            } else if (element instanceof com.valdroid.controls.MouseStickControlElement) {
-                                ((com.valdroid.controls.MouseStickControlElement) element).setSensitivity(s);
-                            } else if (element instanceof com.valdroid.controls.ScrollBarControlElement) {
-                                ((com.valdroid.controls.ScrollBarControlElement) element).setSensitivity(s);
-                            } else if (element instanceof com.valdroid.controls.RadialMenuControlElement) {
-                                ((com.valdroid.controls.RadialMenuControlElement) element).setSensitivity(s);
-                            } else if (isStick) {
-                                ((com.valdroid.controls.StickControlElement) element).setSensitivity(s);
-                            }
-                        }
-                        @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                        @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+                // Drag to look, buttons only: while the button is held, moving the same finger turns
+                // the camera. When on, the sensitivity slider below sets its speed.
+                if (element instanceof com.valdroid.controls.ButtonControlElement) {
+                    com.valdroid.controls.ButtonControlElement button =
+                            (com.valdroid.controls.ButtonControlElement) element;
+                    binding.elementDragLookCb.setOnCheckedChangeListener(null);
+                    binding.elementDragLookCb.setChecked(button.isDragLook());
+                    binding.elementDragLookCb.setOnCheckedChangeListener((v, checked) -> {
+                        button.setDragLook(checked);
+                        loadSensitivity(element);
                     });
+                    binding.elementDragLookCb.setVisibility(View.VISIBLE);
                 } else {
-                    binding.elementSensitivityTv.setVisibility(View.GONE);
-                    binding.elementSensitivityPercentTv.setVisibility(View.GONE);
-                    binding.elementSensitivitySb.setVisibility(View.GONE);
+                    binding.elementDragLookCb.setVisibility(View.GONE);
                 }
+
+                loadSensitivity(element);
 
                 // Tap-to-click, touchpad only. Server admins asked to be able to turn the tap off:
                 // while dragging the cursor an accidental tap clicks whatever is underneath, which

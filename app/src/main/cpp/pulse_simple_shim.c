@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 #include <android/log.h>
 #include <aaudio/AAudio.h>
 
@@ -103,6 +104,45 @@ static aaudio_result_t open_stream(struct pa_simple *s) {
     return AAUDIO_OK;
 }
 
+/* ---- background pause ----
+ * Same gate as the libasound shim (alsa_shim.c): the launcher resolves valdroid_audio_set_paused()
+ * with dlsym and flips it on stop/start. FMOD's writer thread parks in pa_simple_write with the
+ * AAudio stream paused and flushed (no CPU, no stale audio on resume); the wait re-checks every
+ * second so a lost wake-up cannot deadlock. The ALSA path is the one in use today; this keeps the
+ * pulse path from ever becoming the one that plays through a locked screen. */
+static pthread_mutex_t g_pause_mx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  g_pause_cv = PTHREAD_COND_INITIALIZER;
+static volatile int    g_paused = 0;
+
+__attribute__((visibility("default")))
+void valdroid_audio_set_paused(int paused) {
+    pthread_mutex_lock(&g_pause_mx);
+    g_paused = paused ? 1 : 0;
+    if (!paused) pthread_cond_broadcast(&g_pause_cv);
+    pthread_mutex_unlock(&g_pause_mx);
+}
+
+static void pause_gate(AAudioStream *s) {
+    if (!g_paused) return;
+    if (s) {
+        AAudioStream_requestPause(s);
+        aaudio_stream_state_t next = AAUDIO_STREAM_STATE_UNINITIALIZED;
+        AAudioStream_waitForStateChange(s, AAUDIO_STREAM_STATE_PAUSING, &next, 200000000L);
+        AAudioStream_requestFlush(s);
+    }
+    LOGI("audio paused (background)");
+    pthread_mutex_lock(&g_pause_mx);
+    while (g_paused) {
+        struct timespec until;
+        clock_gettime(CLOCK_REALTIME, &until);
+        until.tv_sec += 1;
+        pthread_cond_timedwait(&g_pause_cv, &g_pause_mx, &until);
+    }
+    pthread_mutex_unlock(&g_pause_mx);
+    if (s) AAudioStream_requestStart(s);
+    LOGI("audio resumed");
+}
+
 /* ============================ exported pa_simple API ============================ */
 
 __attribute__((visibility("default")))
@@ -146,6 +186,7 @@ int pa_simple_write(struct pa_simple *s, const void *data, size_t bytes, int *er
     static int firstWrite = 1;
     if (firstWrite) { LOGI("pa_simple_write FIRST call: %zu bytes", bytes); firstWrite = 0; }
     if (!s || !s->stream || !data) { if (error) *error = PA_ERR_IO; return -1; }
+    pause_gate(s->stream);   /* parks here while the app is in the background */
     int32_t frames = (int32_t) (bytes / (size_t) s->frameBytes);
     const uint8_t *p = (const uint8_t *) data;
     int reopened = 0;

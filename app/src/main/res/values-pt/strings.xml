@@ -75,6 +75,8 @@ Na nuvem: %2$s
     <string name="cloud_saves_code">Código do Steam Guard</string>
     <string name="cloud_saves_code_email">Código enviado por e-mail para %1$s</string>
     <string name="reverse_landscape_hint">Inverte o jogo para o outro modo paisagem; continua fixo, sem rotação livre. Ative se o seu controle ou suporte segura o celular de cabeça para baixo.</string>
+    <string name="keep_running_bg_label">Continuar rodando em segundo plano</string>
+    <string name="keep_running_bg_hint">Desativado: o jogo pausa (imagem, som e mundo) enquanto o ValDroid não está na tela — tela desligada, Início, outro app — e continua quando você volta. Ative só se você hospeda um mundo para amigos.</string>
     <string name="compat_mode_label">Modo de compatibilidade</string>
     <string name="compat_mode_hint">Ative se o jogo não iniciar (tela preta ou travado no carregamento). Fica um pouco mais lento, mas ajuda a abrir em alguns aparelhos.</string>
     <string name="native_mono_label">Mono ARM64 nativo (experimental)</string>

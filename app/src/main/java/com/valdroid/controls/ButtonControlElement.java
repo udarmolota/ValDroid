@@ -31,10 +31,140 @@ public class ButtonControlElement extends AbstractControlElement {
     // Attention-color indicator shown while a toggle button is switched ON.
     private static final int TOGGLE_ON_COLOR = android.graphics.Color.parseColor("#FFA726");
 
+    // ---- Drag to look (see ControlElementDescription.dragLook) ----
+    // Finger travel before looking starts, so a plain tap (a thumb always wobbles a little) never
+    // nudges the camera.
+    private static final float LOOK_SLOP_DP = 8f;
+    // Virtual-stick radius at DEFAULT_SENSITIVITY: full deflection after this much finger travel.
+    // Higher sensitivity shrinks it (faster turning), lower grows it.
+    private static final float LOOK_STICK_RADIUS_DP = 64f;
+    private static final float LOOK_STICK_MIN_RADIUS_DP = 12f;
+    // Small radial dead zone so a resting thumb near the touch-down point doesn't drift the camera.
+    private static final float LOOK_STICK_DEAD_ZONE = 0.08f;
+
+    private enum LookMode { NONE, MOUSE, STICK }
+
+    private boolean dragLook;
+    private float sensitivity;
+    private LookMode lookMode = LookMode.NONE;   // decided on touch-down from the bindings
+    private boolean lookActive;                 // the finger has left the slop circle
+    private boolean lookStickSent;              // right-stick axes were written and must be zeroed
+    private float lookDownX, lookDownY;         // touch-down point = virtual stick centre
+    private float lookLastX, lookLastY;         // last position fed to the mouse path
+
     public ButtonControlElement(InputControlsView parentView, ControlElementDescription elementDescription) {
         super(parentView, elementDescription);
         this.drawable = new ButtonControlDrawable(parentView, elementDescription);
         this.bindings.addAll(Arrays.asList(elementDescription.bindings));
+        this.dragLook = elementDescription.dragLook;
+        // Layouts from before buttons kept a sensitivity carry 0 or the default; both mean default.
+        this.sensitivity = elementDescription.sensitivity > 0f
+                ? clamp(elementDescription.sensitivity, ControlElementDescription.MIN_SENSITIVITY,
+                        ControlElementDescription.MAX_SENSITIVITY)
+                : ControlElementDescription.DEFAULT_SENSITIVITY;
+    }
+
+    public boolean isDragLook() {
+        return dragLook;
+    }
+
+    public void setDragLook(boolean dragLook) {
+        if (!dragLook) stopLook();
+        this.dragLook = dragLook;
+    }
+
+    public float getSensitivity() {
+        return sensitivity;
+    }
+
+    public void setSensitivity(float s) {
+        this.sensitivity = clamp(s, ControlElementDescription.MIN_SENSITIVITY, ControlElementDescription.MAX_SENSITIVITY);
+    }
+
+    /**
+     * How a drag on this button turns the camera, from what the button actually sends: the input
+     * type picks the dispatch path in dispatchEvent, the bindings say whether it sends anything.
+     * A gamepad button must never move the mouse - Valheim switches its UI between mouse and
+     * gamepad prompts by the last input, and mixing the two makes the UI flicker. UI actions
+     * (overlay / keyboard toggles) never look.
+     */
+    private LookMode resolveLookMode() {
+        if (!dragLook) return LookMode.NONE;
+        boolean mnk = false, pad = false;
+        for (GLFWBinding b : bindings) {
+            if (b == GLFWBinding.UI_TOGGLE_OVERLAY || b == GLFWBinding.UI_TOGGLE_KEYBOARD) return LookMode.NONE;
+            String n = b.name();
+            if (n.startsWith("MOUSE_") || n.startsWith("KEY_")) mnk = true;
+            else if (n.startsWith("GAMEPAD_")) pad = true;
+        }
+        if (this.inputType == InputType.GAMEPAD) return pad ? LookMode.STICK : LookMode.NONE;
+        if (this.inputType == InputType.MNK) return mnk ? LookMode.MOUSE : LookMode.NONE;
+        return LookMode.NONE;
+    }
+
+    private float density() {
+        return parentView.getResources().getDisplayMetrics().density;
+    }
+
+    private void startLook(float x, float y) {
+        stopLook();   // a re-press by another finger re-centres; never leave the stick deflected
+        lookMode = resolveLookMode();
+        lookActive = false;
+        lookDownX = lookLastX = x;
+        lookDownY = lookLastY = y;
+    }
+
+    private void updateLook(float x, float y) {
+        if (lookMode == LookMode.NONE) return;
+        if (!lookActive) {
+            float slop = LOOK_SLOP_DP * density();
+            float ddx = x - lookDownX, ddy = y - lookDownY;
+            if (ddx * ddx + ddy * ddy < slop * slop) return;
+            lookActive = true;
+            // Mouse: count movement from here on, so the slop itself doesn't become a camera jump.
+            lookLastX = x;
+            lookLastY = y;
+            if (lookMode == LookMode.MOUSE) return;
+        }
+        if (lookMode == LookMode.MOUSE) {
+            // Same path as the touchpad: absolute cursor in menus, mouse-look deltas while the
+            // game holds the mouse (InputControlsView.moveCursorBy checks InputSink.isMouseLocked).
+            float dx = (x - lookLastX) * sensitivity;
+            float dy = (y - lookLastY) * sensitivity;
+            lookLastX = x;
+            lookLastY = y;
+            if (dx != 0f || dy != 0f) parentView.moveCursorBy(dx, dy);
+        } else {
+            // Virtual right stick centred on the touch-down point, like StickControlElement's
+            // RIGHT_JOYSTICK: deflection is the offset over the radius, clamped per axis to +-1.
+            float radius = Math.max(LOOK_STICK_MIN_RADIUS_DP,
+                    LOOK_STICK_RADIUS_DP * ControlElementDescription.DEFAULT_SENSITIVITY / sensitivity) * density();
+            float nx = (x - lookDownX) / radius;
+            float ny = (y - lookDownY) / radius;
+            float mag = (float) Math.sqrt(nx * nx + ny * ny);
+            if (mag < LOOK_STICK_DEAD_ZONE) {
+                nx = ny = 0f;
+            } else {
+                // Rescale past the dead zone so the output starts from 0, not with a step.
+                float k = (mag - LOOK_STICK_DEAD_ZONE) / (1f - LOOK_STICK_DEAD_ZONE) / mag;
+                nx = clamp(nx * k, -1f, 1f);
+                ny = clamp(ny * k, -1f, 1f);
+            }
+            InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RX.code, nx);
+            InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RY.code, ny);
+            lookStickSent = true;
+        }
+    }
+
+    /** End a look gesture: the virtual stick springs back to centre. Mouse looking has no state. */
+    private void stopLook() {
+        if (lookStickSent) {
+            InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RX.code, 0f);
+            InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RY.code, 0f);
+            lookStickSent = false;
+        }
+        lookActive = false;
+        lookMode = LookMode.NONE;
     }
 
     @Override
@@ -87,6 +217,7 @@ public class ButtonControlElement extends AbstractControlElement {
                 float y = e.getY(actionIndex);
                 if (!this.drawable.isPointOver(x, y)) return false;
                 this.pointerId = pointerId;
+                startLook(x, y);
                 maybeHaptic();
 
                 if (getToggle()) {
@@ -104,10 +235,20 @@ public class ButtonControlElement extends AbstractControlElement {
                 this.parentView.invalidate();
                 return true;
             }
+            case MotionEvent.ACTION_MOVE: {
+                // MOVE is broadcast to every element; follow only our own finger, which may by now
+                // be far outside the button - that is the point of dragging to look.
+                if (this.pointerId == -1 || lookMode == LookMode.NONE) return false;
+                int pointerIndex = e.findPointerIndex(this.pointerId);
+                if (pointerIndex < 0) return false;
+                updateLook(e.getX(pointerIndex), e.getY(pointerIndex));
+                return true;
+            }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
                 if (pointerId != this.pointerId) return false;
                 this.pointerId = -1;
+                stopLook();
                 if (!getToggle()) {
                     this.dispatchEvent(false);
                 }
@@ -115,6 +256,7 @@ public class ButtonControlElement extends AbstractControlElement {
             case MotionEvent.ACTION_CANCEL: {
                 if (this.pointerId != -1) {
                     this.pointerId = -1;
+                    stopLook();
                     this.dispatchEvent(false);
                     // A system touch-cancel must also clear the toggle ON state, otherwise the
                     // orange ON indicator stays lit even though the key was released.
@@ -132,6 +274,7 @@ public class ButtonControlElement extends AbstractControlElement {
     public void releasePointer() {
         if (this.pointerId == -1) return;
         this.pointerId = -1;
+        stopLook();
         if (!getToggle()) this.dispatchEvent(false);
         this.parentView.invalidate();
     }
@@ -292,11 +435,12 @@ public class ButtonControlElement extends AbstractControlElement {
                 this.inputType,
                 this.drawable.icon,
                 this.isToggle,
-                ControlElementDescription.DEFAULT_SENSITIVITY,
+                this.sensitivity,   // drag-to-look speed
                 this.drawable.style,
                 this.drawable.iconFile,
                 this.drawable.noTint,
-                false);
+                false,
+                this.dragLook);
     }
 
     private static String defaultArrow(Type t) {

@@ -323,6 +323,8 @@ public final class LogExporter {
         line(sb, "mod support", mods.toString());
         line(sb, "compat mode", String.valueOf(s.isCompatibilityMode()));
         line(sb, "drag pan", String.valueOf(s.isDragPan()));
+        // "the game kept running with the screen off" vs "it froze when I came back" starts here
+        line(sb, "keep running in bg", String.valueOf(s.isKeepRunningInBackground()));
         line(sb, "shader cache", String.valueOf(s.isShaderCache()));
         line(sb, "extra env", s.getEnvVars() == null ? "" : s.getEnvVars());
         byte[] out = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);

@@ -71,6 +71,8 @@ In the cloud: %2$s
     <string name="cloud_saves_code">Steam Guard code</string>
     <string name="cloud_saves_code_email">Code emailed to %1$s</string>
     <string name="reverse_landscape_hint">Flips the game to the opposite landscape — still fixed, no free rotation. Turn on if your gamepad or cradle holds the phone the other way up.</string>
+    <string name="keep_running_bg_label">Keep running in the background</string>
+    <string name="keep_running_bg_hint">Off: the game pauses (picture, sound and world) while ValDroid is not on screen — screen off, Home, another app — and continues when you return. Turn on only if you host a world for friends.</string>
     <string name="compat_mode_label">Compatibility mode</string>
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
     <string name="native_mono_label">Native ARM64 Mono (experimental)</string>

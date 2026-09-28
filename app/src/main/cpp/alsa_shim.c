@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <pthread.h>
 #include <android/log.h>
 #include <aaudio/AAudio.h>
 
@@ -147,6 +148,48 @@ static int open_aaudio(snd_pcm_t *p) {
         LOGE("FORMAT MISMATCH: FMOD writes fmt=%d but AAudio stream is fmt=%d → converting in writei",
              (int)p->fmt, (int)p->actualFmt);
     return 0;
+}
+
+/* ============================ background pause ============================ */
+/* While the app is in the background the game's frame is held (valdroid.c, rd_bg_gate), but FMOD
+ * mixes on its own thread and would keep playing the current music and ambience through us. The
+ * launcher calls valdroid_audio_set_paused() (resolved with dlsym) on stop/start. The FMOD writer
+ * thread then parks inside snd_pcm_writei — no busy loop, no mixing, no CPU — with the AAudio stream
+ * paused and flushed, so resuming starts clean instead of replaying ~0.3 s of stale buffered audio.
+ * The wait re-checks every second, so a lost wake-up can only delay, never deadlock. */
+static pthread_mutex_t g_pause_mx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  g_pause_cv = PTHREAD_COND_INITIALIZER;
+static volatile int    g_paused = 0;
+
+EXPORT void valdroid_audio_set_paused(int paused) {
+    pthread_mutex_lock(&g_pause_mx);
+    g_paused = paused ? 1 : 0;
+    if (!paused) pthread_cond_broadcast(&g_pause_cv);
+    pthread_mutex_unlock(&g_pause_mx);
+}
+
+/* Writer-thread side: all stream control stays on the one thread that writes, so it never races
+ * AAudioStream_write. A disconnect while paused (headphones pulled) surfaces as an error on the next
+ * write, where the existing reopen path takes over. */
+static void pause_gate(AAudioStream *s) {
+    if (!g_paused) return;
+    if (s) {
+        AAudioStream_requestPause(s);
+        aaudio_stream_state_t next = AAUDIO_STREAM_STATE_UNINITIALIZED;
+        AAudioStream_waitForStateChange(s, AAUDIO_STREAM_STATE_PAUSING, &next, 200000000L);
+        AAudioStream_requestFlush(s);   /* drop what was queued: no stale audio on resume */
+    }
+    LOGI("audio paused (background)");
+    pthread_mutex_lock(&g_pause_mx);
+    while (g_paused) {
+        struct timespec until;
+        clock_gettime(CLOCK_REALTIME, &until);
+        until.tv_sec += 1;
+        pthread_cond_timedwait(&g_pause_cv, &g_pause_mx, &until);
+    }
+    pthread_mutex_unlock(&g_pause_mx);
+    if (s) AAudioStream_requestStart(s);
+    LOGI("audio resumed");
 }
 
 /* ============================ open / close ============================ */
@@ -333,6 +376,7 @@ EXPORT snd_pcm_sframes_t snd_pcm_writei(snd_pcm_t *pcm, const void *buf, snd_pcm
      * in its path), so the stream wouldn't otherwise be open. Open it here if needed. */
     if (!pcm->stream && !pcm->capture && open_aaudio(pcm) != 0) return -5 /*-EIO*/;
     if (!pcm->stream) return -5 /*-EIO*/;
+    pause_gate(pcm->stream);   /* parks here while the app is in the background */
     pcm->state = SND_PCM_STATE_RUNNING;
 
     /* ===== DIAGNOSTIC 1: dump the RAW PCM FMOD gives us, to <HOME>/fmod_dump.raw (env RIMDROID_AUDIO_DUMP=1).

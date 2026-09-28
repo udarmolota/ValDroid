@@ -110,6 +110,19 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "reverse_landscape", v).apply();
     }
 
+    // --- Keep the game running while the app is not visible. Default OFF = pause: the game runs
+    // in-process and knows nothing about Android's lifecycle, so with the screen off it kept
+    // simulating, rendering and playing music (dead character, hot phone, drained battery on
+    // return). GameActivity.onStop holds its frame and silences the audio unless this is on.
+    // Someone hosting a world for friends (a paused host freezes everyone) turns it on. ---
+    public boolean isKeepRunningInBackground() {
+        return p.getBoolean(pfx + "keep_running_bg", false);
+    }
+
+    public void setKeepRunningInBackground(boolean v) {
+        p.edit().putBoolean(pfx + "keep_running_bg", v).apply();
+    }
+
     // --- A fixed monitor resolution instead of filling the screen, letterboxed with black margins.
     // Asked for by players coming from PC emulators, who wanted 720p specifically. Both modes keep
     // 720 lines (our readability floor) and differ only in shape: 16:9 suits ordinary phones, 4:3
@@ -369,6 +382,7 @@ public class InstanceSettings {
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")
+                .remove(pfx + "keep_running_bg")
                 .remove(pfx + "fixed_res")
                 .remove(pfx + "fps_cap")
                 .remove(pfx + "fps_mode")

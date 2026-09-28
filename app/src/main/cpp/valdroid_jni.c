@@ -220,3 +220,11 @@ JNIEXPORT void JNICALL
 Java_com_valdroid_GameActivity_nativeSetFpsCap(JNIEnv* env, jclass clazz, jint fps) {
     g_rimdroid_frame_min_ns = (fps > 0) ? (1000000000ull / (uint64_t)fps) : 0;
 }
+
+// Background pause: GameActivity.onStop -> true, onStart/onDestroy -> false (see valdroid.c,
+// rd_bg_gate). Static on GameLauncher so the launch thread can also release it when the game ends.
+JNIEXPORT void JNICALL
+Java_com_valdroid_GameLauncher_nativeSetBackgroundPaused(JNIEnv* env, jclass clazz, jboolean paused) {
+    (void)env; (void)clazz;
+    rimdroid_set_background_paused(paused ? 1 : 0);
+}
