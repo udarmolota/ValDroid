@@ -279,8 +279,9 @@ In the cloud: %2$s
     <string name="gfx_preset_ultra">Very low</string>
     <string name="gfx_preset_hint">The game always starts on Very low — a profile tuned for emulation. After that you can tune the graphics to your phone in the game\'s own settings: the launcher no longer touches them. A button puts the settings back to that profile on the next launch. A grey button means that profile is already set.</string>
     <string name="release_notes_body" translatable="false"><b>– New on-screen controls</b>\nA new controls system with a full editor: buttons with styles and your own pictures, sticks, d-pad, touchpad, scroll bar, radial menu. Two ready-made layouts: Gamepad (the default) and Keyboard and touchpad, under Layouts in the editor. Your old layout is not carried over.\n\n<b>– Mouse look</b>\nIn gameplay the touchpad, the mouse stick and a physical mouse turn the camera as far as you move them.\n\n<b>– Keyboard</b>\nEvery key reaches the game, Shift stays held while sprinting, and the Back gesture opens the game menu instead of closing the game.\n\n<b>– Mods (experimental)</b>\nA new Mods screen in the side menu: turn on BepInEx, install mods from a .zip, switch them on and off. Needs Native ARM64 Mono.\n\n<b>– Shader cache</b>\nA new effect stutters only the very first time you see it. Off by default on Mali GPUs.\n\n<b>– Mali</b>\nThe circles on textures are gone. Some Mali GPUs still show black ground — please send a report with Report a bug.</string>
-    <string name="instance_downloading">downloading</string>
+    <string name="instance_downloading">downloading, wait until it finishes</string>
     <string name="instance_incomplete">not finished</string>
+    <string name="instance_incomplete_hint">The download stopped before it finished. Open side menu → %1$s and download again with the same instance name — it continues where it stopped.</string>
     <string name="download_backup_note">After the download the game is packed into a backup archive in the Downloads folder. That step runs after the progress bar reaches 100%, takes a few minutes for several GB, and needs the app open — please be patient.</string>
     <string name="gfx_preset_apply">Apply</string>
     <string name="gfx_preset_pending">%1$s will be applied on the next launch</string>
@@ -289,6 +290,7 @@ In the cloud: %2$s
     <string name="etc2_label">Enable ETC2 compression</string>
     <string name="etc2_hint">Compresses textures into a format the phone\'s GPU reads natively, so they take about four times less memory. On weaker phones and on Mali that is the difference between running and running out of memory. Works on MobileGlues. Large textures are also always scaled down.</string>
     <string name="install_windows_build">This is the Windows version of Valheim, but ValDroid runs only the Linux version (the one with valheim.x86_64). If you own the game on Steam, the app downloads the right version for you: side menu → %1$s.</string>
+    <string name="install_zip_damaged">Damaged archive. Download it again or make a new one.</string>
     <string name="install_progress_title">Installing the game</string>
     <string name="install_phase_copy">Copying the archive</string>
     <string name="install_phase_extract">Extracting the game</string>

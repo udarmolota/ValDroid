@@ -41,6 +41,9 @@ public class ButtonControlElement extends AbstractControlElement {
     private static final float LOOK_STICK_MIN_RADIUS_DP = 12f;
     // Small radial dead zone so a resting thumb near the touch-down point doesn't drift the camera.
     private static final float LOOK_STICK_DEAD_ZONE = 0.08f;
+    // MOUSE mode: cursor speed at full deflection (view dp per second, before the element's
+    // sensitivity, which works through the radius above exactly as in the gamepad mode).
+    private static final float LOOK_MOUSE_SPEED_DP_PER_S = 700f;
 
     private enum LookMode { NONE, MOUSE, STICK }
 
@@ -50,7 +53,9 @@ public class ButtonControlElement extends AbstractControlElement {
     private boolean lookActive;                 // the finger has left the slop circle
     private boolean lookStickSent;              // right-stick axes were written and must be zeroed
     private float lookDownX, lookDownY;         // touch-down point = virtual stick centre
-    private float lookLastX, lookLastY;         // last position fed to the mouse path
+    private float lookNx, lookNy;               // MOUSE mode: current deflection, -1..1 per axis
+    private boolean lookTicking;                // MOUSE mode: lookTick is scheduled
+    private long lookLastTickNs;
 
     public ButtonControlElement(InputControlsView parentView, ControlElementDescription elementDescription) {
         super(parentView, elementDescription);
@@ -110,8 +115,8 @@ public class ButtonControlElement extends AbstractControlElement {
         stopLook();   // a re-press by another finger re-centres; never leave the stick deflected
         lookMode = resolveLookMode();
         lookActive = false;
-        lookDownX = lookLastX = x;
-        lookDownY = lookLastY = y;
+        lookDownX = x;
+        lookDownY = y;
     }
 
     private void updateLook(float x, float y) {
@@ -121,48 +126,68 @@ public class ButtonControlElement extends AbstractControlElement {
             float ddx = x - lookDownX, ddy = y - lookDownY;
             if (ddx * ddx + ddy * ddy < slop * slop) return;
             lookActive = true;
-            // Mouse: count movement from here on, so the slop itself doesn't become a camera jump.
-            lookLastX = x;
-            lookLastY = y;
-            if (lookMode == LookMode.MOUSE) return;
+        }
+        // Both modes are a virtual stick centred on the touch-down point: holding the finger off
+        // centre keeps turning, like a right stick. A plain finger-travel mouse (the first version)
+        // felt awful on a small button: the thumb runs out of room and turning comes in jerks.
+        float radius = Math.max(LOOK_STICK_MIN_RADIUS_DP,
+                LOOK_STICK_RADIUS_DP * ControlElementDescription.DEFAULT_SENSITIVITY / sensitivity) * density();
+        float nx = (x - lookDownX) / radius;
+        float ny = (y - lookDownY) / radius;
+        float mag = (float) Math.sqrt(nx * nx + ny * ny);
+        if (mag < LOOK_STICK_DEAD_ZONE) {
+            nx = ny = 0f;
+        } else {
+            // Rescale past the dead zone so the output starts from 0, not with a step.
+            float k = (mag - LOOK_STICK_DEAD_ZONE) / (1f - LOOK_STICK_DEAD_ZONE) / mag;
+            nx = clamp(nx * k, -1f, 1f);
+            ny = clamp(ny * k, -1f, 1f);
         }
         if (lookMode == LookMode.MOUSE) {
-            // Same path as the touchpad: absolute cursor in menus, mouse-look deltas while the
-            // game holds the mouse (InputControlsView.moveCursorBy checks InputSink.isMouseLocked).
-            float dx = (x - lookLastX) * sensitivity;
-            float dy = (y - lookLastY) * sensitivity;
-            lookLastX = x;
-            lookLastY = y;
-            if (dx != 0f || dy != 0f) parentView.moveCursorBy(dx, dy);
-        } else {
-            // Virtual right stick centred on the touch-down point, like StickControlElement's
-            // RIGHT_JOYSTICK: deflection is the offset over the radius, clamped per axis to +-1.
-            float radius = Math.max(LOOK_STICK_MIN_RADIUS_DP,
-                    LOOK_STICK_RADIUS_DP * ControlElementDescription.DEFAULT_SENSITIVITY / sensitivity) * density();
-            float nx = (x - lookDownX) / radius;
-            float ny = (y - lookDownY) / radius;
-            float mag = (float) Math.sqrt(nx * nx + ny * ny);
-            if (mag < LOOK_STICK_DEAD_ZONE) {
-                nx = ny = 0f;
-            } else {
-                // Rescale past the dead zone so the output starts from 0, not with a step.
-                float k = (mag - LOOK_STICK_DEAD_ZONE) / (1f - LOOK_STICK_DEAD_ZONE) / mag;
-                nx = clamp(nx * k, -1f, 1f);
-                ny = clamp(ny * k, -1f, 1f);
+            // Mouse bindings: the deflection becomes a mouse speed, fed every frame by lookTick
+            // (the game still sees a mouse, so its UI stays in mouse mode).
+            lookNx = nx;
+            lookNy = ny;
+            if (!lookTicking) {
+                lookTicking = true;
+                lookLastTickNs = System.nanoTime();
+                parentView.postOnAnimation(lookTick);
             }
+        } else {
             InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RX.code, nx);
             InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RY.code, ny);
             lookStickSent = true;
         }
     }
 
-    /** End a look gesture: the virtual stick springs back to centre. Mouse looking has no state. */
+    /** Per-frame mouse feed for the MOUSE look mode: deflection x speed x frame time. Goes through
+     *  moveCursorBy, so it is mouse look while the game holds the mouse and a moving cursor in menus. */
+    private final Runnable lookTick = new Runnable() {
+        @Override public void run() {
+            if (!lookTicking) return;
+            long now = System.nanoTime();
+            // Clamp the step: after a hitch, a long gap must not turn into one big camera jump.
+            float dt = Math.min((now - lookLastTickNs) / 1e9f, 0.05f);
+            lookLastTickNs = now;
+            float speed = LOOK_MOUSE_SPEED_DP_PER_S * density();
+            if (lookNx != 0f || lookNy != 0f)
+                parentView.moveCursorBy(lookNx * speed * dt, lookNy * speed * dt);
+            parentView.postOnAnimation(this);
+        }
+    };
+
+    /** End a look gesture: the virtual stick springs back to centre and the mouse feed stops. */
     private void stopLook() {
         if (lookStickSent) {
             InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RX.code, 0f);
             InputSink.sendJoystickAxis(GLFWBinding.GAMEPAD_AXIS_RY.code, 0f);
             lookStickSent = false;
         }
+        if (lookTicking) {
+            lookTicking = false;
+            parentView.removeCallbacks(lookTick);
+        }
+        lookNx = lookNy = 0f;
         lookActive = false;
         lookMode = LookMode.NONE;
     }

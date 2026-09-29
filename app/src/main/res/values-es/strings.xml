@@ -261,8 +261,9 @@ En la nube: %2$s
     <string name="gfx_preset_low">Baja</string>
     <string name="gfx_preset_ultra">Muy baja</string>
     <string name="gfx_preset_hint">El juego siempre arranca en Muy baja, un perfil ajustado para la emulación. Después puedes adaptar los gráficos a tu teléfono en los ajustes del propio juego: el lanzador ya no los toca. Un botón devuelve los ajustes a ese perfil en el siguiente inicio. Un botón gris significa que ese perfil ya está puesto.</string>
-    <string name="instance_downloading">descargando</string>
+    <string name="instance_downloading">descargando, espera a que termine</string>
     <string name="instance_incomplete">sin terminar</string>
+    <string name="instance_incomplete_hint">La descarga se detuvo antes de terminar. Abre el menú lateral → %1$s y descarga de nuevo con el mismo nombre de instancia: continuará donde se detuvo.</string>
     <string name="download_backup_note">Después de la descarga, el juego se empaqueta en un archivo de respaldo en la carpeta Descargas. Ese paso ocurre cuando la barra ya llegó al 100%, tarda unos minutos para varios GB y necesita la app abierta: ten paciencia.</string>
     <string name="gfx_preset_apply">Aplicar</string>
     <string name="gfx_preset_pending">«%1$s» se aplicará en el siguiente inicio</string>
@@ -271,6 +272,7 @@ En la nube: %2$s
     <string name="etc2_label">Activar compresión ETC2</string>
     <string name="etc2_hint">Comprime las texturas a un formato que la GPU del teléfono lee de forma nativa, así ocupan unas cuatro veces menos memoria. En teléfonos más débiles y en Mali es la diferencia entre funcionar y quedarse sin memoria. Funciona con MobileGlues. Las texturas grandes además siempre se reducen.</string>
     <string name="install_windows_build">Esta es la versión de Windows de Valheim, pero ValDroid solo ejecuta la versión Linux (la que tiene valheim.x86_64). Si tienes el juego en Steam, la app descarga la versión correcta por ti: menú lateral → %1$s.</string>
+    <string name="install_zip_damaged">Archivo dañado. Descárgalo de nuevo o vuelve a crearlo.</string>
     <string name="install_progress_title">Instalando el juego</string>
     <string name="install_phase_copy">Copiando el archivo</string>
     <string name="install_phase_extract">Descomprimiendo el juego</string>

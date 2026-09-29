@@ -263,8 +263,9 @@ Na nuvem: %2$s
     <string name="gfx_preset_low">Baixa</string>
     <string name="gfx_preset_ultra">Muito baixa</string>
     <string name="gfx_preset_hint">O jogo sempre começa em Muito baixa, um perfil ajustado para a emulação. Depois você pode adaptar os gráficos ao seu telefone nas configurações do próprio jogo: o launcher não mexe mais neles. Um botão volta as configurações para esse perfil na próxima inicialização. Botão cinza significa que esse perfil já está aplicado.</string>
-    <string name="instance_downloading">baixando</string>
+    <string name="instance_downloading">baixando, espere terminar</string>
     <string name="instance_incomplete">não terminado</string>
+    <string name="instance_incomplete_hint">O download parou antes de terminar. Abra o menu lateral → %1$s e baixe de novo com o mesmo nome de instância: ele continua de onde parou.</string>
     <string name="download_backup_note">Depois do download, o jogo é empacotado num arquivo de backup na pasta Downloads. Essa etapa acontece depois que a barra chega a 100%, leva alguns minutos para vários GB e precisa do app aberto — tenha paciência.</string>
     <string name="gfx_preset_apply">Aplicar</string>
     <string name="gfx_preset_pending">«%1$s» será aplicado na próxima inicialização</string>
@@ -273,6 +274,7 @@ Na nuvem: %2$s
     <string name="etc2_label">Ativar compressão ETC2</string>
     <string name="etc2_hint">Comprime as texturas num formato que a GPU do telefone lê nativamente, então ocupam cerca de quatro vezes menos memória. Em telefones mais fracos e em Mali é a diferença entre funcionar e ficar sem memória. Funciona com o MobileGlues. Texturas grandes também são sempre reduzidas.</string>
     <string name="install_windows_build">Esta é a versão de Windows de Valheim, mas o ValDroid só roda a versão Linux (a que tem valheim.x86_64). Se você tem o jogo na Steam, o app baixa a versão certa para você: menu lateral → %1$s.</string>
+    <string name="install_zip_damaged">Arquivo danificado. Baixe de novo ou crie outro.</string>
     <string name="install_progress_title">Instalando o jogo</string>
     <string name="install_phase_copy">Copiando o arquivo</string>
     <string name="install_phase_extract">Descompactando o jogo</string>

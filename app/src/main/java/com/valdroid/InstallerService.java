@@ -170,7 +170,13 @@ public class InstallerService extends Service {
         // game binary somewhere. Otherwise we'd extract some other archive and leave an orphaned
         // instance folder that the launcher silently hides (fails isInstalled()).
         broadcastProgress("Checking archive...");
-        if (!zipContainsEntry(zipFile, GameDescriptor.VALHEIM.executable())) {
+        boolean hasBinary;
+        try {
+            hasBinary = zipContainsEntry(zipFile, GameDescriptor.VALHEIM.executable());
+        } catch (java.util.zip.ZipException | java.io.EOFException e) {
+            throw damagedArchive(e);
+        }
+        if (!hasBinary) {
             // The Windows build is by far the most common wrong archive, and the generic line below
             // is English and names a file the player has never heard of — it reads as "the launcher
             // is broken". Say what it is, in the player's language, and where the right one comes
@@ -183,7 +189,18 @@ public class InstallerService extends Service {
         }
         instanceDir.mkdirs();
         broadcastProgress("Extracting instance...");
-        extractZip(zipFile, instanceDir);
+        // A failed extraction leaves a half-filled instance folder behind, and the "already exists"
+        // check above then blocks the retry with the same name. Nothing of the player's is in it yet
+        // (we just created it), so remove it before reporting the error.
+        try {
+            extractZip(zipFile, instanceDir);
+        } catch (java.util.zip.ZipException | java.io.EOFException e) {
+            deleteDir(instanceDir);
+            throw damagedArchive(e);
+        } catch (IOException | RuntimeException e) {
+            deleteDir(instanceDir);
+            throw e;
+        }
         // Re-rooting and the Steam library download that follow have no measurable size.
         broadcastPhase(PHASE_SETUP, -1, -1);
 
@@ -300,6 +317,16 @@ public class InstallerService extends Service {
     // =========================================================================
     // HELPERS
     // =========================================================================
+
+    /**
+     * A broken or oddly written zip fails deep in java.util.zip with lines like "invalid entry size
+     * (expected X but got Y bytes)" — shown raw under the name field, it reads as a problem with the
+     * name. Tell the player what it means and what to do; the original stays in the cause for the log.
+     */
+    private Exception damagedArchive(Exception cause) {
+        Log.e(TAG, "damaged archive", cause);
+        return new Exception(getString(R.string.install_zip_damaged), cause);
+    }
 
     private void extractZip(File zipFile, File destDir) throws IOException {
         destDir.mkdirs();

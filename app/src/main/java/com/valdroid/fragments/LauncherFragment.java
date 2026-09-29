@@ -212,9 +212,26 @@ public class LauncherFragment extends Fragment {
                 com.valdroid.SteamDownloadState dl = com.valdroid.SteamDownloadState.get();
                 boolean downloadingThis = dl.isDownloading()
                         && gi.getName().equals(dl.getAdviseInstance());
-                name.setText(ready ? gi.getName()
-                        : gi.getName() + (downloadingThis ? "  ⤓ " + getString(R.string.instance_downloading)
-                                                          : "  ⚠ " + getString(R.string.instance_incomplete)));
+                if (ready) {
+                    name.setMaxLines(1);
+                    name.setText(gi.getName());
+                } else if (downloadingThis) {
+                    // The tag itself says to wait ("downloading, wait until it finishes").
+                    name.setMaxLines(2);
+                    name.setText(gi.getName() + "  ⤓ " + getString(R.string.instance_downloading));
+                } else {
+                    // The one-word tag alone ("not finished") left players guessing what to do, so add
+                    // a smaller second line that says how to resume from Steam Downloads.
+                    String hint = getString(R.string.instance_incomplete_hint, getString(R.string.nav_download_game));
+                    android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(
+                            gi.getName() + "  ⚠ " + getString(R.string.instance_incomplete) + "\n");
+                    int start = sb.length();
+                    sb.append(hint);
+                    sb.setSpan(new android.text.style.RelativeSizeSpan(0.8f), start, sb.length(),
+                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    name.setMaxLines(4);
+                    name.setText(sb);
+                }
                 launch.setVisibility(ready ? View.VISIBLE : View.GONE);
                 // (renderer subtitle is commented out in the layout — keep the binding out too)
 
