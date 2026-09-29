@@ -129,7 +129,7 @@ public class GameLauncher {
             + "resolution    : " + fixedResReport(s) + fixedGeomReport() + "\n"
             + "texture compr : " + texTierReport(s) + "\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
-            + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
+            + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1)" : "off") + "\n"
             + "background    : " + (s.isKeepRunningInBackground()
                     ? "keep running (pause disabled)" : "pause when not visible") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
@@ -141,7 +141,7 @@ public class GameLauncher {
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (dynarec != null ? dynarec : "1")
-                + " (box64 defaults + CALLRET=1" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1" : "")
+                + " (box64 defaults + CALLRET=1" + (s.isCompatibilityMode() ? "; compat WEAKBARRIER=2 X87DOUBLE=1" : "")
                 + "; Extra env overrides)\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "active mods   : " + readActiveMods(gi) + "\n"
@@ -355,7 +355,7 @@ public class GameLauncher {
             // Adreno 830). The cap is NOT needed by default — it belongs to COMPAT MODE, which the
             // devices hit by the deep box64/Mono bug (def-load SIGSEGV + destroyed-mutex abort;
             // e.g. Adreno 644/725 — NOT a GPU-vendor split) turn on. So DEFAULT = all cores; compat
-            // mode (below) applies MAXCPU=1 + -force-gfx-direct together.
+            // mode used to apply MAXCPU=1 too; removed 2026-09-29 (see the compat block below).
             // textureCompression: OFF by default (the BC-compress shader hangs Turnip/A830). The
             // "rd_texcompress" marker flips it ON to TEST the box64 CompressBC loop-bounding shim
             // (see rd_bc_bound_loops in wrappedsdl2.c) — if that shim tames the hang, compression
@@ -415,19 +415,13 @@ public class GameLauncher {
             // NOTE: FORWARD=0 was tried here too but REMOVED — a tester reported it made things WORSE
             // (smaller blocks → MORE block boundaries → more FP↔GPR-boundary leaks; the bug is at the
             // boundary transition). The proven pair is WEAKBARRIER=2 + X87DOUBLE=1.
-            // MAXCPU=1 → guest sees a single CPU → RimWorld 1.5's parallel Def load (ShortHashGiver
-            // .GiveAllShortHashes via Parallel.ForEach) runs inline/serially, avoiding the older
-            // Task.ExecuteSelfReplicating path box64 miscompiled into a worker NRE ("Caught exception
-            // while loading play data … Resetting mods config" → mods fail / black on 725 / Mali-G57).
-            // CAVEAT (verified 2026-07-18, Adreno 710 / RimWorld 1.6.4633): on 1.6 this does NOT stop
-            // the def-load crash — even with the affinity cap firing (ProcessorCount→1), 1.6's newer
-            // TPL TaskReplicator still runs and the SAME fatal RIP (libmono+0x111610) also faults from
-            // serial XmlTextReaderImpl, so the crash is a box64 SMC-page fault (false-MAPERR 2-hit cap),
-            // NOT the parallel path. So MAXCPU=1 is a 1.5 mod-load workaround only; do not treat it as a
-            // 1.6 def-load fix. Needs the box64 my_sched_getaffinity cap (wrappedlibc.c) to drop
-            // ProcessorCount. See [[save_bug_investigation]] / [[known_bugs]].
-            Os.setenv("BOX64_MAXCPU", "1", true);
         }
+        // BOX64_MAXCPU=1 used to be part of compat mode: a RimWorld 1.5 mod-load workaround (it made
+        // Parallel.ForEach run serially). In Valheim it only hurts — the guest sees one CPU, Unity
+        // drops its render thread ("Render threading mode: Direct") and FPS falls hard. Verified
+        // 2026-09-29 on a Dimensity 9400 (Mali-G925): compat mode launches fine without it and runs
+        // multithreaded. Unset explicitly (setenv persists in this process); Extra env can still set it.
+        Os.unsetenv("BOX64_MAXCPU");
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,
         // including SDL2 — our my2_SDL_DYNAPI_entry never fires.
