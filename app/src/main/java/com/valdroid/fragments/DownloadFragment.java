@@ -325,7 +325,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         // The worker already applied the recommendation, even if this fragment was detached when
         // the download finished. Here we only show its one-time explanation.
         com.valdroid.GpuDriverAdvisor.Result driver = SteamDownloadState.get().takeDriverResult();
-        if (driver != null && driver.applied && isAdded()) showDriverResult(driver);
+        if (driver != null && driver.applied && driver.mobileGlues && isAdded()) showDriverResult(driver);
     }
 
     @Override
@@ -349,8 +349,8 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     /** Off-thread GPU detect → set the instance's recommended driver → inform the user. */
     private void showDriverResult(com.valdroid.GpuDriverAdvisor.Result r) {
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
-                .setTitle(R.string.driver_auto_set_title)
-                .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                .setTitle(R.string.renderer_default_title)
+                .setMessage(R.string.renderer_default_msg)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }

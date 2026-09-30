@@ -248,10 +248,10 @@ public class NewInstanceFragment extends Fragment {
                     com.valdroid.GpuDriverAdvisor.applyRecommendedDriver(inst);
             mainHandler.post(() -> {
                 if (!isAdded() || getView() == null) return;
-                if (!r.applied) { Navigation.findNavController(requireView()).popBackStack(); return; }
+                if (!r.applied || !r.mobileGlues) { Navigation.findNavController(requireView()).popBackStack(); return; }
                 new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(R.string.driver_auto_set_title)
-                        .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                        .setTitle(R.string.renderer_default_title)
+                        .setMessage(R.string.renderer_default_msg)
                         .setCancelable(false)
                         .setPositiveButton(android.R.string.ok,
                                 (d, w) -> Navigation.findNavController(requireView()).popBackStack())

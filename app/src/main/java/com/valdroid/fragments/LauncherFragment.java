@@ -450,10 +450,10 @@ public class LauncherFragment extends Fragment {
             final com.valdroid.GpuDriverAdvisor.Result r =
                     com.valdroid.GpuDriverAdvisor.applyRecommendedDriver(inst);
             mainHandler.post(() -> {
-                if (!isAdded() || getView() == null || !r.applied) return;
+                if (!isAdded() || getView() == null || !r.applied || !r.mobileGlues) return;
                 new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(R.string.driver_auto_set_title)
-                        .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                        .setTitle(R.string.renderer_default_title)
+                        .setMessage(R.string.renderer_default_msg)
                         .setPositiveButton(android.R.string.ok, null)
                         .show();
             });

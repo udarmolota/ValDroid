@@ -16,7 +16,6 @@
     <string name="delete_instance_confirm">¿Eliminar la instancia \"%1$s\" y todos sus archivos? Esto no se puede deshacer.</string>
     <string name="log">Registro</string>
     <string name="renderer">Renderizador</string>
-    <string name="renderer_info">Por ahora ValDroid solo renderiza mediante Zink ZFA.</string>
     <string name="vulkan_driver">Controlador Vulkan</string>
     <string name="vulkan_driver_hint">Elige el controlador que corresponda a tu GPU: los dispositivos que no son Snapdragon deben usar el controlador del sistema. Si no funciona, prueba otro.</string>
     <string name="driver_recommend">Controlador recomendado (detectar GPU)</string>
@@ -105,8 +104,8 @@ En la nube: %2$s
     <string name="render_res_black_margins">bordes negros</string>
     <string name="render_res_hint">Menor = más FPS en GPU débiles y una interfaz más grande. Nativa = más nítida.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
-    <string name="driver_auto_set_title">Controlador recomendado aplicado</string>
-    <string name="driver_auto_set">GPU detectada: %1$s.\n\nSe aplicó el controlador Vulkan recomendado para esta instancia: %2$s.\n\nSi ves una pantalla negra o artefactos, cámbialo en los ajustes de la instancia (el icono de engranaje en su tarjeta).</string>
+    <string name="renderer_default_title">Renderizador: MobileGlues</string>
+    <string name="renderer_default_msg">Está seleccionado MobileGlues: da los FPS más altos. Si el suelo o las texturas se ven negros, consigue la versión 1.0.15 del juego o una más nueva: no tiene este problema. Mientras tanto, en un teléfono Snapdragon (Adreno) puedes cambiar temporalmente a Zink en los ajustes de la instancia (el engranaje de la tarjeta de la instancia); es un poco más lento. Para Mali todavía no hay solución.</string>
     <string name="nav_import_mods">Importar mods (ZIP)…</string>
     <string name="nav_export_saves">Exportar partidas</string>
     <string name="nav_import_saves">Importar partidas</string>
@@ -201,8 +200,8 @@ En la nube: %2$s
     <string name="download_cancel">Cancelar la descarga</string>
     <string name="download_cancel_confirm">¿Cancelar la descarga en curso?</string>
     <string name="gl4es_label">GL4ES (compatible, GPU antiguas)</string>
-    <string name="zink_zfa_label">Zink ZFA (Vulkan, recomendado)</string>
-    <string name="mobileglues_label">MobileGlues (GL sobre GLES — experimental, sin Vulkan)</string>
+    <string name="zink_zfa_label">Zink (Vulkan, solo Snapdragon: más lento, ayuda con texturas negras)</string>
+    <string name="mobileglues_label">MobileGlues (recomendado, más FPS)</string>
     <string name="debug_mode">Modo de depuración (registro detallado)</string>
     <string name="env_vars_title">Avanzado: variables de inicio adicionales</string>
     <string name="env_vars_hint">Pares CLAVE=VALOR (separados por espacios), aplicados al iniciar y con prioridad sobre los valores por defecto. Para pruebas de diagnóstico: déjalo vacío si no sabes lo que haces. </string>

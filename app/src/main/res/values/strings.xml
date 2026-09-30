@@ -14,7 +14,6 @@
     <string name="delete_instance_confirm">Delete instance \"%1$s\" and all its files? This cannot be undone.</string>
     <string name="log">Log</string>
     <string name="renderer">Renderer</string>
-    <string name="renderer_info">ValDroid currently renders only through Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan driver</string>
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU — non-Snapdragon devices should choose the System driver. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
@@ -103,8 +102,8 @@ In the cloud: %2$s
     <string name="render_res_black_margins">black margins</string>
     <string name="render_res_hint">Lower = more FPS on weak GPUs and a bigger UI. Native = sharpest.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
-    <string name="driver_auto_set_title">Recommended driver set</string>
-    <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>
+    <string name="renderer_default_title">Renderer: MobileGlues</string>
+    <string name="renderer_default_msg">MobileGlues is selected: it gives the highest FPS. If the ground or textures look black, get game version 1.0.15 or newer — it doesn\'t have this problem. Until then, a Snapdragon (Adreno) phone can switch to Zink for now in the instance settings (the gear icon on the instance card); it is a bit slower. There is no fix for Mali yet.</string>
     <string name="nav_import_mods">Import Mods (ZIP)…</string>
     <string name="nav_export_saves">Export saves</string>
     <string name="nav_import_saves">Import saves</string>
@@ -218,8 +217,8 @@ In the cloud: %2$s
     <string name="download_cancel">Cancel download</string>
     <string name="download_cancel_confirm">Cancel the download in progress?</string>
     <string name="gl4es_label">GL4ES (compatible, older GPUs)</string>
-    <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
-    <string name="mobileglues_label">MobileGlues (GL over GLES — experimental, no Vulkan)</string>
+    <string name="zink_zfa_label">Zink (Vulkan, Snapdragon only — slower, helps with black textures)</string>
+    <string name="mobileglues_label">MobileGlues (recommended, higher FPS)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
     <string name="env_vars_title">Advanced: extra launch variables</string>
     <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics tests — leave empty unless you know what you\'re doing. </string>

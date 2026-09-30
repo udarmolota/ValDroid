@@ -13,7 +13,6 @@
     <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
     <string name="log">Лог</string>
     <string name="renderer">Рендерер</string>
-    <string name="renderer_info">Сейчас ValDroid работает только через Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan-драйвер</string>
     <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU — на устройствах не с Snapdragon выбирайте системный. Если не сработало — попробуйте другой.</string>
     <string name="upload_custom_driver">Загрузить свой драйвер</string>
@@ -102,8 +101,8 @@
     <string name="render_res_black_margins">чёрные поля</string>
     <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
-    <string name="driver_auto_set_title">Драйвер выставлен</string>
-    <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
+    <string name="renderer_default_title">Рендерер: MobileGlues</string>
+    <string name="renderer_default_msg">Выбран рендерер MobileGlues — с ним самый высокий FPS. Если земля или текстуры чёрные, поставьте версию игры 1.0.15 или новее — в ней этой проблемы нет. А пока на Snapdragon (Adreno) можно временно переключиться на Zink в настройках инстанса (шестерёнка на карточке инстанса), он чуть медленнее. Для Mali решения пока нет.</string>
     <string name="nav_import_mods">Импорт модов (ZIP)…</string>
     <string name="nav_export_saves">Экспорт сейвов</string>
     <string name="nav_import_saves">Импорт сейвов</string>
@@ -195,8 +194,8 @@
     <string name="download_cancel">Отменить скачивание</string>
     <string name="download_cancel_confirm">Отменить текущее скачивание?</string>
     <string name="gl4es_label">GL4ES (совместимый, старые GPU)</string>
-    <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
-    <string name="mobileglues_label">MobileGlues (GL через GLES — экспериментальный, без Vulkan)</string>
+    <string name="zink_zfa_label">Zink (Vulkan, только Snapdragon — медленнее, помогает при чёрных текстурах)</string>
+    <string name="mobileglues_label">MobileGlues (рекомендуется, выше FPS)</string>
     <string name="debug_mode">Режим отладки (подробный лог)</string>
     <string name="env_vars_title">Дополнительно: переменные запуска</string>
     <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>

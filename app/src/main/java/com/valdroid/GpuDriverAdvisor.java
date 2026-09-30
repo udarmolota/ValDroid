@@ -14,11 +14,15 @@ public final class GpuDriverAdvisor {
         public final String driverLabel; // e.g. "Turnip Adreno 6xx (legacy)"
         public final String driverSo;    // soName written to the instance
         public final boolean applied;    // false if the instance already had an explicit driver
-        Result(String gpuName, String driverLabel, String driverSo, boolean applied) {
+        // The post-install note says "MobileGlues is selected"; only show it when that is true
+        // (the global default renderer can be changed).
+        public final boolean mobileGlues;
+        Result(String gpuName, String driverLabel, String driverSo, boolean applied, boolean mobileGlues) {
             this.gpuName = gpuName;
             this.driverLabel = driverLabel;
             this.driverSo = driverSo;
             this.applied = applied;
+            this.mobileGlues = mobileGlues;
         }
     }
 
@@ -40,6 +44,7 @@ public final class GpuDriverAdvisor {
             s.setVulkanDriverSo(so);
             applied = true;
         }
-        return new Result(gpu.displayName(), label, so, applied);
+        return new Result(gpu.displayName(), label, so, applied,
+                s.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES);
     }
 }
