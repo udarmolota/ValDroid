@@ -184,10 +184,17 @@ public class XServer {
      *  cursor exactly while the camera follows the mouse (an all-transparent cursor, which
      *  CursorManager marks invisible). */
     public boolean isMouseLockedByGame() {
+        return isGameCursorHidden()
+                && (explicitPointerGrab || android.os.SystemClock.uptimeMillis() - lastWarpMs < 1000);
+    }
+
+    /** The cursor half of the mouse-look test on its own. Gamepad-only play produces no mouse
+     *  motion, hence no warps, so callers that only need "the game shows no cursor" (the floating
+     *  gamepad stick) must not depend on the grab/warp half. */
+    public boolean isGameCursorHidden() {
         Window w = inputDeviceManager.getPointWindow();
         Cursor c = w != null ? w.attributes.getCursor() : null;
-        boolean hidden = c != null && !c.isVisible();
-        return hidden && (explicitPointerGrab || android.os.SystemClock.uptimeMillis() - lastWarpMs < 1000);
+        return c != null && !c.isVisible();
     }
 
     public void injectPointerMoveDelta(int dx, int dy) {

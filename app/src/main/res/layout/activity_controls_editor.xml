@@ -240,6 +240,54 @@
                     app:layout_constraintTop_toBottomOf="@id/element_sensitivity_tv"
                     app:layout_constraintEnd_toEndOf="parent"/>
 
+                <!-- Floating joystick (movement sticks only) and, when on, its capture zone size -->
+                <CheckBox
+                    android:id="@+id/element_floating_cb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/control_element_floating"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_sensitivity_sb"/>
+
+                <TextView
+                    android:id="@+id/element_float_zone_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:gravity="start"
+                    android:text="@string/control_element_float_zone"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/element_floating_cb"
+                    app:layout_constraintEnd_toStartOf="@+id/element_float_zone_percent_tv"/>
+
+                <TextView
+                    android:id="@+id/element_float_zone_percent_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toEndOf="@+id/element_float_zone_tv"
+                    app:layout_constraintTop_toTopOf="@+id/element_float_zone_tv"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <SeekBar
+                    android:id="@+id/element_float_zone_sb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:min="120"
+                    android:max="500"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_float_zone_tv"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
                 <CheckBox
                     android:id="@+id/element_tap_click_cb"
                     android:layout_width="0dp"
@@ -249,7 +297,7 @@
                     android:visibility="gone"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/element_sensitivity_sb"/>
+                    app:layout_constraintTop_toBottomOf="@id/element_float_zone_sb"/>
 
                 <!-- Text + Toggle -->
                 <LinearLayout

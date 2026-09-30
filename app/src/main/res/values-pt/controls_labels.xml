@@ -43,6 +43,8 @@
     <string name="control_element_sensitivity">Sensibilidade</string>
     <string name="control_element_tap_click">Toque = clique esquerdo</string>
     <string name="control_element_drag_look">Arrastar gira a câmera</string>
+    <string name="control_element_floating">Joystick flutuante</string>
+    <string name="control_element_float_zone">Tamanho da zona</string>
     <string name="control_element_text">Texto</string>
     <string name="control_element_text_empty">Vazio</string>
     <string name="control_element_toggle">Alternar</string>

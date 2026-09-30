@@ -77,6 +77,18 @@ public final class InputSink {
         return xs != null && xs.isMouseLockedByGame();
     }
 
+    /** False while no X server is up (the editor, a session without one): the mouse-lock signal
+     *  then says nothing about the game, and callers must not read "not locked" as "in a menu". */
+    public static boolean hasMouseLockSignal() {
+        return XServerRunner.getXServer() != null;
+    }
+
+    /** True while the game shows no cursor of its own (see XServer.isGameCursorHidden). */
+    public static boolean isGameCursorHidden() {
+        XServer xs = XServerRunner.getXServer();
+        return xs != null && xs.isGameCursorHidden();
+    }
+
     /** Mouse look: move the X pointer by a delta (view px * renderScale), keeping the fraction for
      *  the next call so slow finger movement still turns the camera. */
     public static void sendCursorDelta(double dx, double dy) {

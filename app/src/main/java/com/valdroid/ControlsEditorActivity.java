@@ -208,6 +208,50 @@ public class ControlsEditorActivity extends AppCompatActivity {
                 }
             }
 
+            /** Floating joystick, movement sticks only: the checkbox and, while it is checked,
+             *  the capture zone size (the zone itself is drawn on the layout behind the card). */
+            private void loadFloating(AbstractControlElement element) {
+                if (!element.supportsFloating()) {
+                    binding.elementFloatingCb.setVisibility(View.GONE);
+                    showFloatZone(false);
+                    return;
+                }
+                binding.elementFloatingCb.setOnCheckedChangeListener(null);
+                binding.elementFloatingCb.setChecked(element.isFloating());
+                binding.elementFloatingCb.setOnCheckedChangeListener((v, checked) -> {
+                    element.setFloating(checked);
+                    showFloatZone(checked);
+                });
+                binding.elementFloatingCb.setVisibility(View.VISIBLE);
+
+                // Shown as a percentage of the stick's own size, like the other sliders.
+                int zoneProgress = Math.round(element.getFloatZone() * 100);
+                binding.elementFloatZoneSb.setMin(Math.round(ControlElementDescription.MIN_FLOAT_ZONE * 100));
+                binding.elementFloatZoneSb.setMax(Math.round(ControlElementDescription.MAX_FLOAT_ZONE * 100));
+                binding.elementFloatZonePercentTv.setText(
+                        getResources().getString(R.string.percentage_format, zoneProgress));
+                binding.elementFloatZoneSb.setOnSeekBarChangeListener(null);
+                binding.elementFloatZoneSb.setProgress(zoneProgress);
+                binding.elementFloatZoneSb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        binding.elementFloatZonePercentTv.setText(
+                                getResources().getString(R.string.percentage_format, progress));
+                        element.setFloatZone(progress / 100f);
+                    }
+                    @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                    @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+                });
+                showFloatZone(element.isFloating());
+            }
+
+            private void showFloatZone(boolean show) {
+                int visibility = show ? View.VISIBLE : View.GONE;
+                binding.elementFloatZoneTv.setVisibility(visibility);
+                binding.elementFloatZonePercentTv.setVisibility(visibility);
+                binding.elementFloatZoneSb.setVisibility(visibility);
+            }
+
             private void loadElement(AbstractControlElement element) {
 
                 int scaleProgressValue = Math.round(element.getScale() * 100);
@@ -265,6 +309,7 @@ public class ControlsEditorActivity extends AppCompatActivity {
                 }
 
                 loadSensitivity(element);
+                loadFloating(element);
 
                 // Tap-to-click, touchpad only. Server admins asked to be able to turn the tap off:
                 // while dragging the cursor an accidental tap clicks whatever is underneath, which

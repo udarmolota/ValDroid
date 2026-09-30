@@ -59,6 +59,24 @@ public class ControlElementDescription {
      * field existed load unchanged (Gson fills absent booleans with false).
      */
     public final boolean dragLook;
+    /**
+     * Movement sticks only (STICK, STICK_WASD): a "floating" joystick. Touching an empty spot in a
+     * zone around the stick moves the stick under the finger for the length of that touch, so the
+     * thumb does not have to find the drawn circle. The saved position stays the home position.
+     * Default false so layouts saved before this field existed load unchanged (Gson fills absent
+     * booleans with false).
+     */
+    public final boolean floating;
+    /**
+     * Size of the floating stick's capture zone: the side of the square, as a multiple of the
+     * stick's diameter. Always stored normalised (0 or a missing field = DEFAULT_FLOAT_ZONE), so
+     * the elements can use it as is.
+     */
+    public final float floatZone;
+
+    public static final float DEFAULT_FLOAT_ZONE = 2.5f;
+    public static final float MIN_FLOAT_ZONE = 1.2f;
+    public static final float MAX_FLOAT_ZONE = 5.0f;
 
     public static final float DEFAULT_SENSITIVITY = 2.0f;
     public static final Style DEFAULT_STYLE = Style.OUTLINE;
@@ -118,6 +136,18 @@ public class ControlElementDescription {
                                      boolean isToggle, float sensitivity, Style style,
                                      String iconFile, boolean noTint, boolean tapDisabled,
                                      boolean dragLook) {
+        this(centerXRelative, centerYRelative, scale, type, bindings, text, color, alpha,
+                inputType, icon, isToggle, sensitivity, style, iconFile, noTint, tapDisabled,
+                dragLook, false, 0f);
+    }
+
+    public ControlElementDescription(float centerXRelative, float centerYRelative, float scale,
+                                     @NonNull AbstractControlElement.Type type, @NonNull GLFWBinding[] bindings,
+                                     String text, int color, int alpha,
+                                     AbstractControlElement.InputType inputType, @NonNull Icon icon,
+                                     boolean isToggle, float sensitivity, Style style,
+                                     String iconFile, boolean noTint, boolean tapDisabled,
+                                     boolean dragLook, boolean floating, float floatZone) {
         // Clamped rather than rejected: describe() runs on every save, and an element dragged to
         // the very edge (or a hand-edited file) must not make saving throw and lose the layout.
         this.centerXRelative = clampF(centerXRelative, 0.001f, 0.999f);
@@ -137,6 +167,11 @@ public class ControlElementDescription {
         this.noTint = noTint;
         this.tapDisabled = tapDisabled;
         this.dragLook = dragLook;
+        this.floating = floating;
+        // 0 (a layout from before the field, or a constructor that does not take it), NaN or a
+        // negative value mean "not set".
+        this.floatZone = floatZone > 0f ? clampF(floatZone, MIN_FLOAT_ZONE, MAX_FLOAT_ZONE)
+                : DEFAULT_FLOAT_ZONE;
         validate();
     }
 
@@ -244,7 +279,7 @@ public class ControlElementDescription {
                     d.scale > 0f ? d.scale : 1f, d.type, nonNull.toArray(new GLFWBinding[0]),
                     d.text, d.color, d.alpha, it, d.icon != null ? d.icon : Icon.NO_ICON,
                     d.isToggle, d.sensitivity, d.style, d.iconFile, d.noTint, d.tapDisabled,
-                    d.dragLook);
+                    d.dragLook, d.floating, d.floatZone);
         } catch (RuntimeException e) {
             return null;
         }

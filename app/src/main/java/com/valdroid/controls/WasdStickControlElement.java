@@ -20,6 +20,12 @@ public class WasdStickControlElement extends AbstractControlElement {
     private static final float DEADZONE = 0.20f;
     private static final float THRESH   = 0.35f;
 
+    // Floating joystick: while a finger holds the stick away from where the layout puts it, the
+    // drawable sits under that finger and the layout position is remembered here. Everything the
+    // editor and the saved layout see (describe, getCenterX/Y) keeps reporting the home position.
+    private boolean displaced;
+    private float homeX, homeY;
+
     public WasdStickControlElement(InputControlsView parentView, ControlElementDescription desc) {
         super(parentView, desc);
 
@@ -59,14 +65,50 @@ public class WasdStickControlElement extends AbstractControlElement {
     public void releasePointer() {
         if (pointerId == -1) return;
         pointerId = -1;
+        returnHome();
         drawable.resetInner();
         releaseAll();
         parentView.invalidate();
     }
 
     @Override
+    public boolean supportsFloating() {
+        return true;
+    }
+
+    @Override
+    float getFloatZoneHalfSize() {
+        return drawable.outerRadius * floatZone;
+    }
+
+    @Override
+    boolean startFloating(float x, float y, int pid) {
+        if (pointerId != -1) return false;
+        pointerId = pid;
+        floatTo(x, y);
+        parentView.invalidate();
+        return true;
+    }
+
+    /** Put the stick's centre under the finger: the touch starts with no deflection. */
+    private void floatTo(float x, float y) {
+        if (!displaced) {
+            homeX = drawable.outerCenterX;
+            homeY = drawable.outerCenterY;
+            displaced = true;
+        }
+        drawable.setCenterPosition(x, y);
+    }
+
+    private void returnHome() {
+        if (!displaced) return;
+        displaced = false;
+        drawable.setCenterPosition(homeX, homeY);
+    }
+
+    @Override
     public float getCenterY() {
-        return drawable.outerCenterY;
+        return displaced ? homeY : drawable.outerCenterY;
     }
 
     private void releaseAll() {
@@ -89,7 +131,11 @@ public class WasdStickControlElement extends AbstractControlElement {
                 float x = e.getX(actIndex), y = e.getY(actIndex);
                 if (!drawable.isPointOver(x, y)) return false;
                 pointerId = pid;
-                drawable.setInnerFromTouch(x, y);
+                // A floating stick re-centres under the thumb even when the thumb lands on the
+                // circle itself, so every touch starts neutral wherever it lands. In menus (zone
+                // inactive) it is a plain fixed stick.
+                if (isFloating() && parentView.isFloatZoneActive(this)) floatTo(x, y);
+                else drawable.setInnerFromTouch(x, y);
                 parentView.invalidate();
                 return true;
             }
@@ -120,6 +166,7 @@ public class WasdStickControlElement extends AbstractControlElement {
             case MotionEvent.ACTION_CANCEL: {
                 if (pid != pointerId && action != MotionEvent.ACTION_CANCEL) return false;
                 pointerId = -1;
+                returnHome();
                 drawable.resetInner();
                 releaseAll();
                 parentView.invalidate();
@@ -183,15 +230,16 @@ public class WasdStickControlElement extends AbstractControlElement {
 
     @Override
     public float getCenterX() {
-        return drawable.outerCenterX;
+        return displaced ? homeX : drawable.outerCenterX;
     }
 
     @Override
     public ControlElementDescription describe() {
         // bindings must stay empty
+        // getCenterX/Y, not the drawable: a floating stick may be away from home right now.
         return new ControlElementDescription(
-                drawable.outerCenterX / parentView.getWidth(),
-                drawable.outerCenterY / parentView.getHeight(),
+                getCenterX() / parentView.getWidth(),
+                getCenterY() / parentView.getHeight(),
                 drawable.scale,
                 Type.STICK_WASD,
                 new GLFWBinding[0],
@@ -200,7 +248,11 @@ public class WasdStickControlElement extends AbstractControlElement {
                 drawable.alpha,
                 InputType.MNK,
                 ControlElementDescription.Icon.NO_ICON,
-                false
+                false,
+                ControlElementDescription.DEFAULT_SENSITIVITY,
+                ControlElementDescription.DEFAULT_STYLE,
+                null, false, false, false,
+                floating, floatZone
         );
     }
 

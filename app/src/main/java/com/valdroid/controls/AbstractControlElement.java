@@ -30,6 +30,9 @@ public abstract class AbstractControlElement {
         this.inputType = description.inputType;
         this.context = parentView.getContext();
         this.isToggle = description.isToggle;
+        this.floating = description.floating;
+        this.floatZone = description.floatZone > 0f ? description.floatZone
+                : ControlElementDescription.DEFAULT_FLOAT_ZONE;
     }
 
     public static AbstractControlElement fromDescription(InputControlsView parentView, ControlElementDescription description) {
@@ -201,6 +204,48 @@ public abstract class AbstractControlElement {
     /** Release everything, latched toggles included (element hidden, game paused). */
     public void reset() {
         releasePointer();
+    }
+
+    // ---- Floating joystick (see ControlElementDescription.floating) ----
+    // Kept here so the view and the editor can treat the two stick classes alike; only elements
+    // that return true from supportsFloating() ever act on it.
+    protected boolean floating;
+    protected float floatZone = ControlElementDescription.DEFAULT_FLOAT_ZONE;
+
+    public boolean supportsFloating() {
+        return false;
+    }
+
+    public boolean isFloating() {
+        return floating && supportsFloating();
+    }
+
+    public void setFloating(boolean floating) {
+        this.floating = floating;
+        this.parentView.invalidate();   // the editor draws the zone
+    }
+
+    public float getFloatZone() {
+        return floatZone;
+    }
+
+    public void setFloatZone(float zone) {
+        this.floatZone = clamp(zone, ControlElementDescription.MIN_FLOAT_ZONE, ControlElementDescription.MAX_FLOAT_ZONE);
+        this.parentView.invalidate();
+    }
+
+    /** Half the side of the capture zone in view px (the zone is a square around the home position). */
+    float getFloatZoneHalfSize() {
+        return 0f;
+    }
+
+    /**
+     * A finger went down on an empty spot of this element's capture zone: move the stick under it
+     * and start tracking that finger. The view has already checked that the zone is active and
+     * that no element is under the finger. Returns false when the stick is busy with another finger.
+     */
+    boolean startFloating(float x, float y, int pointerId) {
+        return false;
     }
 
     /** Light haptic tick on a press, when the player enabled it; see InputControlsView.maybeHaptic. */

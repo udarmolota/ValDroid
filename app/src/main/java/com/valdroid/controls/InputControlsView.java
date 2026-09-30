@@ -196,6 +196,8 @@ public class InputControlsView extends View {
             // A fully transparent element still works in the game (touches don't depend on alpha),
             // but in the editor it would be impossible to find: mark where it is.
             if (isEditMode && controlElement.getAlpha() == 0) drawHiddenMarker(canvas, controlElement);
+            // Editor only: show how much of the screen a floating stick's capture zone takes.
+            if (isEditMode && controlElement.isFloating()) drawFloatZone(canvas, controlElement);
         }
         if (!isEditMode && !mouseLocked && curX >= 0 && (physicalMouse || hasMouseElement())) drawCursor(canvas);
     }
@@ -261,8 +263,55 @@ public class InputControlsView extends View {
                 if (!controlElement.isVisible()) continue;
                 if (controlElement.handleMotionEvent(e)) return true;
             }
-            return false;
+            // Nobody took it. Only now may a floating stick claim the touch for its zone, so every
+            // drawn element wins over a zone wherever the two sit in the list.
+            return offerToFloatingStick(e);
         }
+    }
+
+    /**
+     * DOWN / POINTER_DOWN that no element accepted: hand it to the floating stick whose capture
+     * zone it landed in. An element under the finger that refused the touch (a touchpad or button
+     * already held by another finger) still blocks the zone: the finger was aimed at that element.
+     */
+    private boolean offerToFloatingStick(MotionEvent e) {
+        int index = e.getActionIndex();
+        float x = e.getX(index), y = e.getY(index);
+        for (AbstractControlElement el : controlElements) {
+            if (el.isVisible() && el.isPointOver(x, y)) return false;
+        }
+        for (AbstractControlElement el : controlElements) {
+            if (!el.isVisible() || !el.isFloating() || !isFloatZoneActive(el)) continue;
+            floatZoneRect(el, floatZoneRect);
+            if (!floatZoneRect.contains(x, y)) continue;
+            if (el.startFloating(x, y, e.getPointerId(index))) return true;
+        }
+        return false;
+    }
+
+    private final android.graphics.RectF floatZoneRect = new android.graphics.RectF();
+
+    /** The capture zone of a floating stick: a square around its home position, cut to the view. */
+    private void floatZoneRect(AbstractControlElement el, android.graphics.RectF out) {
+        float half = el.getFloatZoneHalfSize();
+        float cx = el.getCenterX(), cy = el.getCenterY();
+        out.set(Math.max(0f, cx - half), Math.max(0f, cy - half),
+                Math.min(getWidth(), cx + half), Math.min(getHeight(), cy + half));
+    }
+
+    /**
+     * Whether a floating stick may take touches on the bare screen right now. Not while the game
+     * shows its cursor (menus, inventory, map): a tap on the bare screen clicks there, and the
+     * zone would swallow it. With no X server (nothing to ask) the zone stays on rather than dead.
+     * Keyboard sticks use the mouse-look signal. Gamepad sticks only ask whether the game's cursor
+     * is hidden: the grab/warp half of the mouse-look test comes from mouse handling, which
+     * gamepad-only play may never trigger, and Valheim hides its cursor while the pad is in use.
+     */
+    boolean isFloatZoneActive(AbstractControlElement el) {
+        if (isEditMode) return false;
+        if (!InputSink.hasMouseLockSignal()) return true;
+        return el.getInputType() == AbstractControlElement.InputType.GAMEPAD
+                ? InputSink.isGameCursorHidden() : InputSink.isMouseLocked();
     }
 
     private void selectElement(@NonNull AbstractControlElement element) {
@@ -314,6 +363,22 @@ public class InputControlsView extends View {
         hiddenPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{ 12f * pixelScale + 4f, 8f * pixelScale + 3f }, 0f));
         c.drawCircle(el.getCenterX(), el.getCenterY(), r, hiddenPaint);
         hiddenPaint.setPathEffect(null);
+    }
+
+    private final Paint floatZonePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /** A floating stick's capture zone, in the same dashed look as the hidden-element marker. */
+    private void drawFloatZone(Canvas c, AbstractControlElement el) {
+        floatZoneRect(el, floatZoneRect);
+        float stroke = Math.max(2f, 3f * pixelScale);
+        floatZonePaint.setStyle(Paint.Style.STROKE);
+        floatZonePaint.setStrokeWidth(stroke);
+        floatZonePaint.setColor(0xCCFFFFFF);
+        floatZonePaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{ 12f * pixelScale + 4f, 8f * pixelScale + 3f }, 0f));
+        // Inset by half the stroke so a side lying on the screen edge is still fully visible.
+        floatZoneRect.inset(stroke / 2f, stroke / 2f);
+        c.drawRect(floatZoneRect, floatZonePaint);
+        floatZonePaint.setPathEffect(null);
     }
 
     public void setSnapToGrid(boolean on) {

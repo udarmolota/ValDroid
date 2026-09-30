@@ -43,6 +43,8 @@
     <string name="control_element_sensitivity">Чувствительность</string>
     <string name="control_element_tap_click">Тап — левый клик</string>
     <string name="control_element_drag_look">Сдвиг пальцем — поворот камеры</string>
+    <string name="control_element_floating">Плавающий джойстик</string>
+    <string name="control_element_float_zone">Размер зоны</string>
     <string name="control_element_text">Текст</string>
     <string name="control_element_text_empty">Пусто</string>
     <string name="control_element_toggle">Фиксация</string>

@@ -26,6 +26,12 @@ public class StickControlElement extends AbstractControlElement {
      */
     private float sensitivity;
 
+    // Floating joystick: while a finger holds the stick away from where the layout puts it, the
+    // drawable sits under that finger and the layout position is remembered here. Everything the
+    // editor and the saved layout see (describe, getCenterX/Y) keeps reporting the home position.
+    private boolean displaced;
+    private float homeX, homeY;
+
     public StickControlElement(InputControlsView parentView, ControlElementDescription elementDescription) {
         super(parentView, elementDescription);
         this.sensitivity = elementDescription.sensitivity > 0f ? elementDescription.sensitivity
@@ -104,9 +110,17 @@ public class StickControlElement extends AbstractControlElement {
             case MotionEvent.ACTION_POINTER_DOWN: {
                 float x = e.getX(actionIndex);
                 float y = e.getY(actionIndex);
+                // A floating stick travels, and may sit on top of a button while a finger holds
+                // it: a second finger there is meant for that button, not for the stick (a fixed
+                // stick keeps Zomdroid's behaviour of following the newest finger).
+                if (isFloating() && this.pointerId != -1) return false;
                 if (!this.drawable.isPointOver(x, y)) return false;
                 this.pointerId = pointerId;
-                this.drawable.setInnerPosition(x, y);
+                // A floating stick re-centres under the thumb even when the thumb lands on the
+                // circle itself, so every touch starts neutral wherever it lands. In menus (zone
+                // inactive) it is a plain fixed stick.
+                if (isFloating() && this.parentView.isFloatZoneActive(this)) floatTo(x, y);
+                else this.drawable.setInnerPosition(x, y);
                 this.parentView.invalidate();
                 this.dispatchEvent();
                 return true;
@@ -115,7 +129,10 @@ public class StickControlElement extends AbstractControlElement {
                 if (this.pointerId < 0) return false;
                 int pointerIndex = e.findPointerIndex(this.pointerId);
                 if (pointerIndex < 0) {
-                    this.pointerId = -1;
+                    // Our finger is gone without an UP. A floating stick must not stay parked
+                    // where that finger left it.
+                    if (displaced) releasePointer();
+                    else this.pointerId = -1;
                     return false;
                 }
                 float x = e.getX(pointerIndex);
@@ -129,6 +146,7 @@ public class StickControlElement extends AbstractControlElement {
             case MotionEvent.ACTION_POINTER_UP:
                 if (pointerId != this.pointerId) return false;
                 this.pointerId = -1;
+                returnHome();
                 drawable.resetInnerPosition();
                 this.parentView.invalidate();
                 this.dispatchEvent();
@@ -147,19 +165,58 @@ public class StickControlElement extends AbstractControlElement {
     public void releasePointer() {
         if (this.pointerId == -1) return;
         this.pointerId = -1;
+        returnHome();
         drawable.resetInnerPosition();
         this.parentView.invalidate();
         this.dispatchEvent();
     }
 
+    /** Both gamepad sticks and the key-bound (MNK) stick: the right stick is allowed too, a
+     *  floating camera stick is as usual in mobile games as a floating movement stick. */
+    @Override
+    public boolean supportsFloating() {
+        return true;
+    }
+
+    @Override
+    float getFloatZoneHalfSize() {
+        return this.drawable.outerRadius * floatZone;
+    }
+
+    @Override
+    boolean startFloating(float x, float y, int pointerId) {
+        if (this.pointerId != -1) return false;
+        this.pointerId = pointerId;
+        floatTo(x, y);
+        this.parentView.invalidate();
+        this.dispatchEvent();
+        return true;
+    }
+
+    /** Put the stick's centre under the finger: the touch starts with no deflection. */
+    private void floatTo(float x, float y) {
+        if (!displaced) {
+            homeX = this.drawable.outerCenterX;
+            homeY = this.drawable.outerCenterY;
+            displaced = true;
+        }
+        this.drawable.setCenterPosition(x, y);
+    }
+
+    private void returnHome() {
+        if (!displaced) return;
+        displaced = false;
+        this.drawable.setCenterPosition(homeX, homeY);
+    }
+
     @Override
     public float getCenterY() {
-        return this.drawable.outerCenterY;
+        return displaced ? homeY : this.drawable.outerCenterY;
     }
 
     @Override
     public float getCenterX() {
-        return this.drawable.outerCenterX;
+        return displaced ? homeX : this.drawable.outerCenterX;
     }
 
     @Override
@@ -268,14 +325,18 @@ public class StickControlElement extends AbstractControlElement {
     }
 
     public ControlElementDescription describe() {
+        // getCenterX/Y, not the drawable: a floating stick may be away from home right now.
         return new ControlElementDescription(
-                this.drawable.outerCenterX / this.parentView.getWidth(),
-                this.drawable.outerCenterY / this.parentView.getHeight(),
+                getCenterX() / this.parentView.getWidth(),
+                getCenterY() / this.parentView.getHeight(),
                 this.drawable.scale, Type.STICK,
                 this.bindings.toArray(new GLFWBinding[0]), null, this.drawable.color,
                 this.drawable.alpha,
                 this.inputType, ControlElementDescription.Icon.NO_ICON,
-                false, sensitivity);
+                false, sensitivity,
+                ControlElementDescription.DEFAULT_STYLE,
+                null, false, false, false,
+                floating, floatZone);
     }
 
     public void setSensitivity(float s) {

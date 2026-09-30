@@ -48,6 +48,8 @@
     <string name="control_element_sensitivity">Sensitivity</string>
     <string name="control_element_tap_click">Tap = left click</string>
     <string name="control_element_drag_look">Drag turns the camera</string>
+    <string name="control_element_floating">Floating joystick</string>
+    <string name="control_element_float_zone">Zone size</string>
     <string name="control_element_text">Text</string>
     <string name="control_element_text_empty">Empty</string>
     <string name="control_element_toggle">Toggle</string>
