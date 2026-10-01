@@ -236,7 +236,7 @@ En la nube: %2$s
     <!-- Gamepad button remapper -->
     <string name="gamepad_mapper_settings_btn">Asignación del control</string>
     <string name="gamepad_mapper_title">Asignación del control</string>
-    <string name="gamepad_mapper_instructions">Corrige un control con los botones cambiados. Pulsa Empezar y luego presiona el botón físico que quieras para cada acción.</string>
+    <string name="gamepad_mapper_instructions">Corrige un control con los botones cambiados o con gatillos que mueven la cámara. Pulsa Empezar y luego presiona el botón físico de cada control que aparezca. En LT y RT, aprieta el gatillo hasta el fondo y suéltalo.</string>
     <string name="gamepad_mapper_start">Empezar</string>
     <string name="gamepad_mapper_reset">Restablecer valores por defecto</string>
     <string name="gamepad_mapper_reset_done">Asignación restablecida</string>
@@ -244,16 +244,18 @@ En la nube: %2$s
     <string name="gamepad_mapper_done">Asignación guardada</string>
     <string name="gamepad_mapper_dup">Ya está asignado: presiona otro botón</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (rotar)</item>
-        <item>LB — Alejar</item>
-        <item>RB — Acercar</item>
-        <item>Select — Tab</item>
-        <item>Start — Siguiente colono (.)</item>
-        <item>L3 — Shift (selección múltiple)</item>
-        <item>R3 — Pulsar stick derecho (sin uso)</item>
+        <item>A</item>
+        <item>B</item>
+        <item>X</item>
+        <item>Y</item>
+        <item>LB (botón superior izquierdo)</item>
+        <item>RB (botón superior derecho)</item>
+        <item>Select / Back</item>
+        <item>Start / Menu</item>
+        <item>L3 (pulsar stick izquierdo)</item>
+        <item>R3 (pulsar stick derecho)</item>
+        <item>LT (gatillo izquierdo)</item>
+        <item>RT (gatillo derecho)</item>
     </string-array>
     <string name="gfx_preset_label">Gráficos</string>
     <string name="gfx_preset_keep">No tocar</string>

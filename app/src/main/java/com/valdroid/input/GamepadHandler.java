@@ -1,6 +1,11 @@
+// Derived from Zomdroid (MIT) — see NOTICE.
 package com.valdroid.input;
 
 import android.app.Activity;
+import android.content.Context;
+import android.util.Log;
+import android.util.SparseArray;
+import android.util.SparseBooleanArray;
 import android.view.Choreographer;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -8,7 +13,10 @@ import android.view.MotionEvent;
 
 import com.valdroid.controls.InputControlsView;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Physical gamepad support. RimWorld is a mouse+keyboard game (Unity, no native controller
@@ -35,6 +43,8 @@ import java.util.EnumSet;
  * OR-combines it into edge-triggered presses.
  */
 public class GamepadHandler {
+
+    private static final String TAG = "ValDroid/Gamepad";
 
     // --- tunables ---
     private static final float DEADZONE      = 0.15f;  // stick deadzone (fraction)
@@ -64,6 +74,18 @@ public class GamepadHandler {
     private boolean running;
     private long lastFrameNs;
 
+    // Passthrough trigger state. A trigger can be driven by an axis AND a key at once (pads that
+    // send L2/R2 keycodes alongside LTRIGGER), so the virtual trigger is the max of both. Without
+    // this, every stick MotionEvent re-wrote the trigger from its (0) axis and released a trigger
+    // that was being held as a key.
+    private boolean ltKeyHeld, rtKeyHeld;
+    private float ltAxis, rtAxis;
+
+    // Per-device controller layout (which Android axes are the right stick / the triggers),
+    // decided once from the device's motion ranges; dropped when the device changes.
+    private final SparseArray<Layout> layouts = new SparseArray<>();
+    private final SparseBooleanArray logged = new SparseBooleanArray();
+
     public GamepadHandler(Activity activity, InputControlsView controls) {
         this.activity = activity;
         this.controls = controls;
@@ -77,6 +99,7 @@ public class GamepadHandler {
         if (running) return;
         running = true;
         lastFrameNs = 0;
+        layouts.clear();   // device changes while paused were not heard (listener unregistered)
         Choreographer.getInstance().postFrameCallback(frameCallback);
     }
 
@@ -90,6 +113,43 @@ public class GamepadHandler {
         bA = bB = bX = bY = bL1 = bR1 = bL2 = bR2 = bStart = bSelect = bL3 = bR3 = false;
         dUp = dDown = dLeft = dRight = false;
         ePause = eSpeed1 = eSpeed2 = eSpeed3 = false;
+        ltKeyHeld = rtKeyHeld = false;
+        ltAxis = rtAxis = 0;
+    }
+
+    /** A gamepad was added or changed: forget its cached layout and log the new one. */
+    public void onInputDeviceChanged(int deviceId, String why) {
+        layouts.remove(deviceId);
+        logged.delete(deviceId);
+        try {
+            InputDevice d = InputDevice.getDevice(deviceId);
+            if (isPadDevice(d)) logDevice(d, why);
+        } catch (Throwable t) {
+            Log.w(TAG, "device " + deviceId + " query failed", t);
+        }
+    }
+
+    public void onInputDeviceRemoved(int deviceId) {
+        layouts.remove(deviceId);
+        logged.delete(deviceId);
+    }
+
+    /** Log every connected gamepad not logged yet by this handler (one block per device). */
+    public void logConnectedGamepads(String why) {
+        for (int id : InputDevice.getDeviceIds()) {
+            if (logged.get(id)) continue;
+            try {
+                InputDevice d = InputDevice.getDevice(id);
+                if (isPadDevice(d)) logDevice(d, why);
+            } catch (Throwable t) {
+                Log.w(TAG, "device " + id + " query failed", t);
+            }
+        }
+    }
+
+    private void logDevice(InputDevice d, String why) {
+        logged.put(d.getId(), true);
+        Log.i(TAG, describeDevice(d, why));
     }
 
     // ============================= input events =============================
@@ -120,15 +180,27 @@ public class GamepadHandler {
     /** Physical button/D-pad -> virtual evdev gamepad. Always consumes gamepad-sourced keys. */
     private boolean passthroughKey(KeyEvent e) {
         final boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
+        // Triggers first: a trigger mapped as a BUTTON in the mapper may use any keycode, and it
+        // must not also act as the button that keycode would otherwise be.
+        if (isTriggerKey(e.getKeyCode(), true)) {
+            ltKeyHeld = down;
+            VirtualGamepad.trigger(VirtualGamepad.ABS_Z, Math.max(ltAxis, ltKeyHeld ? 1f : 0f));
+            VirtualGamepad.sync();
+            return true;
+        }
+        if (isTriggerKey(e.getKeyCode(), false)) {
+            rtKeyHeld = down;
+            VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, Math.max(rtAxis, rtKeyHeld ? 1f : 0f));
+            VirtualGamepad.sync();
+            return true;
+        }
         switch (e.getKeyCode()) {
             case KeyEvent.KEYCODE_DPAD_UP:    VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, down ? -1 : 0); break;
             case KeyEvent.KEYCODE_DPAD_DOWN:  VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, down ?  1 : 0); break;
             case KeyEvent.KEYCODE_DPAD_LEFT:  VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, down ? -1 : 0); break;
             case KeyEvent.KEYCODE_DPAD_RIGHT: VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, down ?  1 : 0); break;
             case KeyEvent.KEYCODE_DPAD_CENTER: return true;
-            case KeyEvent.KEYCODE_BUTTON_L2:  VirtualGamepad.trigger(VirtualGamepad.ABS_Z,  down ? 1f : 0f); break;
-            case KeyEvent.KEYCODE_BUTTON_R2:  VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, down ? 1f : 0f); break;
-            case KeyEvent.KEYCODE_BACK:       VirtualGamepad.button(VirtualGamepad.BTN_B, down); break;   // some pads' B
+            case KeyEvent.KEYCODE_BACK:      VirtualGamepad.button(VirtualGamepad.BTN_B, down); break;   // some pads' B
             default: {
                 int btn = logicalToButton(GamepadMapping.toLogical(e.getKeyCode()));
                 if (btn < 0) return true;   // unknown gamepad button: swallow, never let it become Back
@@ -141,12 +213,15 @@ public class GamepadHandler {
 
     /** Physical sticks/triggers/hat -> virtual evdev gamepad axes. */
     private boolean passthroughMotion(MotionEvent e) {
+        Layout l = layoutFor(e);
+        ltAxis = readTrigger(e, l.lt);
+        rtAxis = readTrigger(e, l.rt);
         VirtualGamepad.stick(VirtualGamepad.ABS_X,  e.getAxisValue(MotionEvent.AXIS_X));
         VirtualGamepad.stick(VirtualGamepad.ABS_Y,  e.getAxisValue(MotionEvent.AXIS_Y));
-        VirtualGamepad.stick(VirtualGamepad.ABS_RX, e.getAxisValue(MotionEvent.AXIS_Z));
-        VirtualGamepad.stick(VirtualGamepad.ABS_RY, e.getAxisValue(MotionEvent.AXIS_RZ));
-        VirtualGamepad.trigger(VirtualGamepad.ABS_Z,  readTrigger(e, true));
-        VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, readTrigger(e, false));
+        VirtualGamepad.stick(VirtualGamepad.ABS_RX, e.getAxisValue(l.rsX));
+        VirtualGamepad.stick(VirtualGamepad.ABS_RY, e.getAxisValue(l.rsY));
+        VirtualGamepad.trigger(VirtualGamepad.ABS_Z,  Math.max(ltAxis, ltKeyHeld ? 1f : 0f));
+        VirtualGamepad.trigger(VirtualGamepad.ABS_RZ, Math.max(rtAxis, rtKeyHeld ? 1f : 0f));
         VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_X)));
         VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_Y)));
         VirtualGamepad.sync();
@@ -159,15 +234,16 @@ public class GamepadHandler {
         if (PASSTHROUGH) return passthroughKey(e);
         final boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
         final int kc = e.getKeyCode();
-        // D-pad and triggers-as-keys are handled directly (not part of the remappable logical set).
+        // Triggers-as-keys (L2/R2, or the key recorded in the mapper) come first, then the D-pad;
+        // neither is part of the remappable logical button set.
+        if (isTriggerKey(kc, true))  { bL2 = down; return true; }   // some pads send triggers as keys
+        if (isTriggerKey(kc, false)) { bR2 = down; return true; }
         switch (kc) {
             case KeyEvent.KEYCODE_DPAD_UP:    dUp = down;    return true;
             case KeyEvent.KEYCODE_DPAD_DOWN:  dDown = down;  return true;
             case KeyEvent.KEYCODE_DPAD_LEFT:  dLeft = down;  return true;
             case KeyEvent.KEYCODE_DPAD_RIGHT: dRight = down; return true;
             case KeyEvent.KEYCODE_DPAD_CENTER: return true;
-            case KeyEvent.KEYCODE_BUTTON_L2:  bL2 = down;    return true;   // some pads send triggers as keys
-            case KeyEvent.KEYCODE_BUTTON_R2:  bR2 = down;    return true;
             case KeyEvent.KEYCODE_BACK:       bB = down;     return true;   // treat as Escape (some pads' B)
         }
         // Face / shoulder / menu / thumb buttons go through the user's physical→logical remap
@@ -193,34 +269,250 @@ public class GamepadHandler {
         if (!isFromGamepad(e.getSource())) return false;
         if (e.getAction() != MotionEvent.ACTION_MOVE) return false;
         if (PASSTHROUGH) return passthroughMotion(e);
-        rsX  = e.getAxisValue(MotionEvent.AXIS_Z);    // right stick
-        rsY  = e.getAxisValue(MotionEvent.AXIS_RZ);
+        Layout l = layoutFor(e);
+        rsX  = e.getAxisValue(l.rsX);    // right stick
+        rsY  = e.getAxisValue(l.rsY);
         lsX  = e.getAxisValue(MotionEvent.AXIS_X);    // left stick
         lsY  = e.getAxisValue(MotionEvent.AXIS_Y);
         hatX = e.getAxisValue(MotionEvent.AXIS_HAT_X);
         hatY = e.getAxisValue(MotionEvent.AXIS_HAT_Y);
-        lt = readTrigger(e, true);
-        rt = readTrigger(e, false);
+        lt = readTrigger(e, l.lt);
+        rt = readTrigger(e, l.rt);
         return true;
     }
 
-    /** Read an analog trigger across the axes different controllers use, checking capability first
-     *  (getAxisValue returns 0 for unsupported axes). Z/RZ are intentionally excluded — we use them
-     *  for the right stick; controllers that put triggers there will need the (later) remap. */
-    private static float readTrigger(MotionEvent e, boolean left) {
-        android.view.InputDevice d = e.getDevice();
-        final int[] axes = left
-            ? new int[]{ MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE, MotionEvent.AXIS_GENERIC_1, MotionEvent.AXIS_GENERIC_3 }
-            : new int[]{ MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS,   MotionEvent.AXIS_GENERIC_2, MotionEvent.AXIS_GENERIC_4 };
-        final int src = e.getSource();
-        for (int ax : axes) {
-            if (d == null || d.getMotionRange(ax, src) != null || d.getMotionRange(ax) != null) {
-                float v = Math.abs(e.getAxisValue(ax));
-                if (v > 1f) v = 1f;
-                if (v > 0f) return v;
-            }
+    /** True if this keycode drives LT/RT: the key recorded in the mapper, else L2/R2 (unless the
+     *  trigger was recorded as an analog axis and L2/R2 is free to keep its default role anyway). */
+    private static boolean isTriggerKey(int keyCode, boolean left) {
+        int code = GamepadMapping.getTrigger(left);
+        if (GamepadMapping.typeOf(code) == GamepadMapping.TYPE_BUTTON)
+            return GamepadMapping.valueOf(code) == keyCode;
+        return keyCode == (left ? KeyEvent.KEYCODE_BUTTON_L2 : KeyEvent.KEYCODE_BUTTON_R2);
+    }
+
+    /**
+     * One trigger's value in 0..1: the largest of its source axes. Negative readings are clamped to
+     * 0, not mirrored (Zomdroid's fix): the old {@code Math.abs} turned a trigger resting at -1 into
+     * a fully held one. The only axis read as (v+1)/2 is one the user recorded in the mapper whose
+     * range is -1..1 — there we KNOW it is a trigger resting at -1 (the mapper only accepts an axis
+     * that rested at the bottom of its range), so the rescale gives it its full travel; clamping it
+     * would lose the first half of the press. Auto-detected axes are never rescaled: a guess that
+     * turned out to be a stick would read as a half-held trigger at rest.
+     */
+    private static float readTrigger(MotionEvent e, Trigger t) {
+        float best = 0f;
+        for (int ax : t.axes) {
+            float v = e.getAxisValue(ax);
+            if (t.rescale) v = (v + 1f) * 0.5f;
+            if (v > best) best = v;
         }
-        return 0f;
+        return best > 1f ? 1f : best;
+    }
+
+    // ============================= controller layout =============================
+
+    /** Where one trigger comes from on this device. Empty axes = key-driven only (or none). */
+    private static final class Trigger {
+        int[] axes = new int[0];
+        boolean rescale;       // a mapped -1..1 axis read as (v+1)/2, see readTrigger
+        String source = "";    // for the log: "auto", "mapped", ...
+    }
+
+    /** Which Android axes feed the virtual pad's right stick and triggers on one device. */
+    private static final class Layout {
+        int rsX = MotionEvent.AXIS_Z, rsY = MotionEvent.AXIS_RZ;
+        String stickWhy = "";
+        final Trigger lt = new Trigger(), rt = new Trigger();
+
+        String describe() {
+            return "right stick = " + axisName(rsX) + "/" + axisName(rsY) + " (" + stickWhy + "), "
+                    + "LT = " + describeTrigger(lt, true) + ", RT = " + describeTrigger(rt, false);
+        }
+
+        private static String describeTrigger(Trigger t, boolean left) {
+            StringBuilder sb = new StringBuilder();
+            for (int ax : t.axes) {
+                if (sb.length() > 0) sb.append('|');
+                sb.append(axisName(ax));
+            }
+            int code = GamepadMapping.getTrigger(left);
+            if (GamepadMapping.typeOf(code) == GamepadMapping.TYPE_BUTTON) {
+                sb.append(KeyEvent.keyCodeToString(GamepadMapping.valueOf(code)));
+            } else {
+                if (sb.length() == 0) sb.append("none");
+                sb.append(left ? " + KEYCODE_BUTTON_L2" : " + KEYCODE_BUTTON_R2");
+            }
+            if (t.rescale) sb.append(", -1..1 rescaled");
+            return sb + " (" + t.source + ")";
+        }
+    }
+
+    // Today's (pre-layout) trigger axes. Z/RZ/RX/RY are added only by the range rules below.
+    private static final int[] AUTO_LT = { MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE,
+            MotionEvent.AXIS_GENERIC_1, MotionEvent.AXIS_GENERIC_3 };
+    private static final int[] AUTO_RT = { MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS,
+            MotionEvent.AXIS_GENERIC_2, MotionEvent.AXIS_GENERIC_4 };
+
+    private Layout layoutFor(MotionEvent e) {
+        int id = e.getDeviceId();
+        Layout l = layouts.get(id);
+        if (l == null) {
+            l = buildLayout(e.getDevice());
+            layouts.put(id, l);
+        }
+        return l;
+    }
+
+    /**
+     * Decide the layout from the device's motion ranges.
+     *
+     * Why: Android has no fixed home for the right stick and the analog triggers. Most pads (with a
+     * key layout file) report the right stick on Z/RZ and the triggers on LTRIGGER/RTRIGGER (or
+     * BRAKE/GAS); others report the evdev layout raw — right stick on RX/RY, triggers on Z/RZ — and
+     * then hard-wiring Z/RZ as the stick turns a trigger press into a camera tilt (Retroid Pocket
+     * Flip 2 report: the triggers "lower the camera and raise it on release").
+     *
+     *  - Right stick: the pair among (Z,RZ) and (RX,RY) whose ranges are both bipolar (min < -0.5);
+     *    (Z,RZ) when both pairs qualify (today's choice, right for most pads) or when neither does
+     *    (ranges missing/odd: today's mapping).
+     *  - Triggers: LTRIGGER/BRAKE/GENERIC_1/GENERIC_3 and RTRIGGER/GAS/GENERIC_2/GENERIC_4 when the
+     *    device has them, plus any axis of the OTHER pair whose range is unipolar (min >= -0.01,
+     *    max > 0.5): Z or RX -> LT, RZ or RY -> RT.
+     *  - A trigger recorded in the mapper wins: AXIS -> only that axis (and it is taken out of the
+     *    right stick, which then uses the other pair); BUTTON -> no axis, the key drives it.
+     */
+    private static Layout buildLayout(InputDevice d) {
+        Layout l = new Layout();
+        int ltCode = GamepadMapping.getTrigger(true), rtCode = GamepadMapping.getTrigger(false);
+        int ltMapped = GamepadMapping.typeOf(ltCode) == GamepadMapping.TYPE_AXIS ? GamepadMapping.valueOf(ltCode) : -1;
+        int rtMapped = GamepadMapping.typeOf(rtCode) == GamepadMapping.TYPE_AXIS ? GamepadMapping.valueOf(rtCode) : -1;
+
+        // --- right stick from ranges ---
+        boolean zPair = d != null && isBipolar(d, MotionEvent.AXIS_Z) && isBipolar(d, MotionEvent.AXIS_RZ);
+        boolean rPair = d != null && isBipolar(d, MotionEvent.AXIS_RX) && isBipolar(d, MotionEvent.AXIS_RY);
+        boolean useR = !zPair && rPair;
+        if (d == null) l.stickWhy = "no device info, default";
+        else if (zPair) l.stickWhy = rPair ? "both pairs bipolar, Z/RZ preferred" : "Z/RZ bipolar";
+        else if (rPair) l.stickWhy = "RX/RY bipolar, Z/RZ not";
+        else l.stickWhy = "no bipolar pair, default";
+
+        // --- a mapped trigger axis cannot also be the stick ---
+        boolean zTaken = isOneOf(ltMapped, MotionEvent.AXIS_Z, MotionEvent.AXIS_RZ)
+                || isOneOf(rtMapped, MotionEvent.AXIS_Z, MotionEvent.AXIS_RZ);
+        boolean rTaken = isOneOf(ltMapped, MotionEvent.AXIS_RX, MotionEvent.AXIS_RY)
+                || isOneOf(rtMapped, MotionEvent.AXIS_RX, MotionEvent.AXIS_RY);
+        if (!useR && zTaken && !rTaken) { useR = true;  l.stickWhy = "Z/RZ mapped as a trigger"; }
+        else if (useR && rTaken && !zTaken) { useR = false; l.stickWhy = "RX/RY mapped as a trigger"; }
+        else if (zTaken && rTaken) l.stickWhy += "; WARNING both pairs hold a mapped trigger";
+        if (useR) { l.rsX = MotionEvent.AXIS_RX; l.rsY = MotionEvent.AXIS_RY; }
+
+        // --- triggers ---
+        int otherL = useR ? MotionEvent.AXIS_Z : MotionEvent.AXIS_RX;   // the non-stick pair
+        int otherR = useR ? MotionEvent.AXIS_RZ : MotionEvent.AXIS_RY;
+        fillTrigger(l.lt, d, ltCode, ltMapped, rtMapped, AUTO_LT, otherL);
+        fillTrigger(l.rt, d, rtCode, rtMapped, ltMapped, AUTO_RT, otherR);
+        return l;
+    }
+
+    private static void fillTrigger(Trigger t, InputDevice d, int code, int mappedAxis,
+                                    int otherMappedAxis, int[] autoAxes, int otherPairAxis) {
+        if (GamepadMapping.typeOf(code) == GamepadMapping.TYPE_BUTTON) {
+            t.source = "mapped button";
+            return;
+        }
+        if (mappedAxis >= 0) {
+            t.axes = new int[]{ mappedAxis };
+            InputDevice.MotionRange r = d != null ? range(d, mappedAxis) : null;
+            t.rescale = r != null && r.getMin() < -0.5f;
+            t.source = "mapped";
+            return;
+        }
+        List<Integer> axes = new ArrayList<>();
+        for (int ax : autoAxes) {
+            // No device info: read them all, as before (getAxisValue is 0 for missing axes).
+            if (ax != otherMappedAxis && (d == null || range(d, ax) != null)) axes.add(ax);
+        }
+        boolean extra = d != null && otherPairAxis != otherMappedAxis && isUnipolar(d, otherPairAxis);
+        if (extra) axes.add(otherPairAxis);
+        t.axes = new int[axes.size()];
+        for (int i = 0; i < t.axes.length; i++) t.axes[i] = axes.get(i);
+        t.source = extra ? "auto, unipolar " + axisName(otherPairAxis) : "auto";
+    }
+
+    /** The axis's range on the joystick source, or any source as a backup (Zomdroid's check). */
+    private static InputDevice.MotionRange range(InputDevice d, int axis) {
+        InputDevice.MotionRange r = d.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK);
+        return r != null ? r : d.getMotionRange(axis);
+    }
+
+    private static boolean isBipolar(InputDevice d, int axis) {
+        InputDevice.MotionRange r = range(d, axis);
+        return r != null && r.getMin() < -0.5f;
+    }
+
+    private static boolean isUnipolar(InputDevice d, int axis) {
+        InputDevice.MotionRange r = range(d, axis);
+        return r != null && r.getMin() >= -0.01f && r.getMax() > 0.5f;
+    }
+
+    private static boolean isOneOf(int v, int a, int b) {
+        return v >= 0 && (v == a || v == b);
+    }
+
+    private static String axisName(int axis) {
+        String s = MotionEvent.axisToString(axis);
+        return s.startsWith("AXIS_") ? s.substring(5) : s;
+    }
+
+    // ============================= diagnostics =============================
+
+    /** One log block: identity, sources, every motion range, and the decided layout. */
+    private static String describeDevice(InputDevice d, String why) {
+        StringBuilder sb = new StringBuilder(1024);
+        sb.append("gamepad (").append(why).append("): \"").append(d.getName()).append("\" id=").append(d.getId())
+          .append(String.format(Locale.US, " vendor=0x%04x product=0x%04x", d.getVendorId(), d.getProductId()))
+          .append(" sources=").append(describeSources(d.getSources()));
+        for (InputDevice.MotionRange r : d.getMotionRanges()) {
+            sb.append(String.format(Locale.US, "\n  %-16s %6.2f..%5.2f flat %.3f fuzz %.3f",
+                    MotionEvent.axisToString(r.getAxis()), r.getMin(), r.getMax(), r.getFlat(), r.getFuzz()));
+            if (r.getSource() != InputDevice.SOURCE_JOYSTICK)
+                sb.append(" [").append(describeSources(r.getSource())).append(']');
+        }
+        sb.append("\n  layout: ").append(buildLayout(d).describe());
+        return sb.toString();
+    }
+
+    private static String describeSources(int s) {
+        StringBuilder sb = new StringBuilder(String.format(Locale.US, "0x%08x", s));
+        if ((s & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD)   sb.append(" gamepad");
+        if ((s & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) sb.append(" joystick");
+        if ((s & InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD)         sb.append(" dpad");
+        if ((s & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) sb.append(" keyboard");
+        if ((s & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE)       sb.append(" mouse");
+        if ((s & InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD) sb.append(" touchpad");
+        return sb.toString();
+    }
+
+    /**
+     * Short "gamepad" line for the bug report: every connected pad with ids and decided layout, or
+     * "(none connected)". Loads the saved mapping so a mapped trigger shows as it would in game.
+     */
+    public static String describeConnected(Context ctx) {
+        try {
+            GamepadMapping.load(ctx);
+            StringBuilder sb = new StringBuilder();
+            for (int id : InputDevice.getDeviceIds()) {
+                InputDevice d = InputDevice.getDevice(id);
+                if (!isPadDevice(d)) continue;
+                if (sb.length() > 0) sb.append(" ; ");
+                sb.append('"').append(d.getName()).append('"')
+                  .append(String.format(Locale.US, " %04x:%04x, ", d.getVendorId(), d.getProductId()))
+                  .append(buildLayout(d).describe());
+            }
+            return sb.length() == 0 ? "(none connected)" : sb.toString();
+        } catch (Throwable t) {
+            return "probe failed: " + t;
+        }
     }
 
     // ============================= per-frame loop =============================
@@ -313,17 +605,21 @@ public class GamepadHandler {
     public static boolean hasConnectedGamepad() {
         for (int id : InputDevice.getDeviceIds()) {
             try {
-                InputDevice device = InputDevice.getDevice(id);
-                if (device == null || device.isVirtual()) continue;
-                int sources = device.getSources();
-                boolean gamepad =
-                       (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
-                    || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
-                boolean hasMotion = device.getMotionRanges() != null
-                        && !device.getMotionRanges().isEmpty();
-                if (gamepad && hasMotion) return true;
+                if (isPadDevice(InputDevice.getDevice(id))) return true;
             } catch (Throwable ignored) {}
         }
         return false;
+    }
+
+    /** A real (non-virtual) gamepad/joystick with analog axes — see {@link #hasConnectedGamepad}. */
+    private static boolean isPadDevice(InputDevice device) {
+        if (device == null || device.isVirtual()) return false;
+        int sources = device.getSources();
+        boolean gamepad =
+               (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+            || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        boolean hasMotion = device.getMotionRanges() != null
+                && !device.getMotionRanges().isEmpty();
+        return gamepad && hasMotion;
     }
 }

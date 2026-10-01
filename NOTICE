@@ -52,7 +52,9 @@ Winlator X server      LGPL-2.1             Copyright (c) BrunoSX (brunodev85)
                        LGPL-2.1 (full text: LICENSES/LGPL-2.1.txt), which allows their use in
                        a GPL-3.0 program.
 
-The on-screen controls (app/src/main/java/com/valdroid/controls/) are derived from
+The on-screen controls (app/src/main/java/com/valdroid/controls/) and the physical
+gamepad mapping (app/src/main/java/com/valdroid/input/GamepadHandler.java,
+input/GamepadMapping.java and GamepadMapperActivity.java) are derived from
 Zomdroid (https://github.com/udarmolota/zomdroid, a fork of liamelui's Zomdroid),
 MIT licence. Original Zomdroid code Copyright (c) 2025 liamelui; touchpad, radial
 menu, scroll bar, mouse and WASD sticks and later changes Copyright (c) 2025-2026

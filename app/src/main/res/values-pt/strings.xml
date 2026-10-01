@@ -238,7 +238,7 @@ Na nuvem: %2$s
     <!-- Gamepad button remapper -->
     <string name="gamepad_mapper_settings_btn">Mapeamento do controle</string>
     <string name="gamepad_mapper_title">Mapeamento do controle</string>
-    <string name="gamepad_mapper_instructions">Corrija um controle com os botões trocados. Toque em Começar e depois pressione o botão físico que quiser para cada ação.</string>
+    <string name="gamepad_mapper_instructions">Corrija um controle com os botões trocados ou com gatilhos que movem a câmera. Toque em Começar e depois pressione o botão físico de cada controle mostrado. Em LT e RT, aperte o gatilho até o fim e solte.</string>
     <string name="gamepad_mapper_start">Começar</string>
     <string name="gamepad_mapper_reset">Restaurar padrões</string>
     <string name="gamepad_mapper_reset_done">Mapeamento restaurado</string>
@@ -246,16 +246,18 @@ Na nuvem: %2$s
     <string name="gamepad_mapper_done">Mapeamento salvo</string>
     <string name="gamepad_mapper_dup">Já está mapeado: pressione outro botão</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (girar)</item>
-        <item>LB — Afastar</item>
-        <item>RB — Aproximar</item>
-        <item>Select — Tab</item>
-        <item>Start — Próximo colono (.)</item>
-        <item>L3 — Shift (seleção múltipla)</item>
-        <item>R3 — Pressionar analógico direito (sem uso)</item>
+        <item>A</item>
+        <item>B</item>
+        <item>X</item>
+        <item>Y</item>
+        <item>LB (botão superior esquerdo)</item>
+        <item>RB (botão superior direito)</item>
+        <item>Select / Back</item>
+        <item>Start / Menu</item>
+        <item>L3 (pressionar analógico esquerdo)</item>
+        <item>R3 (pressionar analógico direito)</item>
+        <item>LT (gatilho esquerdo)</item>
+        <item>RT (gatilho direito)</item>
     </string-array>
     <string name="gfx_preset_label">Gráficos</string>
     <string name="gfx_preset_keep">Não mexer</string>

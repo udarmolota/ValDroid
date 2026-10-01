@@ -253,7 +253,7 @@ In the cloud: %2$s
     <!-- Gamepad button remapper -->
     <string name="gamepad_mapper_settings_btn">Gamepad mapping</string>
     <string name="gamepad_mapper_title">Gamepad mapping</string>
-    <string name="gamepad_mapper_instructions">Fix a controller with swapped buttons. Tap Start, then press the physical button you want for each action.</string>
+    <string name="gamepad_mapper_instructions">Fix a controller with swapped buttons, or triggers that move the camera. Tap Start, then press the physical button for each control shown. For LT and RT, press the trigger all the way and release it.</string>
     <string name="gamepad_mapper_start">Start</string>
     <string name="gamepad_mapper_reset">Reset to default</string>
     <string name="gamepad_mapper_reset_done">Mapping reset to default</string>
@@ -261,16 +261,18 @@ In the cloud: %2$s
     <string name="gamepad_mapper_done">Mapping saved</string>
     <string name="gamepad_mapper_dup">Already assigned — press another button</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (rotate)</item>
-        <item>LB — Zoom out</item>
-        <item>RB — Zoom in</item>
-        <item>Select — Tab</item>
-        <item>Start — Next colonist (.)</item>
-        <item>L3 — Shift (multi-select)</item>
-        <item>R3 — Right stick press (unused)</item>
+        <item>A</item>
+        <item>B</item>
+        <item>X</item>
+        <item>Y</item>
+        <item>LB (left bumper)</item>
+        <item>RB (right bumper)</item>
+        <item>Select / Back</item>
+        <item>Start / Menu</item>
+        <item>L3 (left stick press)</item>
+        <item>R3 (right stick press)</item>
+        <item>LT (left trigger)</item>
+        <item>RT (right trigger)</item>
     </string-array>
     <string name="gfx_preset_label">Graphics</string>
     <string name="gfx_preset_keep">Don&#8217;t touch</string>

@@ -731,6 +731,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         inputManager = (android.hardware.input.InputManager) getSystemService(INPUT_SERVICE);
         if (inputManager != null) inputManager.registerInputDeviceListener(deviceListener, null);
         refreshGamepadControls();                     // apply current connection state
+        // Axis layout of each connected pad into logcat (and so into launcher.log / bug reports):
+        // pads disagree on where the right stick and triggers live. Once per device, not per resume.
+        if (gamepad != null) gamepad.logConnectedGamepads("game start");
         ui.removeCallbacks(mouseLockTick);
         ui.post(mouseLockTick);
     }
@@ -837,9 +840,18 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private boolean lastPadConnected = false;
     private final android.hardware.input.InputManager.InputDeviceListener deviceListener =
         new android.hardware.input.InputManager.InputDeviceListener() {
-            @Override public void onInputDeviceAdded(int id)   { refreshGamepadControls(); }
-            @Override public void onInputDeviceRemoved(int id) { refreshGamepadControls(); }
-            @Override public void onInputDeviceChanged(int id) { refreshGamepadControls(); }
+            @Override public void onInputDeviceAdded(int id) {
+                if (gamepad != null) gamepad.onInputDeviceChanged(id, "connected");
+                refreshGamepadControls();
+            }
+            @Override public void onInputDeviceRemoved(int id) {
+                if (gamepad != null) gamepad.onInputDeviceRemoved(id);
+                refreshGamepadControls();
+            }
+            @Override public void onInputDeviceChanged(int id) {
+                if (gamepad != null) gamepad.onInputDeviceChanged(id, "changed");
+                refreshGamepadControls();
+            }
         };
 
     /** Hide the on-screen GAMEPAD elements when a physical gamepad connects (it feeds the same virtual

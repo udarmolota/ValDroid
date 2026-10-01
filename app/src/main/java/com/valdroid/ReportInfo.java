@@ -124,6 +124,9 @@ public final class ReportInfo {
         line(sb, "android", Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), abis "
                 + String.join(",", Build.SUPPORTED_ABIS) + ", page size " + pageSize);
         line(sb, "ram", ramSummary(ctx));
+        // Pads disagree on which axes are the right stick and the triggers; the full ranges are
+        // logged by GamepadHandler when the game starts or a pad connects.
+        line(sb, "gamepad", com.valdroid.input.GamepadHandler.describeConnected(ctx));
 
         // --- Build ---
         line(sb, "valdroid", buildId());
@@ -266,12 +269,17 @@ public final class ReportInfo {
      */
     static String gameVersion(GameInstance gi) {
         File dir = gi.getUserDataDir();
+        boolean anyLog = false;
         for (String name : new String[] { "Player.log", "Player-prev.log" }) {
             File f = new File(dir, name);
-            String v = grepFirst(f, GAME_VERSION, 300);
+            anyLog |= f.isFile();
+            // The line comes after Unity's start-up output (hundreds of "BC7 ... decompressing"
+            // warnings on GLES), ~700-900 lines in on real reports — a 300-line window always
+            // missed it. Stop at the first match, so this stays cheap.
+            String v = grepFirst(f, GAME_VERSION, 20000);
             if (v != null) return v + " (from " + name + ")";
         }
-        return "unknown (no Player.log yet)";
+        return anyLog ? "unknown (no version line in Player.log)" : "unknown (no Player.log yet)";
     }
 
     /** box64's own banner line ("Box64 arm64 v0.x.y <hash> with Dynarec built on ...") from its log. */
