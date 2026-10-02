@@ -990,6 +990,11 @@ public class GameLauncher {
             // Virtual evdev gamepad: SDL opens this path (box64 routes it to valdroid_pad.c) and
             // reports an Xbox 360 pad, so the game runs with its own controller UI and bindings.
             Os.setenv("SDL_JOYSTICK_DEVICE", com.valdroid.input.VirtualGamepad.DEVICE_PATH, true);
+            // ...and only that pad: no HIDAPI backend. box64 also refuses the guest every other
+            // /dev/input node and hidraw (wrappedlibc.c vd_is_physical_input_path) — on handhelds
+            // like the AYN Thor SDL otherwise found the physical controller too and every press
+            // arrived twice.
+            Os.setenv("SDL_JOYSTICK_HIDAPI", "0", true);
             // Force SDL to use our root visual by id (bypasses XMatchVisualInfo, which was failing to
             // match our depth-32 TrueColor visual → SDL added 0 displays → Unity crashed). See
             // memory rimworld_16_port.

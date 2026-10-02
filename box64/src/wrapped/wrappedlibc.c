@@ -1002,6 +1002,24 @@ extern __attribute__((weak)) int rd_pad_open(int flags);
 extern __attribute__((weak)) int rd_pad_is_fd(int fd);
 extern __attribute__((weak)) int rd_pad_ioctl(int fd, unsigned long req, void* arg);
 static int vd_is_pad_path(const char* p) { return p && rd_pad_path && !strcmp(p, rd_pad_path()); }
+// The guest must see ONLY the virtual pad. On gaming handhelds (AYN Thor, likely Retroid) the
+// physical controller's /dev/input/event* nodes are readable by apps, so the game's static SDL also
+// opened them directly and mapped them with its own (wrong) database: 2-3 pads, every press sent
+// twice (X also Y, LB also Select), triggers on the camera. The guest needs no physical input
+// device at all — keyboard, mouse and touch reach it through our X server — so refuse every
+// /dev/input node except the virtual pad, and hidraw (SDL's HIDAPI backend), as a normal phone
+// already does. Call after vd_is_pad_path. Logs each refused path once.
+static int vd_is_physical_input_path(const char* p)
+{
+    if(!p) return 0;
+    if(strncmp(p, "/dev/input/", 11) && strncmp(p, "/dev/hidraw", 11)) return 0;
+    static char seen[16][64];
+    static int nseen = 0;
+    for(int i = 0; i < nseen; i++) if(!strncmp(seen[i], p, sizeof(seen[i]) - 1)) return 1;
+    if(nseen < 16) { strncpy(seen[nseen], p, sizeof(seen[nseen]) - 1); seen[nseen][sizeof(seen[nseen]) - 1] = 0; nseen++; }
+    printf_log(LOG_NONE, "ValDroid: guest open of physical input device %s refused (virtual pad only)\n", p);
+    return 1;
+}
 static int vd_pad_is_fd(int fd) { return rd_pad_is_fd && rd_pad_is_fd(fd); }
 static int vd_pad_fake_stat(void* buf) {   // what SDL expects of /dev/input/eventN: a character device
     struct stat st; memset(&st, 0, sizeof(st));
@@ -2542,6 +2560,7 @@ static void CreateAuxvFile(int fd, uintptr_t* auxv)
 EXPORT int32_t my_open(x64emu_t* emu, void* pathname, int32_t flags, uint32_t mode)
 {
     if(vd_is_pad_path((const char*)pathname)) { int r = rd_pad_open ? rd_pad_open(flags) : -1; if(r<0) errno = ENOENT; return r; }
+    if(vd_is_physical_input_path((const char*)pathname)) { errno = EACCES; return -1; }
     if(isAndroidHiddenPath((const char*)pathname)) {
         errno = ENOENT;
         return -1;
@@ -2698,6 +2717,7 @@ EXPORT int32_t my___open(x64emu_t* emu, void* pathname, int32_t flags, uint32_t 
 EXPORT int32_t my_open64(x64emu_t* emu, void* pathname, int32_t flags, uint32_t mode)
 {
     if(vd_is_pad_path((const char*)pathname)) { int r = rd_pad_open ? rd_pad_open(flags) : -1; if(r<0) errno = ENOENT; return r; }
+    if(vd_is_physical_input_path((const char*)pathname)) { errno = EACCES; return -1; }
     if(isAndroidHiddenPath((const char*)pathname)) {
         errno = ENOENT;
         return -1;
