@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resource names Unity's player classes (unity-classes.jar) look up in the com.unity3d.player namespace. -->
+<resources>
+    <item type="id" name="unitySurfaceView" />
+    <string name="game_view_content_description">Game view</string>
+    <string name="FreeformWindowSize_maximize">maximize</string>
+    <string name="FreeformWindowOrientation_landscape">landscape</string>
+    <style name="BaseUnityTheme" parent="android:Theme.Material.NoActionBar.Fullscreen" />
+    <style name="UnityThemeSelector" parent="BaseUnityTheme">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

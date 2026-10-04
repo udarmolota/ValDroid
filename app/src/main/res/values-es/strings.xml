@@ -78,6 +78,10 @@ En la nube: %2$s
     <string name="compat_mode_hint">Actívalo si el juego no inicia (pantalla negra o se queda en la carga). Es un poco más lento, pero ayuda a que arranque en algunos dispositivos.</string>
     <string name="native_mono_label">Mono ARM64 nativo (experimental)</string>
     <string name="native_mono_hint">Ejecuta el código del propio juego de forma nativa, sin emulación x86: solo se emula el motor. Experimental: haz copia de tus partidas y desactívalo si algo falla.</string>
+    <string name="native_engine_label">Motor nativo (experimental)</string>
+    <string name="native_engine_hint">Ejecuta el juego en el propio motor Android de Unity, sin ninguna emulación: mucho más rápido, pero en fase temprana. Las partidas se comparten con el inicio normal. Experimental: haz copia de tus partidas.</string>
+    <string name="native_engine_preparing">Preparando el motor nativo…</string>
+    <string name="native_engine_failed">El motor nativo no pudo iniciarse: %1$s</string>
     <string name="native_mono_off_msg">El juego funcionará en el modo anterior, más lento. Si lo desactivaste por un problema, envíanos los registros: nos ayuda a solucionarlo.</string>
     <string name="haptic_label">Vibrar al pulsar un botón</string>
     <string name="audio_label">Sonido del juego</string>

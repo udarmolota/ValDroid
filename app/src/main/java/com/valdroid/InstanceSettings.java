@@ -279,6 +279,17 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "native_mono", v).apply();
     }
 
+    // --- Native engine (experimental): Unity's own ARM64 Android player instead of the Linux player
+    // under box64, the game's C# on ARM64 Mono through il2mono (com.valdroid.game.NativeEngine). Default
+    // OFF; the switch is shown only when the APK carries the native player module.
+    public boolean isNativeEngine() {
+        return p.getBoolean(pfx + "native_engine", false);
+    }
+
+    public void setNativeEngine(boolean v) {
+        p.edit().putBoolean(pfx + "native_engine", v).apply();
+    }
+
     // Mod support (BepInEx), the master switch on the Mods screen. Off by default: the loader is new,
     // and a player without mods should start exactly as before. Each mod's own on/off lives in the
     // file system (BepInEx/plugins vs plugins_off, see ModManager), not here.

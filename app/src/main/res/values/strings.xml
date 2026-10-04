@@ -76,6 +76,10 @@ In the cloud: %2$s
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
     <string name="native_mono_label">Native ARM64 Mono (experimental)</string>
     <string name="native_mono_hint">Runs the game\'s own code natively instead of through x86 emulation, so only the engine is emulated. Experimental: back up your saves first, and turn it off if something breaks.</string>
+    <string name="native_engine_label">Native engine (experimental)</string>
+    <string name="native_engine_hint">Runs the game on Unity\'s own Android engine with no emulation at all: much faster, but early. Your saves are shared with the normal launch. Experimental: back up your saves first.</string>
+    <string name="native_engine_preparing">Preparing the native engine…</string>
+    <string name="native_engine_failed">Native engine could not start: %1$s</string>
     <string name="native_mono_off_msg">The game will run in the previous, slower mode. If you turned it off because of a problem, please send us the logs — it helps us fix it.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>

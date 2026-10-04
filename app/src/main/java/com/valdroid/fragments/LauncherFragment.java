@@ -381,6 +381,11 @@ public class LauncherFragment extends Fragment {
         LauncherPreferences.requireSingleton().setLastInstanceName(gi.getName());
         clearLog();
 
+        if (com.valdroid.game.NativeEngine.isAvailable() && gi.settings().isNativeEngine()) {
+            startNativeEngine(gi);
+            return;
+        }
+
         android.content.Intent gameIntent = new android.content.Intent(requireContext(), GameActivity.class);
         gameIntent.putExtra(GameActivity.EXTRA_INSTANCE_NAME, gi.getName());   // per-instance scale + controls
         requireContext().startActivity(gameIntent);
@@ -396,6 +401,25 @@ public class LauncherFragment extends Fragment {
                 Log.e(TAG, "Launch failed", e);
                 com.valdroid.LauncherLog.line("LAUNCH FAILED: " + Log.getStackTraceString(e));
                 appendLog("ERROR: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    // Native engine (experimental): prepare the instance off the UI thread (first time builds the data
+    // archive, ~100 MB), then hand over to the native player's own process.
+    private void startNativeEngine(GameInstance gi) {
+        android.content.Context app = requireContext().getApplicationContext();
+        android.widget.Toast.makeText(app, R.string.native_engine_preparing, android.widget.Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                android.content.Intent intent = com.valdroid.game.NativeEngine.prepare(app, gi);
+                app.startActivity(intent);
+            } catch (Throwable e) {
+                Log.e(TAG, "Native engine launch failed", e);
+                com.valdroid.LauncherLog.line("NATIVE ENGINE FAILED: " + Log.getStackTraceString(e));
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                        android.widget.Toast.makeText(app, app.getString(R.string.native_engine_failed, e.getMessage()),
+                                android.widget.Toast.LENGTH_LONG).show());
             }
         }).start();
     }

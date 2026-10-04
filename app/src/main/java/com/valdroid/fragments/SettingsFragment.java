@@ -130,6 +130,14 @@ public class SettingsFragment extends Fragment {
                         .show();
             }
         });
+        // Native engine (experimental): only in APKs built with the native Unity player module.
+        Switch swNativeEngine = view.findViewById(R.id.sw_native_engine);
+        View tvNativeEngineHint = view.findViewById(R.id.tv_native_engine_hint);
+        boolean nativeEngineOffered = com.valdroid.game.NativeEngine.isAvailable();
+        swNativeEngine.setVisibility(nativeEngineOffered ? View.VISIBLE : View.GONE);
+        tvNativeEngineHint.setVisibility(nativeEngineOffered ? View.VISIBLE : View.GONE);
+        swNativeEngine.setChecked(nativeEngineOffered && inst.isNativeEngine());
+        swNativeEngine.setOnCheckedChangeListener((btn, checked) -> inst.setNativeEngine(checked));
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // In-game overlay — GLOBAL: off / classic FPS counter / full performance bar. Shows the true

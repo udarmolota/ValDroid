@@ -33,3 +33,8 @@ box64/docs/
 box64/debian/changelog
 # ...except the repository front page
 !/README.md
+
+# Native Unity player: Unity binaries prepared by tools/unity-native/prepare_unity_module.sh
+/unity/prepared/
+/unity/.cxx/
+/unity/build/

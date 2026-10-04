@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />
+
+    <application>
+        <!-- Unity player settings read by Unity's Java side. -->
+        <meta-data android:name="unity.splash-mode" android:value="0" />
+        <meta-data android:name="unity.splash-enable" android:value="False" />
+        <meta-data android:name="unity.launch-fullscreen" android:value="True" />
+        <meta-data android:name="unity.render-outside-safearea" android:value="True" />
+        <meta-data android:name="notch.config" android:value="portrait|landscape" />
+        <meta-data android:name="unity.auto-report-fully-drawn" android:value="true" />
+        <meta-data android:name="unity.auto-set-game-state" android:value="true" />
+
+        <!-- Own process: the Unity engine never shares a process with the launcher or box64.
+             exported only while it is started by hand (adb) during the experiment. -->
+        <activity
+            android:name="com.valdroid.nativeunity.NativeUnityActivity"
+            android:process=":unity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:hardwareAccelerated="false"
+            android:resizeableActivity="false"
+            android:theme="@style/UnityThemeSelector"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density">
+            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+            <meta-data android:name="notch_support" android:value="true" />
+        </activity>
+    </application>
+</manifest>

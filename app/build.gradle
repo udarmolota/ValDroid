@@ -76,6 +76,12 @@ android {
         }
         debug {
             jniDebuggable true
+            // With the experimental native Unity player module, the debug build installs next to
+            // the released ValDroid (different signing key) instead of failing to replace it.
+            if (rootProject.file('unity/prepared').isDirectory()) {
+                applicationIdSuffix '.nativeunity'
+                versionNameSuffix '-native'
+            }
         }
     }
 
@@ -100,6 +106,12 @@ dependencies {
     // System.load(libfmod) aborts with ClassNotFoundException. Used by the offline FSB5 audio decoder
     // (FmodDecodeService, ":fmoddec" process). From the shared Zomdroid FMOD bundle.
     implementation files('libs/fmod.jar')
+
+    // Native Unity player (experimental, ":unity" process). Present only when unity/prepared exists
+    // (tools/unity-native/prepare_unity_module.sh), see settings.gradle.kts.
+    if (rootProject.findProject(':unity') != null) {
+        implementation project(':unity')
+    }
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.activity:activity:1.8.2'

@@ -626,6 +626,25 @@
               android:visibility="gone"
               android:text="@string/native_mono_hint" />
 
+          <Switch
+              android:id="@+id/sw_native_engine"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:textSize="14sp"
+              android:visibility="gone"
+              android:text="@string/native_engine_label" />
+
+          <TextView
+              android:id="@+id/tv_native_engine_hint"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="2dp"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:alpha="0.7"
+              android:visibility="gone"
+              android:text="@string/native_engine_hint" />
+
           <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
                them (set GONE in code). Do not remove. -->
           <Button
