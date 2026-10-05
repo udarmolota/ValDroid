@@ -311,6 +311,8 @@ public final class LogExporter {
         // The setting AND what box64 really loaded in the last launch: a failed native load falls back
         // to the emulated x86 Mono silently, and only this line would show it.
         String monoStatus = com.valdroid.game.NativeMono.readStatus(gi);
+        int engine = s.getEngine();
+        line(sb, "engine", engine + "   (0 box64, 1 box64 + native Mono, 2 native engine)");
         line(sb, "native mono", s.isNativeMono()
                 + (monoStatus != null ? " (last launch: " + monoStatus + ")" : ""));
         // Whether the game ran modded, and with what — the first thing to know about a bug report.

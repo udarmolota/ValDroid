@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import com.valdroid.LauncherPreferences.Renderer;
 import com.valdroid.LauncherPreferences.VulkanDriverOption;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -266,28 +267,59 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "compat_mode", v).apply();
     }
 
-    // --- Native ARM64 Mono (experimental, RimWorld 1.6 only): the game's C# code runs on a native ARM64
-    // build of Unity's Mono instead of the emulated x86_64 one (see com.valdroid.game.NativeMono and
-    // box64 wrappedlibmonobdwgc.c). Default ON: the value is only stored once the player flips the
-    // switch, so everyone who never touched it gets the native runtime. The switch is only shown (and
-    // the setting only used) for a 1.6 instance when the runtime is packaged in this APK.
+    // --- Engine: how the game runs (Settings → Engine).
+    //   ENGINE_BOX64       the Linux player and the game's C# both under box64 (x86 Mono);
+    //   ENGINE_BOX64_MONO  the Linux player under box64, the C# on our native ARM64 Mono
+    //                      (com.valdroid.game.NativeMono, box64 wrappedlibmonobdwgc.c);
+    //   ENGINE_NATIVE      Unity's own ARM64 Android player, the C# on ARM64 Mono through il2mono
+    //                      (com.valdroid.game.NativeEngine; only in APKs built with that module).
+    // Mods (BepInEx) need one of the last two.
+    public static final int ENGINE_BOX64 = 0, ENGINE_BOX64_MONO = 1, ENGINE_NATIVE = 2;
+
+    /**
+     * The chosen engine. An instance from before the choice existed keeps what it ran with: its two
+     * old switches ("native_mono", default on, and "native_engine"). A new one starts from what suits
+     * the phone: the native engine on Adreno (Snapdragon), box64 + native Mono elsewhere (Mali and
+     * the rest, until the native engine is proven there). The decision is stored the first time, so
+     * it does not change behind the player's back.
+     */
+    public int getEngine() {
+        if (p.contains(pfx + "engine")) return p.getInt(pfx + "engine", ENGINE_BOX64_MONO);
+        int engine;
+        if (p.getBoolean(pfx + "native_engine", false)) engine = ENGINE_NATIVE;
+        else if (p.contains(pfx + "native_mono") || hasBeenPlayed())
+            engine = p.getBoolean(pfx + "native_mono", true) ? ENGINE_BOX64_MONO : ENGINE_BOX64;
+        else engine = defaultEngine();
+        setEngine(engine);
+        return engine;
+    }
+
+    public void setEngine(int engine) {
+        p.edit().putInt(pfx + "engine", engine).apply();
+    }
+
+    private static int defaultEngine() {
+        if (com.valdroid.game.NativeEngine.isAvailable() && GpuInfo.query().adrenoModel > 0) return ENGINE_NATIVE;
+        return ENGINE_BOX64_MONO;
+    }
+
+    /** Whether the instance was launched before: each launch leaves its log in the instance folder. */
+    private boolean hasBeenPlayed() {
+        AppStorage st = AppStorage.getSingleton();
+        if (st == null) return true;   // cannot tell: keep the old default rather than switch engines
+        File dir = st.getInstanceDir(instanceName);
+        return new File(dir, "rimdroid.log").exists() || new File(dir, "box64.log").exists()
+                || new File(dir, "native_engine").exists();
+    }
+
+    /** The game's C# runs on our native ARM64 Mono under box64 (box64 launch only). */
     public boolean isNativeMono() {
-        return p.getBoolean(pfx + "native_mono", true);
+        return getEngine() == ENGINE_BOX64_MONO;
     }
 
-    public void setNativeMono(boolean v) {
-        p.edit().putBoolean(pfx + "native_mono", v).apply();
-    }
-
-    // --- Native engine (experimental): Unity's own ARM64 Android player instead of the Linux player
-    // under box64, the game's C# on ARM64 Mono through il2mono (com.valdroid.game.NativeEngine). Default
-    // OFF; the switch is shown only when the APK carries the native player module.
+    /** Unity's own Android player (the native engine) runs the game. */
     public boolean isNativeEngine() {
-        return p.getBoolean(pfx + "native_engine", false);
-    }
-
-    public void setNativeEngine(boolean v) {
-        p.edit().putBoolean(pfx + "native_engine", v).apply();
+        return getEngine() == ENGINE_NATIVE;
     }
 
     // Mod support (BepInEx), the master switch on the Mods screen. Off by default: the loader is new,
@@ -386,7 +418,9 @@ public class InstanceSettings {
                 .remove(pfx + "debug")
                 .remove(pfx + "interpreter")   // retired setting; still cleaned from old installs
                 .remove(pfx + "compat_mode")
+                .remove(pfx + "engine")
                 .remove(pfx + "native_mono")
+                .remove(pfx + "native_engine")
                 .remove(pfx + "native_mono_launch_ms")
                 .remove(pfx + "native_mono_failures")
                 .remove(pfx + "mod_support")

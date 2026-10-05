@@ -10,6 +10,92 @@
     android:orientation="vertical"
     android:padding="12dp">
 
+    <!-- ============================ ENGINE ============================ -->
+    <!-- Full emulation / box64 + native Mono / native engine. SettingsFragment hides the options this
+         APK or instance cannot run (native Mono: the runtime is packaged; native engine: the APK carries
+         the native player module), and the whole card when only one is left. First: the choice decides
+         which of the settings below apply. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_engine"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/engine_label"
+            android:layout_marginBottom="6dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_engine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_engine_box64"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:text="@string/engine_box64" />
+
+            <TextView
+                android:id="@+id/tv_engine_box64_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/engine_box64_hint" />
+
+            <RadioButton
+                android:id="@+id/rb_engine_box64_mono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:text="@string/engine_box64_mono" />
+
+            <TextView
+                android:id="@+id/tv_engine_box64_mono_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/engine_box64_mono_hint" />
+
+            <RadioButton
+                android:id="@+id/rb_engine_native"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:text="@string/engine_native" />
+
+            <TextView
+                android:id="@+id/tv_engine_native_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/engine_native_hint" />
+        </RadioGroup>
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- ============================ VIDEO (renderer + driver) ============================ -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -60,6 +146,16 @@
         </RadioGroup>
 
         <TextView
+            android:id="@+id/tv_native_renderer_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:alpha="0.7"
+            android:visibility="gone"
+            android:text="@string/engine_native_renderer_note" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/vulkan_driver"
@@ -78,6 +174,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tv_native_driver_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:alpha="0.7"
+            android:visibility="gone"
+            android:text="@string/engine_native_driver_note" />
 
         <Button
             android:id="@+id/btn_recommend_driver"
@@ -604,46 +710,6 @@
               android:textAppearance="?attr/textAppearanceBodySmall"
               android:alpha="0.7"
               android:text="@string/compat_mode_hint" />
-
-          <!-- Native ARM64 Mono (experimental). Shown by SettingsFragment only for a RimWorld 1.6
-               instance when the runtime is packaged in this APK. -->
-          <Switch
-              android:id="@+id/sw_native_mono"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginTop="16dp"
-              android:textSize="14sp"
-              android:visibility="gone"
-              android:text="@string/native_mono_label" />
-
-          <TextView
-              android:id="@+id/tv_native_mono_hint"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginTop="2dp"
-              android:textAppearance="?attr/textAppearanceBodySmall"
-              android:alpha="0.7"
-              android:visibility="gone"
-              android:text="@string/native_mono_hint" />
-
-          <Switch
-              android:id="@+id/sw_native_engine"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginTop="16dp"
-              android:textSize="14sp"
-              android:visibility="gone"
-              android:text="@string/native_engine_label" />
-
-          <TextView
-              android:id="@+id/tv_native_engine_hint"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginTop="2dp"
-              android:textAppearance="?attr/textAppearanceBodySmall"
-              android:alpha="0.7"
-              android:visibility="gone"
-              android:text="@string/native_engine_hint" />
 
           <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
                them (set GONE in code). Do not remove. -->

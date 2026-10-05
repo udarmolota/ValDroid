@@ -135,7 +135,9 @@ public class ModsFragment extends Fragment {
         binding = false;
         btnPick.setEnabled(has && !installing);
         updateInstallEnabled();
-        tvNativeWarning.setVisibility(on && !gi.settings().isNativeMono() ? View.VISIBLE : View.GONE);
+        // Mods load on native Mono or the native engine, not under full emulation.
+        boolean fullEmulation = has && gi.settings().getEngine() == com.valdroid.InstanceSettings.ENGINE_BOX64;
+        tvNativeWarning.setVisibility(on && fullEmulation ? View.VISIBLE : View.GONE);
 
         llList.removeAllViews();
         List<ModManager.Mod> mods = has ? ModManager.list(new File(gi.getGamePath())) : new ArrayList<>();
