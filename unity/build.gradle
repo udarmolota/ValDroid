@@ -3,8 +3,8 @@
 // docs/research/unity-arm64-stepC-plan.md and docs/research/unity-native-integration-plan.md.
 //
 // Unity's binaries are not in the repository: tools/unity-native/prepare_unity_module.sh extracts them
-// from Unity's Android Support package into unity/prepared/ (git-ignored). settings.gradle includes
-// this module only when that folder exists, so builds without it are unaffected.
+// from Unity's Android Support package into unity/prepared/ (git-ignored). settings.gradle.kts includes
+// this module only with nativeEngine=true and that folder present, so other builds are unaffected.
 plugins {
     id 'com.android.library'
 }
@@ -25,6 +25,11 @@ android {
                 arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
+    }
+
+    // games-frame-pacing's prefab package, for Unity's Swappy wrapper (src/main/cpp/CMakeLists.txt).
+    buildFeatures {
+        prefab true
     }
 
     compileOptions {

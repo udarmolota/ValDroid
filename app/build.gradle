@@ -78,7 +78,7 @@ android {
             jniDebuggable true
             // With the experimental native Unity player module, the debug build installs next to
             // the released ValDroid (different signing key) instead of failing to replace it.
-            if (rootProject.file('unity/prepared').isDirectory()) {
+            if (rootProject.findProject(':unity') != null) {
                 applicationIdSuffix '.nativeunity'
                 versionNameSuffix '-native'
             }
@@ -107,8 +107,8 @@ dependencies {
     // (FmodDecodeService, ":fmoddec" process). From the shared Zomdroid FMOD bundle.
     implementation files('libs/fmod.jar')
 
-    // Native Unity player (experimental, ":unity" process). Present only when unity/prepared exists
-    // (tools/unity-native/prepare_unity_module.sh), see settings.gradle.kts.
+    // Native Unity player (experimental, ":unity" process). Present only when the build asks for it
+    // (nativeEngine=true) and unity/prepared exists, see settings.gradle.kts.
     if (rootProject.findProject(':unity') != null) {
         implementation project(':unity')
     }

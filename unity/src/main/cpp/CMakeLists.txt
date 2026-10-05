@@ -21,3 +21,17 @@ target_link_options(il2cpp PRIVATE -Wl,--no-undefined)
 # ARM64 stand-in for Valheim's x86_64 DiskSpacePlugin (checked before every save).
 add_library(DiskSpacePlugin SHARED plugins/disk_space_plugin.c)
 target_compile_options(DiskSpacePlugin PRIVATE -fvisibility=hidden -Wall)
+
+# Unity's Swappy wrapper (frame pacing), loaded by libunity when present. Its source comes with Unity's
+# Android Support package and is copied by prepare_unity_module.sh into unity/prepared/swappy; built as
+# Unity's own CMake file for it does.
+set(SWAPPY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../../../prepared/swappy)
+if(EXISTS ${SWAPPY_SRC}/UnitySwappyWrapper.cpp)
+    enable_language(CXX)
+    find_package(games-frame-pacing REQUIRED CONFIG)
+    add_library(swappywrapper SHARED ${SWAPPY_SRC}/UnitySwappyWrapper.cpp)
+    target_compile_definitions(swappywrapper PRIVATE EXTERNAL_FRAME_PACING_CODE)
+    target_include_directories(swappywrapper PRIVATE ${SWAPPY_SRC})
+    target_link_options(swappywrapper PRIVATE -Wl,--wrap=__android_log_print)
+    target_link_libraries(swappywrapper android games-frame-pacing::swappy_static log)
+endif()

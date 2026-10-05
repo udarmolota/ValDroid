@@ -200,6 +200,10 @@ public final class NativeEngine {
         File stamp = new File(dir, ".stamp");
         if (readStamp(stamp) == apkStamp && apkStamp != 0) return dir;
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+        // Start empty: an assembly a newer APK no longer carries must not stay behind and shadow the
+        // game's own copy (the Android Input System builds did until 2026-10).
+        File[] old = dir.listFiles();
+        if (old != null) for (File f : old) if (f.isFile() && !f.delete()) throw new IOException("cannot delete " + f);
         AssetManager assets = context.getAssets();
         String[] names = assets.list(MANAGED_OVERRIDES_ASSETS);
         if (names == null || names.length == 0) throw new IOException("no managed overrides in the APK");
