@@ -775,8 +775,10 @@ public class ControlsEditorActivity extends AppCompatActivity {
                     binding.elementStickBindingTv.setVisibility(View.GONE);
                     binding.elementStickBindingS.setVisibility(View.GONE);
 
-                } else if (element.getType() == AbstractControlElement.Type.STICK_WASD
-                        || element.getType() == AbstractControlElement.Type.STICK_MOUSE) {
+                } else {
+                    // No bindings to edit: STICK_WASD / STICK_MOUSE (fixed keys), TOUCHPAD (a tap is
+                    // always a left click), SCROLL_BAR. Clear the panel, or the previous element's
+                    // binding rows stay on screen and still edit THAT element.
                     binding.elementBindingsTv.setVisibility(View.GONE);
                     binding.elementBindingsAddIb.setVisibility(View.GONE);
                     binding.elementBindingsContainerLl.removeAllViews();
