@@ -52,9 +52,9 @@
     <li><a href="#picture">Imagen y fotogramas</a></li>
     <li><a href="#controls">Controles</a></li>
     <li><a href="#saves">Partidas guardadas</a></li>
+    <li><a href="#engine">Motor</a></li>
     <li><a href="#renderers">Controladores gráficos</a></li>
     <li><a href="#mods">Mods</a></li>
-    <li><a href="#native-mono">Mono ARM64 nativo</a></li>
     <li><a href="#compat-mode">Ajustes avanzados</a></li>
     <li><a href="#performance">Sacar el máximo rendimiento</a></li>
     <li><a href="#known-issues">Problemas conocidos</a></li>
@@ -170,30 +170,37 @@
 
 <section id="picture">
     <h2>Imagen y fotogramas</h2>
-    <p>Todo esto está en los ajustes de la instancia (engranaje), tarjeta <b>Vídeo</b>.</p>
+    <p>Todo esto está en los ajustes de la instancia (icono de engranaje).</p>
     <ul>
-        <li><b>Gráficos</b> escribe en el juego un conjunto de ajustes antes de iniciarlo, pensado
-            para la emulación: sin teselación, sin sombras y sin distancia de dibujado extra, que es
-            lo que más cuesta aquí. <b>Baja</b> mantiene los efectos que la GPU hace casi gratis
-            (antialiasing, bloom, rayos de sol); <b>Muy baja</b> también los quita y dibuja el mundo
-            a menor resolución interna. <b>No tocar</b> deja lo que hayas puesto en el juego.</li>
-        <li><b>Resolución de renderizado</b> fija el tamaño de la ventana del juego. Un porcentaje
-            menor da más FPS y una interfaz más grande; el 100% es lo más nítido.</li>
-        <li><b>Calidad de texturas</b> reduce las texturas para ahorrar memoria: <b>Baja</b> parte a
-            la mitad las más grandes, <b>Muy baja</b> las deja en una cuarta parte. Ahorra unos
-            cientos de MB de memoria de vídeo, útil en teléfonos con menos RAM, a cambio de algo de
-            nitidez de cerca.</li>
-        <li><b>Caché de shaders</b> (activado por defecto) guarda los shaders ya compilados en el
-            teléfono, así un enemigo o un efecto nuevo solo da un tirón la primerísima vez que lo
-            ves, no en cada sesión. Desactívalo si algo se dibuja mal.</li>
-        <li><b>Mostrar contador de FPS</b> pone la tasa de fotogramas arriba a la izquierda.</li>
-        <li><b>Límite de fotogramas</b> (30, 60 o sin límite) suaviza los altibajos. Unos 30
-            estables suelen sentarse mejor que saltar entre 25 y 60.</li>
+        <li><b>Resolución de renderizado</b> (su propia tarjeta) fija el tamaño de la imagen del
+            juego. Las opciones se muestran en píxeles para tu pantalla; una más pequeña da más FPS
+            y una interfaz más grande. <b>Bordes negros 1280×720</b> mantiene una imagen clásica
+            16:9 con franjas a los lados.</li>
+        <li><b>Gráficos</b>: el juego arranca en <b>Muy baja</b>, un perfil ajustado para estos
+            teléfonos: sin teselación, sin sombras y sin distancia de dibujado extra, que es lo que
+            más cuesta aquí. Después puedes ajustar los gráficos en los ajustes del propio juego; el
+            lanzador ya no los toca. <b>Muy baja</b> o <b>Baja</b> (mantiene antialiasing, bloom y
+            rayos de sol) devuelve los ajustes a ese perfil en el siguiente inicio; un botón gris
+            significa que ya está puesto.</li>
+        <li>Las texturas se <b>reducen automáticamente</b>: las más grandes se encogen para ahorrar
+            memoria de vídeo. No hay nada que ajustar.</li>
+        <li><b>Caché de shaders</b> (tarjeta <b>Compresión de texturas</b>, activada por defecto)
+            guarda los shaders compilados en el teléfono, así un enemigo o efecto nuevo solo da
+            tirones la primera vez que lo ves, no en cada sesión. Desactívala si algo se dibuja mal.
+            Pertenece a MobileGlues, igual que <b>Activar compresión ETC2</b> a su lado.</li>
+        <li><b>En pantalla durante el juego</b> (tarjeta <b>Fluidez</b>): <b>No</b>, <b>FPS</b> (los
+            fotogramas en la esquina superior izquierda) o <b>Info completa</b> (una barra arriba
+            con los fotogramas y un gráfico, la carga de GPU y CPU, la memoria y la
+            temperatura).</li>
+        <li><b>Límite de FPS</b> (tarjeta <b>Fluidez</b>): <b>Sin límite</b>, <b>Económico
+            (~30)</b>, <b>Equilibrado (~40)</b> o <b>Fluido (~60)</b>. El número exacto se elige
+            según tu pantalla y se muestra debajo. Un ritmo estable se siente más suave que uno que
+            salta, y el teléfono se calienta menos y mantiene su velocidad más tiempo.</li>
     </ul>
     <p>
-        Cambia la resolución en el <b>lanzador</b>, no en el juego: el lanzador inicia Valheim al
-        tamaño de su ventana, así que la lista de resoluciones del juego no hace nada (y muestra
-        <code>0x0</code>).
+        Cambia la resolución en el <b>lanzador</b>, no en el juego: el lanzador inicia Valheim en
+        el tamaño elegido, así que la lista de resoluciones del juego no tiene efecto (y muestra
+        <code>0x0</code>). Estos ajustes se aplican a cualquier <a href="#engine">motor</a>.
     </p>
 </section>
 
@@ -330,11 +337,59 @@
 
 <hr>
 
+<section id="engine">
+    <h2>Motor</h2>
+    <p>
+        En los ajustes de la instancia (icono de engranaje), la primera tarjeta, <b>Motor</b>.
+        Decide cómo se ejecuta el juego y, con ello, cuáles de los demás ajustes se aplican.
+    </p>
+    <ul>
+        <li><b>Emulación completa (box64)</b> — la versión de PC se ejecuta tal cual, toda con
+            emulación x86. La más compatible y la más lenta. Los mods no se cargan.</li>
+        <li><b>box64 + Mono nativo</b> — se emula el motor Unity, pero el código del propio juego
+            (todo lo escrito en C#) se ejecuta directamente en el procesador del teléfono. Mucho más
+            rápido en zonas cargadas; los mods funcionan.</li>
+        <li><b>Motor nativo (experimental)</b> — no se emula nada: el propio motor Android de Unity
+            ejecuta el juego. El más rápido, y la imagen es más nítida porque las texturas no se
+            vuelven a comprimir. Solo aparece en las versiones que lo incluyen.</li>
+    </ul>
+    <p>
+        Una instancia nueva empieza con el motor nativo en teléfonos Snapdragon (Adreno) y con
+        box64 + Mono nativo en todos los demás. Las instancias de versiones anteriores conservan lo
+        que usaban. Las partidas, los ajustes del propio juego, los controles en pantalla y los mods
+        son los mismos en los tres, así que puedes cambiar cuando quieras sin perder nada.
+    </p>
+    <h3>Motor nativo</h3>
+    <ul>
+        <li>Siempre dibuja con <b>Vulkan</b>, con el controlador del propio teléfono. Mientras está
+            elegido, el renderizador y el controlador Vulkan (tarjeta <b>Vídeo</b>), las cachés de
+            shaders y ETC2 y el modo de compatibilidad aparecen en gris: no se aplican a él.</li>
+        <li>La resolución, el modo de fotogramas, el panel de rendimiento, la imagen invertida y los
+            controles en pantalla funcionan como siempre. Las texturas siempre se reducen un
+            nivel.</li>
+        <li>El primer inicio después de instalar o actualizar ValDroid tarda unos segundos más: el
+            lanzador prepara los datos del juego para él (unos 100 MB).</li>
+        <li>Los mods funcionan, salvo las partes de un mod que traen sus propias bibliotecas x86
+            (archivos .so): sin emulación no se pueden cargar.</li>
+        <li>Aquí el límite es la <b>GPU</b>, no el procesador. Si los fotogramas bajan en escenas
+            pesadas, desactiva primero en el juego el SSAO, las sombras de luces puntuales y los
+            rayos de sol.</li>
+        <li>En GPU Mali aún no está probado y puede no arrancar. En ese caso elige
+            <b>box64 + Mono nativo</b>.</li>
+    </ul>
+</section>
+
+<hr>
+
 <section id="renderers">
     <h2>Controladores gráficos</h2>
     <p>
         El renderizador se elige en los ajustes de la instancia (engranaje), tarjeta <b>Vídeo</b>.
         Hay dos.
+    </p>
+    <p>
+        Estos ajustes se aplican a los dos motores con box64. El <a href="#engine">motor nativo</a>
+        siempre dibuja con Vulkan, con el controlador del propio teléfono.
     </p>
     <ul>
         <li><b>MobileGlues</b> — el predeterminado. El juego usa OpenGL y MobileGlues lo traduce al
@@ -374,7 +429,7 @@
     <ul>
         <li>Elige la instancia arriba y activa <b>Soporte de mods (BepInEx)</b>: carga BepInEx al
             iniciar el juego y, con él, los mods activados abajo.</li>
-        <li>Los mods solo funcionan con <a href="#native-mono">Mono ARM64 nativo</a> activado.</li>
+        <li>Los mods funcionan con <b>box64 + Mono nativo</b> y con el <b>motor nativo</b>, no con la emulación completa (ver <a href="#engine">Motor</a>).</li>
         <li>Para instalar un mod, toca <b>Elegir archivo del mod (zip)</b>, selecciona el .zip y toca
             <b>Instalar</b>.</li>
         <li>Cada mod instalado tiene su propio interruptor para activarlo o desactivarlo.</li>
@@ -384,20 +439,6 @@
 </section>
 
 <hr>
-
-<section id="native-mono">
-    <h2>Mono ARM64 nativo</h2>
-    <p>En los ajustes de la instancia, tarjeta <b>Avanzado</b>. Activado por defecto.</p>
-    <p>
-        El juego es una compilación Linux x86_64, así que ValDroid lo emula. Con este interruptor,
-        el código propio del juego (todo lo escrito en C#) se ejecuta <b>directamente en el
-        procesador del teléfono</b> y solo se emula el motor Unity.
-    </p>
-    <p>
-        Si algo va mal, desactívalo: el juego vuelve a la emulación completa. Tus partidas no se ven
-        afectadas, se cargan en ambos modos.
-    </p>
-</section>
 
 <section id="compat-mode">
     <h2>Ajustes avanzados</h2>
@@ -423,6 +464,11 @@
         que añade objetos o pasadas a un fotograma — sombras, teselación, distancia de dibujado,
         vegetación — cuesta mucho más que la resolución o el tamaño de las texturas.
     </p>
+    <p>
+        Esto se refiere a los dos motores con box64. Con el <a href="#engine">motor nativo</a> no se
+        emula nada y el límite pasa a ser la GPU: baja primero los efectos pesados (SSAO, sombras de
+        luces puntuales, rayos de sol).
+    </p>
     <ul>
         <li>Comprueba primero el <b>perfil de rendimiento</b> del teléfono. En Samsung, un perfil
             como <i>Ligero</i> en los ajustes de batería limita el procesador y la GPU a casi la
@@ -430,10 +476,10 @@
             <b>Estándar</b> y activa el modo juego del teléfono para ValDroid: Samsung Game Booster,
             Xiaomi/POCO Game Turbo, Realme/OPPO/OnePlus Game Space, vivo/iQOO Ultra Game Mode,
             Infinix/Tecno Game Mode.</li>
-        <li>Usa el preajuste <b>Gráficos</b> (tarjeta Vídeo). Si prefieres ajustarlo en el juego, lo
+        <li>Usa el preajuste <b>Gráficos</b> (su propia tarjeta). Si prefieres ajustarlo en el juego, lo
             primero que hay que desactivar es la <b>teselación</b>.</li>
-        <li>Baja la <b>Resolución de renderizado</b> — 60–72% es un buen rango — y pon un
-            <b>Límite de fotogramas</b> para que la tasa se mantenga estable.</li>
+        <li>Baja la <b>Resolución de renderizado</b> — los tamaños aparecen en píxeles; los del medio son un buen equilibrio — y pon un
+            <b>Límite de FPS</b> para que la tasa se mantenga estable.</li>
         <li>El teléfono se calienta, y cualquier teléfono se frena a sí mismo cuando eso pasa. Uno
             frío puede ir bastante más rápido que ese mismo teléfono veinte minutos después; quitar
             la funda y estar en una habitación fresca ayuda más de lo que parece.</li>

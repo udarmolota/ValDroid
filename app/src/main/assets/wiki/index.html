@@ -52,9 +52,9 @@
     <li><a href="#picture">Picture and frame rate</a></li>
     <li><a href="#controls">Controls</a></li>
     <li><a href="#saves">Saves</a></li>
+    <li><a href="#engine">Engine</a></li>
     <li><a href="#renderers">Graphics drivers</a></li>
     <li><a href="#mods">Mods</a></li>
-    <li><a href="#native-mono">Native ARM64 Mono</a></li>
     <li><a href="#compat-mode">Advanced settings</a></li>
     <li><a href="#performance">Getting the best performance</a></li>
     <li><a href="#known-issues">Known issues</a></li>
@@ -163,29 +163,36 @@
 
 <section id="picture">
     <h2>Picture and frame rate</h2>
-    <p>All of these are in the instance settings (gear icon), card <b>Video</b>.</p>
+    <p>All of these are in the instance settings (gear icon).</p>
     <ul>
-        <li><b>Graphics</b> writes a set of in-game graphics settings before the game starts, tuned
-            for emulation: no tessellation, no shadows, no extra draw distance — those cost the most
-            here. <b>Low</b> keeps the effects the GPU handles for free (antialiasing, bloom, sun
-            shafts); <b>Very low</b> drops them too and renders the world at a lower internal
-            resolution. <b>Don't touch</b> leaves whatever you set inside the game.</li>
-        <li><b>Render resolution</b> sets the size of the game window. A lower percentage gives more
-            FPS and a bigger interface; 100% is the sharpest.</li>
-        <li><b>Texture quality</b> shrinks textures to save memory: <b>Low</b> halves the biggest
-            ones, <b>Ultra low</b> quarters them. It saves a few hundred MB of video memory, which
-            matters on phones with less RAM, and costs some sharpness up close.</li>
-        <li><b>Shader cache</b> (on by default) keeps compiled shaders on the phone, so a new enemy
-            or effect stutters only the very first time you see it, not in every session. Turn it
-            off if something renders wrong.</li>
-        <li><b>Show FPS counter</b> puts the frame rate in the top-left corner.</li>
-        <li><b>Frame rate limit</b> (30, 60 or no limit) smooths out swings. A steady 30 often feels
-            better than a frame rate that jumps between 25 and 60.</li>
+        <li><b>Render resolution</b> (its own card) sets the size of the game picture. The choices
+            are shown in pixels for your screen; a smaller one gives more FPS and a bigger
+            interface. <b>Black margins 1280×720</b> keeps a classic 16:9 picture with bars at the
+            sides.</li>
+        <li><b>Graphics</b>: the game starts on <b>Very low</b>, a profile tuned for these phones —
+            no tessellation, no shadows, no extra draw distance, which cost the most here. After that
+            you can tune the graphics in the game's own settings; the launcher no longer touches
+            them. <b>Very low</b> or <b>Low</b> (keeps antialiasing, bloom and sun shafts) puts the
+            settings back to that profile on the next launch; a grey button means it is already
+            set.</li>
+        <li>Textures are <b>reduced automatically</b>: the biggest ones are shrunk to save video
+            memory. There is nothing to set.</li>
+        <li><b>Shader cache</b> (card <b>Texture compression</b>, on by default) keeps compiled
+            shaders on the phone, so a new enemy or effect stutters only the very first time you see
+            it, not in every session. Turn it off if something renders wrong. It belongs to
+            MobileGlues, like <b>Enable ETC2 compression</b> next to it.</li>
+        <li><b>In-game display</b> (card <b>Frame rate</b>): <b>Off</b>, <b>FPS</b> (the frame rate
+            in the top-left corner) or <b>Full info</b> (a bar at the top with the frame rate and a
+            graph, GPU and CPU load, memory and temperature).</li>
+        <li><b>Frame rate limit</b> (card <b>Frame rate</b>): <b>No limit</b>, <b>Economy
+            (~30)</b>, <b>Balanced (~40)</b> or <b>Smooth (~60)</b>. The exact number is picked to
+            fit your screen and shown under the choice. A steady rate feels smoother than one that
+            jumps, and the phone stays cooler, so it keeps its speed longer.</li>
     </ul>
     <p>
         Set the resolution in the <b>launcher</b>, not in the game: the launcher starts Valheim at
-        the size of its window, so the game's own resolution list has no effect (and shows
-        <code>0x0</code>).
+        the size it chose, so the game's own resolution list has no effect (and shows
+        <code>0x0</code>). These settings apply to every <a href="#engine">engine</a>.
     </p>
 </section>
 
@@ -312,10 +319,56 @@
 
 <hr>
 
+<section id="engine">
+    <h2>Engine</h2>
+    <p>
+        In the instance settings (gear icon), the first card, <b>Engine</b>. It decides how the game
+        runs, and with it which of the other settings apply.
+    </p>
+    <ul>
+        <li><b>Full emulation (box64)</b> — the PC version runs as is, entirely through x86
+            emulation. The most compatible and the slowest. Mods do not load.</li>
+        <li><b>box64 + native Mono</b> — the Unity engine is emulated, but the game's own code
+            (everything written in C#) runs directly on your phone's processor. Much faster in busy
+            places; mods work.</li>
+        <li><b>Native engine (experimental)</b> — nothing is emulated: Unity's own Android engine
+            runs the game. The fastest, and the picture is sharper, because textures are not
+            re-compressed on the way. It appears only in builds that include it.</li>
+    </ul>
+    <p>
+        A new instance starts on the native engine on Snapdragon (Adreno) phones and on box64 +
+        native Mono on all others. Instances from earlier versions keep what they used. Saves, the
+        game's own settings, the on-screen controls and the mods are the same for all three, so you
+        can switch at any time and nothing is lost.
+    </p>
+    <h3>Native engine</h3>
+    <ul>
+        <li>It always renders with <b>Vulkan</b>, on the phone's own driver. While it is chosen, the
+            renderer and Vulkan driver (card <b>Video</b>), the shader and ETC2 caches and
+            compatibility mode are greyed out: they do not apply to it.</li>
+        <li>Render resolution, frame rate mode, the performance overlay, the mirrored picture and the
+            on-screen controls work as usual. Textures are always reduced by one step.</li>
+        <li>The first start after installing or updating ValDroid takes a few seconds longer: the
+            launcher prepares the game data for it (about 100 MB).</li>
+        <li>Mods work, except the parts of a mod that bring their own x86 libraries (.so files):
+            those cannot load without emulation.</li>
+        <li>Here the <b>GPU</b> is the limit, not the processor. If the frame rate drops in heavy
+            scenes, turn off SSAO, point light shadows and sun shafts in the game first.</li>
+        <li>On Mali GPUs it is not tested yet and may not start. If it does not, choose
+            <b>box64 + native Mono</b>.</li>
+    </ul>
+</section>
+
+<hr>
+
 <section id="renderers">
     <h2>Graphics drivers</h2>
     <p>
         The renderer is picked in the instance settings (gear icon), card <b>Video</b>. There are two.
+    </p>
+    <p>
+        These settings apply to the two box64 engines. The <a href="#engine">native engine</a>
+        always renders with Vulkan on the phone's own driver.
     </p>
     <ul>
         <li><b>MobileGlues</b> — the default. The game runs on OpenGL, which MobileGlues translates
@@ -355,7 +408,7 @@
     <ul>
         <li>Pick the instance at the top and turn on <b>Mod support (BepInEx)</b>: it loads
             BepInEx when the game starts, and with it the mods switched on below.</li>
-        <li>Mods only work with <a href="#native-mono">Native ARM64 Mono</a> on.</li>
+        <li>Mods work with <b>box64 + native Mono</b> and the <b>native engine</b>, not with full emulation (see <a href="#engine">Engine</a>).</li>
         <li>To install a mod, tap <b>Choose mod file (zip)</b>, pick the .zip and tap
             <b>Install</b>.</li>
         <li>Each installed mod has its own switch, to turn it on or off.</li>
@@ -365,20 +418,6 @@
 </section>
 
 <hr>
-
-<section id="native-mono">
-    <h2>Native ARM64 Mono</h2>
-    <p>In the instance settings, card <b>Advanced</b>. On by default.</p>
-    <p>
-        The game is a Linux x86_64 build, so ValDroid emulates it. With this switch the game's own
-        code (everything written in C#) runs <b>directly on your phone's processor</b> instead, and
-        only the Unity engine is emulated.
-    </p>
-    <p>
-        If something is wrong, turn the switch off: the game goes back to full emulation. Your saves
-        are not affected, they load in both modes.
-    </p>
-</section>
 
 <section id="compat-mode">
     <h2>Advanced settings</h2>
@@ -404,15 +443,20 @@
         Anything that adds objects or passes to a frame — shadows, tessellation, draw distance,
         vegetation — costs far more than resolution or texture size.
     </p>
+    <p>
+        This is about the two box64 engines. With the <a href="#engine">native engine</a> nothing
+        is emulated and the GPU is the limit instead: lower the heavy effects (SSAO, point light
+        shadows, sun shafts) first.
+    </p>
     <ul>
         <li>Check your phone's <b>performance profile</b> first. On Samsung, a profile such as
             <i>Light</i> in Battery settings caps the processor and the GPU to roughly half their
             speed, and that alone can halve the frame rate. Set it to <b>Standard</b>, and turn on
             the phone's game booster for ValDroid: Samsung Game Booster, Xiaomi/POCO Game Turbo,
             Realme/OPPO/OnePlus Game Space, vivo/iQOO Ultra Game Mode, Infinix/Tecno Game Mode.</li>
-        <li>Use the <b>Graphics</b> preset (card Video). If you prefer to set things in the game
+        <li>Use the <b>Graphics</b> preset (its own card). If you prefer to set things in the game
             yourself, the one thing to turn off first is <b>tessellation</b>.</li>
-        <li>Lower the <b>Render resolution</b> — 60–72% is a good range — and set a <b>Frame rate
+        <li>Lower the <b>Render resolution</b> — the sizes are listed in pixels; the middle ones are a good balance — and set a <b>Frame rate
             limit</b> so the rate stays steady instead of swinging.</li>
         <li>The phone heats up, and every phone slows itself down when it does. A cool phone can be
             noticeably faster than the same phone twenty minutes later; a case off and a cool room
