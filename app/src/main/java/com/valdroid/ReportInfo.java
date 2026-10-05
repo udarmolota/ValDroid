@@ -107,6 +107,17 @@ public final class ReportInfo {
     }
 
     /** The full header, "key : value" lines, newline-terminated. */
+    /** The Vulkan version the phone's driver declares (what the native engine renders with). */
+    static String vulkanVersion(Context ctx) {
+        int best = 0;
+        for (android.content.pm.FeatureInfo f : ctx.getPackageManager().getSystemAvailableFeatures()) {
+            if (android.content.pm.PackageManager.FEATURE_VULKAN_HARDWARE_VERSION.equals(f.name))
+                best = Math.max(best, f.version);
+        }
+        if (best == 0) return "none declared";
+        return (best >> 22) + "." + ((best >> 12) & 0x3ff) + "." + (best & 0xfff);
+    }
+
     public static String header(Context ctx, @Nullable GameInstance gi) {
         StringBuilder sb = new StringBuilder(4096);
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.US);
@@ -117,6 +128,7 @@ public final class ReportInfo {
         line(sb, "device", Build.MANUFACTURER + " " + Build.MODEL + " (" + Build.DEVICE + ")");
         line(sb, "soc", deviceSoc());
         line(sb, "gpu", gpu());
+        line(sb, "vulkan", vulkanVersion(ctx));
         String pageSize;
         try {
             pageSize = String.valueOf(android.system.Os.sysconf(android.system.OsConstants._SC_PAGESIZE));

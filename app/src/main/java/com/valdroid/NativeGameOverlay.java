@@ -45,6 +45,10 @@ public class NativeGameOverlay extends FrameLayout {
         super(context);
         String instanceName = context instanceof Activity
                 ? ((Activity) context).getIntent().getStringExtra(NativeEngine.EXTRA_INSTANCE) : null;
+        // The game's own log for "Report a bug": first, so it has as much of the start as possible.
+        AppStorage storage = AppStorage.getSingleton();
+        if (storage != null && instanceName != null)
+            com.valdroid.game.NativeLog.start(storage.getInstanceDir(instanceName));
         if (context instanceof Activity) applyWindowSettings((Activity) context, instanceName);
 
         InputSink.setBackend(new NativeInput());

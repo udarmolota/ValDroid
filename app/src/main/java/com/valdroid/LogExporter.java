@@ -110,6 +110,16 @@ public final class LogExporter {
                 // The game's own settings: graphics preset, resolution, VSync, FPS limit, tessellation…
                 put(candidates, "prefs-game.xml", new File(userDir, "prefs"));
                 put(candidates, "prefs-unknown.xml", new File(gamePath, "unity3d/unknown/unknown/prefs"));
+                // Native engine: the game process's own logcat (game.NativeLog) for this run and the
+                // one before, and what BepInEx says about the mods (its log, and the preloader's
+                // crash log when it failed to start).
+                put(candidates, com.valdroid.game.NativeLog.FILE, new File(gamePath, com.valdroid.game.NativeLog.FILE));
+                put(candidates, com.valdroid.game.NativeLog.PREV, new File(gamePath, com.valdroid.game.NativeLog.PREV));
+                caps.put(com.valdroid.game.NativeLog.FILE, new long[] { LAUNCHER_HEAD_BYTES, LAUNCHER_TAIL_BYTES });
+                caps.put(com.valdroid.game.NativeLog.PREV, new long[] { LAUNCHER_HEAD_BYTES, LAUNCHER_TAIL_BYTES });
+                put(candidates, "bepinex-LogOutput.log", new File(gamePath, "BepInEx/LogOutput.log"));
+                caps.put("bepinex-LogOutput.log", new long[] { LAUNCHER_HEAD_BYTES, LAUNCHER_TAIL_BYTES });
+                put(candidates, "bepinex-preloader.log", newestPreloaderLog(gamePath));
                 // RIMDROID_STUTTER_DIAG=1: long frames, Mono collections and slow shader compiles,
                 // all with wall-clock times, to see what each stutter was.
                 put(candidates, "stutter_diag.log", new File(gamePath, "stutter_diag.log"));
@@ -175,6 +185,15 @@ public final class LogExporter {
         }
         if (r.items.isEmpty()) r.error = "No logs found yet (run the game first).";
         return r;
+    }
+
+    /** BepInEx writes preloader_&lt;time&gt;.log into the game folder when its preloader fails; the newest one. */
+    @androidx.annotation.Nullable
+    private static File newestPreloaderLog(File gamePath) {
+        File[] logs = gamePath.listFiles((d, n) -> n.startsWith("preloader_") && n.endsWith(".log"));
+        File newest = null;
+        if (logs != null) for (File f : logs) if (newest == null || f.lastModified() > newest.lastModified()) newest = f;
+        return newest;
     }
 
     /**
