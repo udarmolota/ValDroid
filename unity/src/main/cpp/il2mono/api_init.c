@@ -162,14 +162,24 @@ static void set_sleep_timeout_override(int32_t value)
 }
 
 // Desktop games use targetFrameRate -1 for "unlimited"; on Android -1 means the platform default,
-// 30 fps. Map "unlimited" (<= 0) to 120, the S25's refresh rate; explicit limits pass through.
+// 30 fps. The launcher's frame-rate mode gives the cap (VALDROID_FPS_CAP: the planned rate, or the
+// screen's top rate with the mode off): "unlimited" (<= 0) and anything above it become the cap, a
+// lower limit of the game's own passes through. Without the variable "unlimited" is 120.
 #define UNLIMITED_FRAME_RATE 120
 typedef void (*SetTargetFrameRateFn)(int32_t value);
 static SetTargetFrameRateFn g_orig_set_target_frame_rate;
 
+static int32_t frame_rate_cap(void)
+{
+    const char* env = getenv("VALDROID_FPS_CAP");
+    int cap = env ? atoi(env) : 0;
+    return cap > 0 ? cap : UNLIMITED_FRAME_RATE;
+}
+
 static void set_target_frame_rate_override(int32_t value)
 {
-    int32_t applied = value <= 0 ? UNLIMITED_FRAME_RATE : value;
+    int32_t cap = frame_rate_cap();
+    int32_t applied = (value <= 0 || value > cap) ? cap : value;
     static int32_t last = -2;
     if (applied != last)
     {
@@ -353,11 +363,12 @@ IL2MONO_API int il2cpp_init(const char* domain_name)
     il2mono_domain = domain;
     pthread_mutex_unlock(&g_icall_lock);
 
-    il2mono_register_pad_icalls();
+    il2mono_register_input_icalls();
     if (g_exception_policy >= 0)
         p_mono_runtime_unhandled_exception_policy_set(g_exception_policy);
     if (g_argc > 0)
         p_mono_runtime_set_main_args(g_argc, g_argv);
+    il2mono_bepinex_boot(domain);
 
     LOGI("Mono domain up: %p", domain);
     return 1;

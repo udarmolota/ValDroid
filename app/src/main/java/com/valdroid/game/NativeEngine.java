@@ -38,6 +38,11 @@ public final class NativeEngine {
     private static final String ACTIVITY = "com.valdroid.nativeunity.NativeUnityActivity";
     private static final String EXTRA_DATA_ARCHIVE = "valdroid.dataArchive";
     private static final String EXTRA_ENV = "valdroid.env";
+    private static final String EXTRA_OVERLAY = "valdroid.overlay";
+    /** The instance being played (its controls layout and settings), read by NativeGameOverlay. */
+    public static final String EXTRA_INSTANCE = "valdroid.instance";
+    /** Display mode (refresh rate) the frame-rate mode picked, 0 = leave the panel alone; for NativeGameOverlay. */
+    public static final String EXTRA_DISPLAY_MODE = "valdroid.displayMode";
 
     /** Player files packaged in the APK; they win over the game's copies of the same names. */
     private static final String PLAYER_ASSETS = "bin/Data";
@@ -81,12 +86,102 @@ public final class NativeEngine {
         env.add("VALDROID_IL2MONO_STREAMING_ASSETS=" + new File(dataDir, "StreamingAssets").getAbsolutePath());
         env.add("VALDROID_IL2MONO_PERSISTENT_DATA=" + instance.getUserDataDir().getAbsolutePath());
 
+        addMods(context, instance, gameDir, dataDir, env);
+        applyGameSettings(context, instance, gameDir);
+        int displayMode = graphicsSettings(context, instance.settings(), env);
+
         Intent intent = new Intent();
         intent.setClassName(context.getPackageName(), ACTIVITY);
         intent.putExtra(EXTRA_DATA_ARCHIVE, archive.getAbsolutePath());
         intent.putExtra(EXTRA_ENV, env.toArray(new String[0]));
+        intent.putExtra(EXTRA_OVERLAY, com.valdroid.NativeGameOverlay.class.getName());
+        intent.putExtra(EXTRA_INSTANCE, instance.getName());
+        intent.putExtra(EXTRA_DISPLAY_MODE, displayMode);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return intent;
+    }
+
+    /**
+     * Mods: the Mods screen's master switch, as in the box64 launch on native Mono (GameLauncher): the
+     * bundled BepInEx is refreshed in the instance and il2mono starts its preloader (bepinex.c). The
+     * DOORSTOP_* variables stand in for what Doorstop would derive from the game's executable, so
+     * BepInEx finds the same game root, BepInEx folder and Managed folder as in the box64 launch.
+     */
+    private static void addMods(Context context, GameInstance instance, File gameDir, File dataDir, List<String> env) {
+        if (!instance.settings().isModSupport()) return;
+        try {
+            com.valdroid.ModManager.ensureBepInEx(context, gameDir);
+        } catch (IOException e) {
+            Log.e(TAG, "Mods: could not set up BepInEx, starting without mods", e);
+            com.valdroid.LauncherLog.line("Mods: BepInEx setup FAILED, starting without mods: " + e);
+            return;
+        }
+        String dataName = dataDir.getName();
+        String stem = dataName.endsWith("_Data") ? dataName.substring(0, dataName.length() - 5) : dataName;
+        env.add("VALDROID_BEPINEX_PRELOADER=" + com.valdroid.ModManager.preloader(gameDir).getAbsolutePath());
+        env.add("DOORSTOP_PROCESS_PATH=" + new File(gameDir, stem + ".x86_64").getAbsolutePath());
+        env.add("DOORSTOP_MANAGED_FOLDER_DIR=" + new File(dataDir, "Managed").getAbsolutePath());
+        Log.i(TAG, "Mods: BepInEx " + com.valdroid.ModManager.BEPINEX_VERSION + ", "
+                + com.valdroid.ModManager.countEnabled(gameDir) + " mod(s) enabled");
+    }
+
+    /**
+     * The game's own settings, as before a box64 launch: a graphics profile pressed in the launcher is
+     * written into the Linux prefs (once, see GameLauncher), then whatever is newer there reaches the
+     * native player's prefs.
+     */
+    private static void applyGameSettings(Context context, GameInstance instance, File gameDir) {
+        com.valdroid.InstanceSettings is = instance.settings();
+        try {
+            int pending = is.getGraphicsPending();
+            if (pending != com.valdroid.InstanceSettings.GFX_KEEP) {
+                com.valdroid.ValheimInstanceSetup.applyGraphicsPreset(gameDir, pending);
+                is.setGraphicsPending(com.valdroid.InstanceSettings.GFX_KEEP);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "graphics preset failed", t);
+        }
+        ValheimPrefsSync.toNative(context, gameDir);
+    }
+
+    /**
+     * The launcher's graphics settings for the player, as environment for il2mono and the bridge:
+     * reduced textures (always on for Valheim, as in the box64 launch: every texture drops its top mip
+     * level), the render resolution preset (the fixed 720p mode becomes 720 lines filling the screen:
+     * the player has no black margins) and the frame-rate cap, with "off" capping at the screen's top
+     * rate. Returns the display mode the frame-rate mode wants, 0 = none.
+     */
+    private static int graphicsSettings(Context context, com.valdroid.InstanceSettings is, List<String> env) {
+        if (is.getTexTier() != com.valdroid.InstanceSettings.TEX_NONE)
+            env.add("VALDROID_TEXTURE_MIPMAP_LIMIT=1");
+
+        android.hardware.display.DisplayManager dm =
+                (android.hardware.display.DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+        android.view.Display display = dm != null ? dm.getDisplay(android.view.Display.DEFAULT_DISPLAY) : null;
+        if (display != null) {
+            android.view.Display.Mode mode = display.getMode();
+            int sLong = Math.max(mode.getPhysicalWidth(), mode.getPhysicalHeight());
+            int sShort = Math.min(mode.getPhysicalWidth(), mode.getPhysicalHeight());
+            int w, h;
+            if (is.getFixedResMode() != com.valdroid.InstanceSettings.FIXED_NONE) {
+                h = Math.min(720, sShort);
+                w = Math.round((float) sLong * h / sShort);
+            } else {
+                float scale = is.getEffectiveRenderScale(sLong, sShort);
+                w = Math.round(sLong * scale);
+                h = Math.round(sShort * scale);
+            }
+            env.add("VALDROID_SCREEN_WIDTH=" + w);
+            env.add("VALDROID_SCREEN_HEIGHT=" + h);
+            Log.i(TAG, "render resolution " + w + "x" + h + " on " + sLong + "x" + sShort);
+        }
+
+        com.valdroid.FpsPlanner.Plan fp = com.valdroid.FpsPlanner.plan(display, is.getFpsMode());
+        int cap = fp.fps > 0 ? fp.fps : com.valdroid.FpsPlanner.maxHz(display);
+        if (cap > 0) env.add("VALDROID_FPS_CAP=" + cap);
+        Log.i(TAG, "fps mode " + is.getFpsMode() + " -> cap " + cap + " @ " + fp.refreshHz + " Hz"
+                + (fp.modeId != 0 ? " (display mode " + fp.modeId + ")" : ""));
+        return fp.modeId;
     }
 
     private static long apkStamp(Context context) {
@@ -173,8 +268,8 @@ public final class NativeEngine {
         return archive;
     }
 
-    // The virtual gamepad assembly (ValDroidBridge.dll) is not part of the game: list it and its
-    // [RuntimeInitializeOnLoadMethod] so the player loads and starts it.
+    // The bridge assembly (ValDroidBridge.dll: virtual gamepad, keyboard and mouse) is not part of the
+    // game: list it and its [RuntimeInitializeOnLoadMethod] so the player loads and starts it.
     private static byte[] addBridgeAssembly(byte[] json) throws IOException {
         try {
             JSONObject root = new JSONObject(new String(json, StandardCharsets.UTF_8));
@@ -199,7 +294,7 @@ public final class NativeEngine {
             JSONObject entry = new JSONObject();
             entry.put("assemblyName", "ValDroidBridge");
             entry.put("nameSpace", "ValDroid");
-            entry.put("className", "VirtualPad");
+            entry.put("className", "Bridge");
             entry.put("methodName", "Initialize");
             entry.put("loadTypes", 1); // BeforeSceneLoad
             entry.put("isUnityClass", false);
@@ -299,14 +394,32 @@ public final class NativeEngine {
 
     // The game's etc/mono, with System.Native mapped to the libmono-native.so in the app's own
     // native libs instead of the Linux layout's $mono_libdir.
+    /** Sends a library's dlopen to il2mono (libil2cpp.so); its other functions stay where they were. */
+    private static final String DLOPEN_ENTRY =
+            "<dllentry dll=\"libil2cpp.so\" name=\"dlopen\" target=\"il2mono_dlopen\"/>";
+
     private static File prepareMonoConfig(File dataDir, File workDir) throws IOException {
         File src = new File(dataDir, "MonoBleedingEdge/etc");
         File dst = new File(workDir, "etc");
         copyTree(src, dst);
         File config = new File(dst, "mono/config");
         if (config.isFile()) {
+            // P/Invoke names: Android's libc is libc.so (libdl, libm likewise; pthread is inside libc),
+            // not the glibc sonames the Linux config and Linux mods use (BepInEx calls uname() through
+            // "libc.so.6"). Under box64 those names reached box64's own libraries. Names handed to
+            // dlopen() itself (MonoMod's DynDll) never meet the dllmap: dlopen goes to il2mono's
+            // il2mono_dlopen, which translates them.
             String text = new String(readFile(config), StandardCharsets.UTF_8)
-                    .replace("$mono_libdir/libmono-native.so", "libmono-native.so");
+                    .replace("$mono_libdir/libmono-native.so", "libmono-native.so")
+                    .replace("target=\"libc.so.6\"", "target=\"libc.so\"")
+                    .replace("</configuration>",
+                            "\t<dllmap dll=\"libc.so.6\" target=\"libc.so\"/>\n"
+                            + "\t<dllmap dll=\"libdl.so.2\" target=\"libdl.so\">" + DLOPEN_ENTRY + "</dllmap>\n"
+                            + "\t<dllmap dll=\"dl\">" + DLOPEN_ENTRY + "</dllmap>\n"
+                            + "\t<dllmap dll=\"libdl\">" + DLOPEN_ENTRY + "</dllmap>\n"
+                            + "\t<dllmap dll=\"libm.so.6\" target=\"libm.so\"/>\n"
+                            + "\t<dllmap dll=\"libpthread.so.0\" target=\"libc.so\"/>\n"
+                            + "</configuration>");
             try (OutputStream out = new FileOutputStream(config)) {
                 out.write(text.getBytes(StandardCharsets.UTF_8));
             }

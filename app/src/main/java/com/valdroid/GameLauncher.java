@@ -282,6 +282,11 @@ public class GameLauncher {
         // everywhere else, and it puts the game's own binary back if the address becomes available.
         UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
 
+        // Settings the game changed under the native engine come first (a no-op until it has run),
+        // so a pending graphics profile below still lands on top of them.
+        com.valdroid.game.ValheimPrefsSync.toLinux(ValDroidApplication.APP,
+                new java.io.File(gameInstance.getGamePath()));
+
         // Graphics profile: written into the game's own settings ONCE — on a new instance's first
         // launch, or on the launch after the player pressed a profile button — and then left alone.
         // Stamping it on every launch (the old behaviour) silently undid every change the player

@@ -18,11 +18,52 @@ import com.valdroid.xserver.XServerRunner;
  *   <li>the gamepad goes to {@link VirtualGamepad}, the evdev Xbox 360 pad the guest's SDL opens.</li>
  * </ul>
  * Everything is a no-op while the X server or the native pad is not up (e.g. in the editor).
+ * The native engine (Unity's Android player, ":unity" process) has neither: it installs a
+ * {@link Backend} that takes everything instead.
  */
 public final class InputSink {
     private static final String TAG = "ValDroid/InputSink";
 
     private InputSink() {}
+
+    // ------------------------------------------------------------------ backend
+
+    /**
+     * Takes all input instead of the X server and the evdev pad. Positions and deltas are fractions
+     * of the game rect, top-left origin, + = right / down; key and button numbers are GLFW's.
+     */
+    public interface Backend {
+        void key(int glfwKey, boolean pressed);
+        void mouseButton(int glfwButton, boolean pressed);
+        void mousePosition(float x, float y);
+        void mouseDelta(float dx, float dy);
+        void mouseScroll(float notches);
+        /** GLFW axis 0..3 = LX, LY, RX, RY in -1..1 (down = +y); 4/5 = LT/RT in 0..1. */
+        void gamepadAxis(int axis, float value);
+        /** GLFW hat mask: 1 up, 2 right, 4 down, 8 left. */
+        void gamepadDpad(int mask);
+        /** GLFW gamepad button: A, B, X, Y, LB, RB, Back, Start, Guide, L3, R3. */
+        void gamepadButton(int button, boolean pressed);
+        /** Whether the game holds the mouse (mouse look): 1, 0, or -1 while it is not known. */
+        int mouseLocked();
+        /** Whether the game hides its cursor: 1, 0, or -1 while it is not known. */
+        int cursorHidden();
+    }
+
+    private static volatile Backend backend;
+
+    public static void setBackend(Backend b) {
+        backend = b;
+    }
+
+    /** The game rect in game-buffer px, never 0 (a fraction is taken of it). */
+    private static float gameWidthPx() {
+        return Math.max(1, Math.round(gameW * renderScale));
+    }
+
+    private static float gameHeightPx() {
+        return Math.max(1, Math.round(gameH * renderScale));
+    }
 
     // ------------------------------------------------------------------ geometry
 
@@ -56,6 +97,8 @@ public final class InputSink {
     // ------------------------------------------------------------------ keyboard / mouse
 
     public static void sendKeyboard(int key, boolean isPressed) {
+        Backend be = backend;
+        if (be != null) { be.key(key, isPressed); return; }
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return;
         XKeycode xk = xKeycodeForGlfw(key);
@@ -73,6 +116,8 @@ public final class InputSink {
 
     /** True while the game holds the mouse (see XServer.isMouseLockedByGame). */
     public static boolean isMouseLocked() {
+        Backend be = backend;
+        if (be != null) return be.mouseLocked() == 1;
         XServer xs = XServerRunner.getXServer();
         return xs != null && xs.isMouseLockedByGame();
     }
@@ -80,11 +125,15 @@ public final class InputSink {
     /** False while no X server is up (the editor, a session without one): the mouse-lock signal
      *  then says nothing about the game, and callers must not read "not locked" as "in a menu". */
     public static boolean hasMouseLockSignal() {
+        Backend be = backend;
+        if (be != null) return be.mouseLocked() >= 0;
         return XServerRunner.getXServer() != null;
     }
 
     /** True while the game shows no cursor of its own (see XServer.isGameCursorHidden). */
     public static boolean isGameCursorHidden() {
+        Backend be = backend;
+        if (be != null) return be.cursorHidden() == 1;
         XServer xs = XServerRunner.getXServer();
         return xs != null && xs.isGameCursorHidden();
     }
@@ -92,6 +141,8 @@ public final class InputSink {
     /** Mouse look: move the X pointer by a delta (view px * renderScale), keeping the fraction for
      *  the next call so slow finger movement still turns the camera. */
     public static void sendCursorDelta(double dx, double dy) {
+        Backend be = backend;
+        if (be != null) { be.mouseDelta((float) (dx / gameWidthPx()), (float) (dy / gameHeightPx())); return; }
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return;
         pendingDx += dx;
@@ -105,12 +156,15 @@ public final class InputSink {
 
     /** The X pointer position in view px (for re-syncing the overlay cursor after mouse look). */
     static float[] pointerInView() {
+        if (backend != null) return null;   // nothing moves the pointer behind the overlay's back
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return null;
         return new float[]{ xs.pointer.getX() / renderScale + gameLeft, xs.pointer.getY() / renderScale + gameTop };
     }
 
     public static void sendCursorPos(double x, double y) {
+        Backend be = backend;
+        if (be != null) { be.mousePosition(toGameX(x) / gameWidthPx(), toGameY(y) / gameHeightPx()); return; }
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return;
         xs.injectPointerMove(toGameX(x), toGameY(y));
@@ -122,6 +176,8 @@ public final class InputSink {
      * game has warped (mouse look) back to the overlay cursor. GLFW buttons 4-8 have no X button.
      */
     public static void sendMouseButton(int button, boolean isPressed) {
+        Backend be = backend;
+        if (be != null) { if (button >= 0 && button <= 2) be.mouseButton(button, isPressed); return; }
         XServer xs = XServerRunner.getXServer();
         if (xs == null) return;
         Pointer.Button b;
@@ -137,6 +193,8 @@ public final class InputSink {
 
     /** X has no wheel axis: each notch is a press+release of button 4 (up) or 5 (down). */
     public static void sendMouseScroll(double xoffset, double yoffset) {
+        Backend be = backend;
+        if (be != null) { if (yoffset != 0) be.mouseScroll((float) yoffset); return; }
         XServer xs = XServerRunner.getXServer();
         if (xs == null || yoffset == 0) return;
         Pointer.Button b = yoffset > 0 ? Pointer.Button.BUTTON_SCROLL_UP : Pointer.Button.BUTTON_SCROLL_DOWN;
@@ -158,6 +216,8 @@ public final class InputSink {
 
     /** GLFW axis 0..3 = LX, LY, RX, RY in -1..1 (down = +y, as evdev); 4/5 = LT/RT in 0..1. */
     public static void sendJoystickAxis(int axis, float state) {
+        Backend be = backend;
+        if (be != null) { be.gamepadAxis(axis, state); return; }
         try {
             switch (axis) {
                 case 0: VirtualGamepad.stick(VirtualGamepad.ABS_X, state); break;
@@ -174,6 +234,8 @@ public final class InputSink {
 
     /** GLFW hat mask: 1 up, 2 right, 4 down, 8 left -> HAT0X/HAT0Y. */
     public static void sendJoystickDpad(int dpad, char state) {
+        Backend be = backend;
+        if (be != null) { be.gamepadDpad(state); return; }
         try {
             VirtualGamepad.axis(VirtualGamepad.ABS_HAT0X, ((state & 2) != 0 ? 1 : 0) - ((state & 8) != 0 ? 1 : 0));
             VirtualGamepad.axis(VirtualGamepad.ABS_HAT0Y, ((state & 4) != 0 ? 1 : 0) - ((state & 1) != 0 ? 1 : 0));
@@ -183,6 +245,8 @@ public final class InputSink {
 
     /** GLFW gamepad button order (A, B, X, Y, LB, RB, Back, Start, Guide, L3, R3) -> evdev codes. */
     public static void sendJoystickButton(int button, boolean isPressed) {
+        Backend be = backend;
+        if (be != null) { be.gamepadButton(button, isPressed); return; }
         int code;
         switch (button) {
             case 0: code = VirtualGamepad.BTN_A; break;

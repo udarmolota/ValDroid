@@ -10,7 +10,7 @@ namespace ValDroid
     // A virtual gamepad the on-screen controls drive. The native side (il2mono) owns a small state
     // block written from Java over JNI; before every Input System update the current state is queued
     // to a Gamepad device, so the game sees an ordinary controller.
-    // Started by the engine through RuntimeInitializeOnLoads.json (an entry added for this assembly).
+    // Started by Bridge.Initialize.
     public static class VirtualPad
     {
         // Must match struct ValDroidPadState in il2mono/pad.c.
@@ -29,8 +29,7 @@ namespace ValDroid
         static IntPtr s_State;
         static uint s_LastSequence = uint.MaxValue;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        static void Initialize()
+        internal static void Initialize()
         {
             try
             {

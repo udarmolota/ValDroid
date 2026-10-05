@@ -12,6 +12,7 @@ add_library(il2cpp SHARED
     il2mono/api_more.c
     il2mono/pad.c
     il2mono/config.c
+    il2mono/bepinex.c
     il2mono/gen/stubs.c)
 target_compile_options(il2cpp PRIVATE -std=c11 -fvisibility=hidden -Wall -Wextra -Wno-unused-parameter)
 target_link_libraries(il2cpp log dl)

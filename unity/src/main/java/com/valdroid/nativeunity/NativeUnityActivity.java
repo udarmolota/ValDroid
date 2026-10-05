@@ -1,11 +1,13 @@
 package com.valdroid.nativeunity;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -39,8 +41,11 @@ public class NativeUnityActivity extends Activity
         FrameLayout root = mUnityPlayer.getFrameLayout();
         setContentView(root);
         root.requestFocus();
-        root.addView(new ValDroidPad(this), new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        View overlay = createOverlay(getIntent().getStringExtra(EXTRA_OVERLAY));
+        if (overlay != null) {
+            root.addView(overlay, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        }
         keepScreenOn();
     }
 
@@ -48,6 +53,22 @@ public class NativeUnityActivity extends Activity
     public static final String EXTRA_DATA_ARCHIVE = "valdroid.dataArchive";
     /** Intent extra: String[] of "KEY=VALUE" set in this process's environment (il2mono's paths). */
     public static final String EXTRA_ENV = "valdroid.env";
+    /**
+     * Intent extra: class name of a View (public constructor taking a Context) laid over the player:
+     * the launcher's on-screen controls and HUD. By name, because the launcher depends on this module
+     * and not the other way round. Touches the overlay does not take reach the player.
+     */
+    public static final String EXTRA_OVERLAY = "valdroid.overlay";
+
+    private View createOverlay(String className) {
+        if (className == null) return null;
+        try {
+            return (View) Class.forName(className).getConstructor(Context.class).newInstance(this);
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            android.util.Log.e("NativeUnity", "overlay " + className + " failed", e);
+            return null;
+        }
+    }
 
     private static void applyEnvironment(String[] env) {
         if (env == null) return;

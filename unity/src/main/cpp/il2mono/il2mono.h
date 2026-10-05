@@ -112,6 +112,9 @@ typedef void (*MonoPrintCallback)(const char* string, int is_stdout);
     X(void*, mono_runtime_invoke, (void* method, void* obj, void** params, void** exc))       \
     X(void*, mono_object_new, (void* domain, void* klass))                                    \
     X(void*, mono_object_get_class, (void* obj))                                              \
+    X(void*, mono_object_to_string, (void* obj, void** exc))                                  \
+    X(char*, mono_string_to_utf8, (void* str))                                                \
+    X(void, mono_domain_set_config, (void* domain, const char* base_dir, const char* config)) \
     X(void*, mono_array_class_get, (void* element_class, uint32_t rank))                      \
     X(void*, mono_array_new, (void* domain, void* element_class, uintptr_t n))                \
     X(void*, mono_string_new_len, (void* domain, const char* text, unsigned int length))     \
@@ -150,5 +153,9 @@ extern Il2MonoConfig il2mono_cfg;
 bool il2mono_config_load(const char* data_dir);
 bool il2mono_find_assembly(const char* file_name, char* out, size_t out_size);
 
-// Registers ValDroid.VirtualPad's internal call (pad.c); called right after the domain is up.
-void il2mono_register_pad_icalls(void);
+// Registers the ValDroidBridge internal calls (pad.c: gamepad, keyboard/mouse, game state);
+// called right after the domain is up.
+void il2mono_register_input_icalls(void);
+
+// Starts BepInEx in the new root domain when VALDROID_BEPINEX_PRELOADER is set (bepinex.c).
+void il2mono_bepinex_boot(void* domain);
