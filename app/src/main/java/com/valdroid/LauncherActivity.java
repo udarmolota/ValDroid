@@ -276,8 +276,10 @@ public class LauncherActivity extends AppCompatActivity {
                         LogExporter.export(this, instance, out);
                     }
                     if (zip.length() > 0)
+                        // The manifest names the provider after the application id, which differs
+                        // in builds with a suffix (the native engine's .nativeunity).
                         attach = androidx.core.content.FileProvider.getUriForFile(
-                                this, "com.valdroid.fileprovider", zip);
+                                this, getPackageName() + ".fileprovider", zip);
                 }
             } catch (Throwable t) { attach = null; }   // no logs → still send the text report
             final Uri fAttach = attach;
