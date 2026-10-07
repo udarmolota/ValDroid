@@ -212,8 +212,9 @@ public class TouchpadControlElement extends AbstractControlElement {
 
         void draw(Canvas canvas) {
             float cr = CORNER_RADIUS_DP * parentView.pixelScale * scale;
+            // The shadow and the label follow the opacity: as before at the default, fainter below it.
             rimPaint.setColor(Color.rgb(30, 30, 30));
-            rimPaint.setAlpha(80);
+            rimPaint.setAlpha(shadowAlpha());
             rimPaint.setStrokeWidth((STROKE_WIDTH_DP + 3f) * parentView.pixelScale);
             canvas.drawRoundRect(rect, cr, cr, rimPaint);
             canvas.drawRoundRect(rect, cr, cr, fillPaint);
@@ -223,12 +224,15 @@ public class TouchpadControlElement extends AbstractControlElement {
             canvas.drawRoundRect(rect, cr, cr, rimPaint);
             float textSize = 28f * parentView.pixelScale * scale;
             textPaint.setTextSize(textSize);
-            textPaint.setAlpha(Math.min(255, alpha + 60));
+            textPaint.setAlpha(labelAlpha());
             canvas.drawText("TOUCH", centerX, centerY + textSize * 0.35f, textPaint);
         }
 
         void setColor(int c) { color=c; fillPaint.setColor(c); rimPaint.setColor(c); textPaint.setColor(c); }
-        void setAlpha(int a) { alpha=a; fillPaint.setAlpha(a/3); rimPaint.setAlpha(a); textPaint.setAlpha(Math.min(255,a+60)); }
+        void setAlpha(int a) { alpha=a; fillPaint.setAlpha(a/3); rimPaint.setAlpha(a); textPaint.setAlpha(labelAlpha()); }
+        // 80 and alpha + 60 at the default opacity (128), scaled with it below.
+        private int shadowAlpha() { return Math.min(80, alpha * 80 / 128); }
+        private int labelAlpha() { return Math.min(255, alpha * 188 / 128); }
         void setColorFilter(@Nullable ColorFilter cf) { fillPaint.setColorFilter(cf); rimPaint.setColorFilter(cf); }
         void setScale(float s) { scale=s; updateDimensions(); }
         void setCenterPosition(float x, float y) { centerX=x; centerY=y; updateBounds(); }

@@ -22,7 +22,22 @@ public class ControlElementDescription {
     public enum Style {
         OUTLINE,
         FILLED,
-        GLASS
+        GLASS,
+        // Dark see-through body, thin glowing ring in the element colour, white label (see
+        // ConsolePainter). Appended last: layouts store the name, and an older app that does not
+        // know it reads it as null, which sanitize() turns into DEFAULT_STYLE.
+        CONSOLE
+    }
+
+    /**
+     * The styles sticks and the composite d-pad can take. FILLED and GLASS only ever changed how a
+     * button is drawn; offering them on a stick would be a picker entry that does nothing.
+     */
+    public static final Style[] STICK_STYLES = { Style.OUTLINE, Style.CONSOLE };
+
+    /** A stored style narrowed to {@link #STICK_STYLES}: anything but CONSOLE draws as before. */
+    public static Style stickStyle(Style style) {
+        return style == Style.CONSOLE ? Style.CONSOLE : DEFAULT_STYLE;
     }
 
     public final float centerXRelative;
@@ -59,6 +74,13 @@ public class ControlElementDescription {
      * field existed load unchanged (Gson fills absent booleans with false).
      */
     public final boolean dragLook;
+    /**
+     * Buttons with {@link #dragLook} only: the drag works like a touchpad instead of a stick. The camera
+     * turns by as much as the finger moves and stops with it (precise aiming, asked for by a player for
+     * the bow); it is always mouse movement, a gamepad button too. Default false = the stick, so layouts
+     * saved before this field existed load unchanged (Gson fills absent booleans with false).
+     */
+    public final boolean dragLookTouchpad;
     /**
      * Movement sticks only (STICK, STICK_WASD): a "floating" joystick. Touching an empty spot in a
      * zone around the stick moves the stick under the finger for the length of that touch, so the
@@ -148,6 +170,19 @@ public class ControlElementDescription {
                                      boolean isToggle, float sensitivity, Style style,
                                      String iconFile, boolean noTint, boolean tapDisabled,
                                      boolean dragLook, boolean floating, float floatZone) {
+        this(centerXRelative, centerYRelative, scale, type, bindings, text, color, alpha,
+                inputType, icon, isToggle, sensitivity, style, iconFile, noTint, tapDisabled,
+                dragLook, floating, floatZone, false);
+    }
+
+    public ControlElementDescription(float centerXRelative, float centerYRelative, float scale,
+                                     @NonNull AbstractControlElement.Type type, @NonNull GLFWBinding[] bindings,
+                                     String text, int color, int alpha,
+                                     AbstractControlElement.InputType inputType, @NonNull Icon icon,
+                                     boolean isToggle, float sensitivity, Style style,
+                                     String iconFile, boolean noTint, boolean tapDisabled,
+                                     boolean dragLook, boolean floating, float floatZone,
+                                     boolean dragLookTouchpad) {
         // Clamped rather than rejected: describe() runs on every save, and an element dragged to
         // the very edge (or a hand-edited file) must not make saving throw and lose the layout.
         this.centerXRelative = clampF(centerXRelative, 0.001f, 0.999f);
@@ -167,6 +202,7 @@ public class ControlElementDescription {
         this.noTint = noTint;
         this.tapDisabled = tapDisabled;
         this.dragLook = dragLook;
+        this.dragLookTouchpad = dragLookTouchpad;
         this.floating = floating;
         // 0 (a layout from before the field, or a constructor that does not take it), NaN or a
         // negative value mean "not set".
@@ -266,6 +302,13 @@ public class ControlElementDescription {
      * loaded entry through the validating constructor, with defaults for what is missing.
      * Returns null for an entry that still cannot describe a valid element.
      */
+    /** This element with another picture: a custom icon file, tinted unless noTint. */
+    public ControlElementDescription withIcon(String iconFile, boolean noTint) {
+        return new ControlElementDescription(centerXRelative, centerYRelative, scale, type, bindings, text,
+                color, alpha, inputType, icon, isToggle, sensitivity, style, iconFile, noTint, tapDisabled,
+                dragLook, floating, floatZone, dragLookTouchpad);
+    }
+
     public static ControlElementDescription sanitize(ControlElementDescription d) {
         if (d == null || d.type == null) return null;
         try {
@@ -279,7 +322,7 @@ public class ControlElementDescription {
                     d.scale > 0f ? d.scale : 1f, d.type, nonNull.toArray(new GLFWBinding[0]),
                     d.text, d.color, d.alpha, it, d.icon != null ? d.icon : Icon.NO_ICON,
                     d.isToggle, d.sensitivity, d.style, d.iconFile, d.noTint, d.tapDisabled,
-                    d.dragLook, d.floating, d.floatZone);
+                    d.dragLook, d.floating, d.floatZone, d.dragLookTouchpad);
         } catch (RuntimeException e) {
             return null;
         }

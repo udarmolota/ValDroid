@@ -15,6 +15,8 @@ public class MouseStickControlElement extends AbstractControlElement {
     private final MouseStickDrawable drawable;
 
     private int pointerId = -1;
+    // OUTLINE (the original look) or CONSOLE; see ControlElementDescription.STICK_STYLES.
+    private ControlElementDescription.Style style;
     private float sensitivity;
     private static final float TAP_SLOP    = 12f;
     private static final long  TAP_MAX_MS  = 250;
@@ -33,6 +35,7 @@ public class MouseStickControlElement extends AbstractControlElement {
         this.bindings.clear();
         this.sensitivity = (desc.sensitivity > 0f) ? desc.sensitivity : ControlElementDescription.DEFAULT_SENSITIVITY;
         this.drawable = new MouseStickDrawable(parentView, desc);
+        this.style = ControlElementDescription.stickStyle(desc.style);
     }
 
     @Override
@@ -106,7 +109,27 @@ public class MouseStickControlElement extends AbstractControlElement {
 
     @Override
     public void draw(Canvas canvas) {
-        drawable.draw(canvas);
+        if (style == ControlElementDescription.Style.CONSOLE) {
+            drawable.drawConsole(canvas, pointerId != -1 && !parentView.isEditMode());
+        } else {
+            drawable.draw(canvas);
+        }
+    }
+
+    @Override
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return ControlElementDescription.STICK_STYLES;
+    }
+
+    @Override
+    public ControlElementDescription.Style getStyle() {
+        return style;
+    }
+
+    @Override
+    public void setStyle(ControlElementDescription.Style style) {
+        this.style = ControlElementDescription.stickStyle(style);
+        this.parentView.invalidate();
     }
 
     @Override
@@ -154,7 +177,8 @@ public class MouseStickControlElement extends AbstractControlElement {
                 InputType.MNK,
                 ControlElementDescription.Icon.NO_ICON,
                 false,
-                sensitivity
+                sensitivity,
+                style
         );
     }
 
@@ -185,6 +209,7 @@ public class MouseStickControlElement extends AbstractControlElement {
 
         private final Paint fillPaint   = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final ConsolePainter console = new ConsolePainter();
 
         private final InputControlsView parentView;
 
@@ -208,7 +233,7 @@ public class MouseStickControlElement extends AbstractControlElement {
 
         void setColor(int c)  { color = c; fillPaint.setColor(c); strokePaint.setColor(c); }
         void setAlpha(int a)  { alpha = a; fillPaint.setAlpha(a / 3); strokePaint.setAlpha(a); }
-        void setColorFilter(@Nullable ColorFilter cf) { fillPaint.setColorFilter(cf); strokePaint.setColorFilter(cf); }
+        void setColorFilter(@Nullable ColorFilter cf) { fillPaint.setColorFilter(cf); strokePaint.setColorFilter(cf); console.setColorFilter(cf); }
 
         void setScale(float s) {
             scale = s;
@@ -270,6 +295,15 @@ public class MouseStickControlElement extends AbstractControlElement {
             canvas.drawCircle(outerCenterX, outerCenterY, outerRadius, fillPaint);
             canvas.drawCircle(innerCenterX, innerCenterY, innerRadius, strokePaint);
             canvas.drawCircle(innerCenterX, innerCenterY, innerRadius, fillPaint);
+        }
+
+        /** CONSOLE style, same look as StickControlElement's. */
+        void drawConsole(Canvas canvas, boolean pressed) {
+            float ring = ConsolePainter.ringWidth(parentView.pixelScale, scale);
+            console.circle(outerCenterX, outerCenterY, outerRadius);
+            console.drawStickBase(canvas, color, alpha, pressed, ring);
+            console.circle(innerCenterX, innerCenterY, innerRadius);
+            console.drawStickKnob(canvas, color, alpha, ring);
         }
     }
 }

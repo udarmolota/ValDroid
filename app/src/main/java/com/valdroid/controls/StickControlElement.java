@@ -25,6 +25,8 @@ public class StickControlElement extends AbstractControlElement {
      * DEFAULT_SENSITIVITY (2.0, what every layout without the field gets) means 1:1.
      */
     private float sensitivity;
+    // OUTLINE (the original look) or CONSOLE; see ControlElementDescription.STICK_STYLES.
+    private ControlElementDescription.Style style;
 
     // Floating joystick: while a finger holds the stick away from where the layout puts it, the
     // drawable sits under that finger and the layout position is remembered here. Everything the
@@ -36,6 +38,7 @@ public class StickControlElement extends AbstractControlElement {
         super(parentView, elementDescription);
         this.sensitivity = elementDescription.sensitivity > 0f ? elementDescription.sensitivity
                 : ControlElementDescription.DEFAULT_SENSITIVITY;
+        this.style = ControlElementDescription.stickStyle(elementDescription.style);
         this.drawable = new StickControlDrawable(parentView, elementDescription);
         this.bindings.clear();
         if (elementDescription.bindings != null) {
@@ -334,7 +337,7 @@ public class StickControlElement extends AbstractControlElement {
                 this.drawable.alpha,
                 this.inputType, ControlElementDescription.Icon.NO_ICON,
                 false, sensitivity,
-                ControlElementDescription.DEFAULT_STYLE,
+                style,
                 null, false, false, false,
                 floating, floatZone);
     }
@@ -345,6 +348,22 @@ public class StickControlElement extends AbstractControlElement {
 
     public float getSensitivity() {
         return sensitivity;
+    }
+
+    @Override
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return ControlElementDescription.STICK_STYLES;
+    }
+
+    @Override
+    public ControlElementDescription.Style getStyle() {
+        return style;
+    }
+
+    @Override
+    public void setStyle(ControlElementDescription.Style style) {
+        this.style = ControlElementDescription.stickStyle(style);
+        this.parentView.invalidate();
     }
 
     public class StickControlDrawable {
@@ -363,7 +382,8 @@ public class StickControlElement extends AbstractControlElement {
         private float innerCenterX;
         private float innerCenterY;
         private final ShapeDrawable innerShapeDrawable = new ShapeDrawable(new OvalShape());
-
+        private final ConsolePainter console = new ConsolePainter();
+        private float consoleRingWidth;
 
         public StickControlDrawable(InputControlsView parentView, ControlElementDescription description) {
             setColor(description.color);
@@ -378,6 +398,10 @@ public class StickControlElement extends AbstractControlElement {
         }
 
         public void draw(@NonNull Canvas canvas) {
+            if (style == ControlElementDescription.Style.CONSOLE) {
+                drawConsole(canvas);
+                return;
+            }
             // --- Outer outline ---
             Paint op = outerShapeDrawable.getPaint();
             int oc = op.getColor();
@@ -418,6 +442,29 @@ public class StickControlElement extends AbstractControlElement {
             innerShapeDrawable.draw(canvas);
         }
 
+        /**
+         * CONSOLE style: the base is a disc of the stick colour with a light rim, the knob a solid
+         * disc with a white rim and the stick's letter (L / R for gamepad sticks) on it.
+         */
+        private void drawConsole(@NonNull Canvas canvas) {
+            boolean pressed = pointerId != -1 && !parentView.isEditMode();
+            console.circle(outerCenterX, outerCenterY, outerRadius);
+            console.drawStickBase(canvas, color, alpha, pressed, consoleRingWidth);
+            console.circle(innerCenterX, innerCenterY, innerRadius);
+            console.drawStickKnob(canvas, color, alpha, consoleRingWidth);
+            console.drawLabel(canvas, consoleLabel(), innerCenterX, innerCenterY,
+                    ConsolePainter.labelColorOn(color),
+                    ConsolePainter.scaleAlpha(alpha, ConsolePainter.LABEL_K));
+        }
+
+        private String consoleLabel() {
+            if (inputType != InputType.GAMEPAD || bindings.isEmpty()) return null;
+            GLFWBinding b = bindings.get(0);
+            if (b == GLFWBinding.LEFT_JOYSTICK) return "L";
+            if (b == GLFWBinding.RIGHT_JOYSTICK) return "R";
+            return null;
+        }
+
         public void setColor(int color) {
             this.color = color;
             this.outerShapeDrawable.getPaint().setColor(this.color);
@@ -433,6 +480,7 @@ public class StickControlElement extends AbstractControlElement {
         public void setColorFilter(@Nullable ColorFilter colorFilter) {
             this.outerShapeDrawable.getPaint().setColorFilter(colorFilter);
             this.innerShapeDrawable.getPaint().setColorFilter(colorFilter);
+            this.console.setColorFilter(colorFilter);
         }
 
         public boolean isPointOver(float x, float y) {
@@ -461,6 +509,8 @@ public class StickControlElement extends AbstractControlElement {
         private void updateDimensions() {
             this.outerRadius = OUTER_CIRCLE_RADIUS * parentView.pixelScale * this.scale;
             this.innerRadius = INNER_CIRCLE_RADIUS * parentView.pixelScale * this.scale;
+            this.consoleRingWidth = ConsolePainter.ringWidth(parentView.pixelScale, this.scale);
+            this.console.setLabelSize(this.innerRadius * 0.8f);
             updateBounds();
         }
 

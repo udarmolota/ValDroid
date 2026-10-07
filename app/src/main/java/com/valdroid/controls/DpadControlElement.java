@@ -23,6 +23,10 @@ public class DpadControlElement extends AbstractControlElement {
     private final DpadControlDrawable drawable;
     private int pointerId = -1;
     private int lastState = 0;   // this element's bits in the shared d-pad hat
+    // Directions held right now, in either input mode: the CONSOLE style lights those arms.
+    private int pressedMask = 0;
+    // OUTLINE (the original look) or CONSOLE; see ControlElementDescription.STICK_STYLES.
+    private ControlElementDescription.Style style;
     private static final float DPAD_DEAD_ZONE = 0.3f;
     private final AbstractControlElement.Type type;
     private static final int OUTLINE_ALPHA = 70; // 120;
@@ -34,6 +38,7 @@ public class DpadControlElement extends AbstractControlElement {
         this.drawable = new DpadControlDrawable(parentView, elementDescription);
         this.bindings.addAll(Arrays.asList(elementDescription.bindings));
         this.type = elementDescription.type;
+        this.style = ControlElementDescription.stickStyle(elementDescription.style);
 
         if (this.type != Type.DPAD) {
           throw new IllegalArgumentException("DpadControlElement must be created with Type.DPAD");
@@ -72,6 +77,11 @@ public class DpadControlElement extends AbstractControlElement {
             if (nx > DPAD_DEAD_ZONE) state |= 0x2;
             if (ny > DPAD_DEAD_ZONE) state |= 0x4;
             if (nx < -DPAD_DEAD_ZONE) state |= 0x8;
+        }
+        if (state != pressedMask) {
+            pressedMask = state;
+            // Only the CONSOLE style shows the held arms; the others need no redraw here.
+            if (style == ControlElementDescription.Style.CONSOLE) this.parentView.invalidate();
         }
 
         if (this.inputType == InputType.GAMEPAD) {
@@ -245,6 +255,22 @@ public class DpadControlElement extends AbstractControlElement {
         this.parentView.invalidate();
     }
 
+    @Override
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return ControlElementDescription.STICK_STYLES;
+    }
+
+    @Override
+    public ControlElementDescription.Style getStyle() {
+        return style;
+    }
+
+    @Override
+    public void setStyle(ControlElementDescription.Style style) {
+        this.style = ControlElementDescription.stickStyle(style);
+        this.parentView.invalidate();
+    }
+
     public ControlElementDescription describe() {
         return new ControlElementDescription(
                 this.drawable.centerX / this.parentView.getWidth(),
@@ -255,7 +281,7 @@ public class DpadControlElement extends AbstractControlElement {
                 this.bindings.toArray(new GLFWBinding[0]), null, this.drawable.color,
                 this.drawable.alpha,
                 this.inputType, ControlElementDescription.Icon.NO_ICON, false,
-                ControlElementDescription.DEFAULT_SENSITIVITY, ControlElementDescription.DEFAULT_STYLE,
+                ControlElementDescription.DEFAULT_SENSITIVITY, this.style,
                 this.drawable.iconFile, this.drawable.noTint);
     }
 
@@ -300,6 +326,13 @@ public class DpadControlElement extends AbstractControlElement {
         private boolean noTint;         // keep the custom image's original colors when true
         private Drawable iconDrawable;  // decoded custom image, drawn instead of the cross
         private ColorFilter colorFilter;
+        // CONSOLE style: each arm as its own path (index = bit 0x1 up, 0x2 right, 0x4 down,
+        // 0x8 left) so a held direction can be lit alone, plus the four white arrows. Rebuilt
+        // with the bounds, never while drawing.
+        private final ConsolePainter console = new ConsolePainter();
+        private final Path[] consoleArms = { new Path(), new Path(), new Path(), new Path() };
+        private final Path consoleArrows = new Path();
+        private float consoleRingWidth;
 
         public DpadControlDrawable(InputControlsView parentView, ControlElementDescription description) {
             setColor(description.color);
@@ -389,12 +422,77 @@ public class DpadControlElement extends AbstractControlElement {
             this.path.lineTo(this.x + this.size, this.centerY + halfWidth);
             this.path.lineTo(this.centerX + halfHeight, this.centerY + halfWidth);
             this.path.close();
+
+            calculateConsolePaths(halfWidth, halfHeight, offset);
+        }
+
+        /** The same four arms as {@link #path}, one path each, and an arrow near each arm's end. */
+        private void calculateConsolePaths(float halfWidth, float halfHeight, float offset) {
+            Path up = this.consoleArms[0], right = this.consoleArms[1];
+            Path down = this.consoleArms[2], left = this.consoleArms[3];
+            for (Path arm : this.consoleArms) arm.reset();
+
+            up.moveTo(this.centerX, this.centerY - offset);
+            up.lineTo(this.centerX - halfWidth, this.centerY - halfHeight);
+            up.lineTo(this.centerX - halfWidth, this.y);
+            up.lineTo(this.centerX + halfWidth, this.y);
+            up.lineTo(this.centerX + halfWidth, this.centerY - halfHeight);
+            up.close();
+
+            right.moveTo(this.centerX + offset, this.centerY);
+            right.lineTo(this.centerX + halfHeight, this.centerY - halfWidth);
+            right.lineTo(this.x + this.size, this.centerY - halfWidth);
+            right.lineTo(this.x + this.size, this.centerY + halfWidth);
+            right.lineTo(this.centerX + halfHeight, this.centerY + halfWidth);
+            right.close();
+
+            down.moveTo(this.centerX, this.centerY + offset);
+            down.lineTo(this.centerX - halfWidth, this.centerY + halfHeight);
+            down.lineTo(this.centerX - halfWidth, this.y + this.size);
+            down.lineTo(this.centerX + halfWidth, this.y + this.size);
+            down.lineTo(this.centerX + halfWidth, this.centerY + halfHeight);
+            down.close();
+
+            left.moveTo(this.centerX - offset, this.centerY);
+            left.lineTo(this.centerX - halfHeight, this.centerY - halfWidth);
+            left.lineTo(this.x, this.centerY - halfWidth);
+            left.lineTo(this.x, this.centerY + halfWidth);
+            left.lineTo(this.centerX - halfHeight, this.centerY + halfWidth);
+            left.close();
+
+            // Arrow centre about two thirds of the way out along each arm.
+            float d = this.size * 0.33f, len = this.size * 0.09f, w = this.size * 0.11f;
+            this.consoleArrows.reset();
+            ConsolePainter.addArrow(this.consoleArrows, this.centerX, this.centerY - d, 0f, -1f, len, w);
+            ConsolePainter.addArrow(this.consoleArrows, this.centerX + d, this.centerY, 1f, 0f, len, w);
+            ConsolePainter.addArrow(this.consoleArrows, this.centerX, this.centerY + d, 0f, 1f, len, w);
+            ConsolePainter.addArrow(this.consoleArrows, this.centerX - d, this.centerY, -1f, 0f, len, w);
+        }
+
+        /**
+         * CONSOLE style: every arm gets the button look (dark body, thin glowing ring in the
+         * d-pad colour) and a white arrow; a held direction is drawn pressed.
+         */
+        private void drawConsole(@NonNull Canvas canvas) {
+            boolean editMode = parentView.isEditMode();
+            for (int i = 0; i < 4; i++) {
+                boolean pressed = !editMode && (pressedMask & (1 << i)) != 0;
+                this.console.path(this.consoleArms[i]);
+                this.console.drawBody(canvas, this.color, this.alpha, pressed);
+                this.console.drawRing(canvas, this.color, this.alpha, pressed, this.consoleRingWidth);
+            }
+            this.console.fillPath(canvas, this.consoleArrows, android.graphics.Color.WHITE,
+                    ConsolePainter.scaleAlpha(this.alpha, ConsolePainter.LABEL_K));
         }
 
         public void draw(@NonNull Canvas canvas) {
             // A custom image replaces the drawn cross entirely.
             if (this.iconDrawable != null) {
                 this.iconDrawable.draw(canvas);
+                return;
+            }
+            if (style == ControlElementDescription.Style.CONSOLE) {
+                drawConsole(canvas);
                 return;
             }
 
@@ -432,7 +530,11 @@ public class DpadControlElement extends AbstractControlElement {
         public void setScale(float scale) {
             this.scale = scale;
             this.paint.setStrokeWidth(PAINT_STROKE_WIDTH * (float) Math.sqrt(this.scale));
-            this.paint.setPathEffect(new CornerPathEffect(15f * this.scale));
+            CornerPathEffect corners = new CornerPathEffect(15f * this.scale);
+            this.paint.setPathEffect(corners);
+            // The CONSOLE arms are filled too, so the fill needs the same rounded corners.
+            this.console.setPathEffect(corners);
+            this.consoleRingWidth = ConsolePainter.ringWidth(parentView.pixelScale, this.scale);
             updateDimensions();
         }
 
@@ -451,6 +553,7 @@ public class DpadControlElement extends AbstractControlElement {
         public void setColorFilter(@Nullable ColorFilter colorFilter) {
             this.colorFilter = colorFilter;
             this.paint.setColorFilter(colorFilter);
+            this.console.setColorFilter(colorFilter);
             if (this.iconDrawable != null) this.iconDrawable.setColorFilter(colorFilter);
         }
 

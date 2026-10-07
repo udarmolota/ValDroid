@@ -83,6 +83,7 @@ In the cloud: %2$s
     <string name="engine_box64_mono_hint">The engine is emulated, the game\'s own code runs natively. Faster; mods work.</string>
     <string name="engine_native">Native engine (experimental)</string>
     <string name="engine_native_hint">Unity\'s own Android engine, nothing emulated. Fastest. Vulkan only; mods with x86 libraries won\'t load.</string>
+    <string name="engine_weak_gpu_note">For this phone\'s GPU the native engine needs the Minimal profile: press Apply next to Minimal in the Graphics card.</string>
     <string name="engine_native_renderer_note">The native engine always renders with Vulkan directly.</string>
     <string name="engine_native_driver_note">The native engine uses the phone\'s own Vulkan driver.</string>
     <string name="native_mono_off_msg">The game will run in the previous, slower mode. If you turned it off because of a problem, please send us the logs — it helps us fix it.</string>
@@ -287,6 +288,8 @@ In the cloud: %2$s
     <string name="gfx_preset_keep">Don&#8217;t touch</string>
     <string name="gfx_preset_low">Low</string>
     <string name="gfx_preset_ultra">Very low</string>
+    <string name="gfx_preset_minimal">Minimal</string>
+    <string name="gfx_preset_minimal_hint">For weak phones: lower 3D resolution, pixelated. In the native engine also textures 4× smaller and no shadows.</string>
     <string name="gfx_preset_hint">The game always starts on Very low — a profile tuned for emulation. After that you can tune the graphics to your phone in the game\'s own settings: the launcher no longer touches them. A button puts the settings back to that profile on the next launch. A grey button means that profile is already set.</string>
     <string name="release_notes_body" translatable="false"><b>– Game version</b>\nUse Valheim 1.0.15 or newer — on 1.0.7 the ground renders black.\n\n<b>– Pause in the background</b>\nThe game freezes when you leave the app (can be turned off in Settings).\n\n<b>– Turn the camera with buttons</b>\nHold Attack, Block or Alt and slide your finger.\n\n<b>– Floating joystick</b>\nThe left stick appears where your thumb lands.\n\n<b>– Invisible buttons</b>\nOpacity can go down to 0%.\n\n<b>– Gamepads</b>\nNo more double inputs on handhelds; LT and RT in Gamepad mapping.\n\n<b>– Compatibility mode</b>\nMuch faster now.\n\n<b>– Clearer messages</b>\nWhen installing and downloading the game.\n\n<b>– Multiplayer</b>\nNot supported yet, but it\'s planned.</string>
     <string name="instance_downloading">downloading, wait until it finishes</string>
@@ -321,6 +324,24 @@ In the cloud: %2$s
     <string name="fps_mode_resolved_off">Screen up to %1$d Hz</string>
     <!-- Mods (BepInEx) screen -->
     <string name="nav_mods">Mods</string>
+    <string name="nav_icon_packs">Button icons</string>
+    <string name="icon_packs_title">Icon packs</string>
+    <string name="icon_packs_note">A pack puts a picture on every on-screen button by what it does: attack, block, jump and so on. Pick the instance and press Apply next to a pack. Buttons without a matching picture keep their text. One button at a time: the controls editor, From a pack.</string>
+    <string name="icon_packs_format">Your own pack: a zip of white pictures on a transparent background (PNG), named after the actions: %1$s. Any other picture in the zip can be put on a button by hand. Colour pictures: add \"tint\": false to pack.json and they are shown in their own colours.</string>
+    <string name="icon_packs_instance">Instance</string>
+    <string name="icon_packs_apply">Apply</string>
+    <string name="icon_packs_delete">Delete</string>
+    <string name="icon_packs_import">Import a pack (zip)</string>
+    <string name="icon_packs_count">%1$d pictures</string>
+    <string name="icon_packs_builtin">built in</string>
+    <string name="icon_packs_applied">%1$d buttons of %2$s got icons</string>
+    <string name="icon_packs_applied_none">No button of this layout matches a picture of the pack</string>
+    <string name="icon_packs_apply_failed">Could not change the layout</string>
+    <string name="icon_packs_apply_confirm">Put the pack «%1$s» on the layout of %2$s? Buttons it has a picture for get that picture instead of their current icon or text.</string>
+    <string name="icon_packs_delete_confirm">Delete the pack «%1$s»? Buttons that already show its pictures keep them.</string>
+    <string name="icon_packs_imported">Pack «%1$s» imported: %2$d pictures</string>
+    <string name="icon_packs_import_failed">Could not import the pack: %1$s</string>
+    <string name="control_element_icon_from_pack">From a pack…</string>
     <string name="mod_support_label">Mod support (BepInEx)</string>
     <string name="mod_support_hint">Loads BepInEx when the game starts, and with it the mods switched on below. Mods only work with Native ARM64 Mono.</string>
     <string name="mods_native_mono_warning">Mods need native Mono or the native engine. Change the engine in the instance settings.</string>

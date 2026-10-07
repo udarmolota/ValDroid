@@ -191,6 +191,20 @@ public abstract class AbstractControlElement {
         return isToggle;
     }
 
+    /**
+     * Styles the editor's style picker offers for this element, or null when the element has no
+     * style (touchpad, scroll bar, radial menu): the picker is then hidden.
+     */
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return null;
+    }
+
+    public ControlElementDescription.Style getStyle() {
+        return ControlElementDescription.DEFAULT_STYLE;
+    }
+
+    public void setStyle(ControlElementDescription.Style style) {}
+
     public abstract ControlElementDescription describe();
 
     /**

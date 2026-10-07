@@ -131,6 +131,31 @@ public final class GpuInfo {
         return adrenoModel > 0;
     }
 
+    private static final Pattern MALI_G_PATTERN = Pattern.compile("(?i)\\bmali-g(\\d{2,3})(?!\\d)");
+
+    /**
+     * A GPU on which the native engine runs Valheim well below 30 fps at Very low, so a new instance
+     * there starts on the Minimal profile. Measured on a Mali-G57 (2026-10-06: 14 fps at Very low,
+     * 27-30 at Minimal); the rest are its peers or older:
+     *   Adreno below 640 (budget 6xx, all 5xx and older; 640/642L/644 and 7xx/8xx are not weak);
+     *   Mali-T and the small Mali-G: G31, G51, G52, G57, G68, G71, G72, G76. G77/G78, G610 and
+     *   newer (G615, G710, Immortalis) are not.
+     * Unknown GPUs are not weak: the Minimal profile is a choice, not a guess.
+     */
+    public boolean isWeakForNativeEngine() {
+        if (adrenoModel > 0) return adrenoModel < 640;
+        if (renderer == null) return false;
+        if (renderer.matches("(?is).*\\bmali-t\\d.*")) return true;
+        Matcher m = MALI_G_PATTERN.matcher(renderer);
+        if (!m.find()) return false;
+        switch (Integer.parseInt(m.group(1))) {
+            case 31: case 51: case 52: case 57: case 68: case 71: case 72: case 76:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /** True when EGL returned a real renderer, including a positively identified non-Adreno GPU. */
     public boolean isKnownGpu() {
         return renderer != null && !renderer.trim().isEmpty();

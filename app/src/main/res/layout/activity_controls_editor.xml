@@ -203,6 +203,19 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/element_opacity_sb"/>
 
+                <!-- The drag's style, shown while drag to look is on: a stick (default) or a touchpad -->
+                <CheckBox
+                    android:id="@+id/element_drag_look_touchpad_cb"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:text="@string/control_element_drag_look_touchpad"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/element_drag_look_cb"/>
+
                 <!-- Sensitivity (touchpad, sticks, scroll bar, radial menu, drag-to-look buttons) -->
                 <TextView
                     android:id="@+id/element_sensitivity_tv"
@@ -215,7 +228,7 @@
                     android:text="@string/control_element_sensitivity"
                     android:visibility="gone"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/element_drag_look_cb"
+                    app:layout_constraintTop_toBottomOf="@+id/element_drag_look_touchpad_cb"
                     app:layout_constraintEnd_toStartOf="@+id/element_sensitivity_percent_tv"/>
 
                 <TextView
@@ -411,6 +424,21 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/element_style_tv"/>
 
+                <!-- Gives every element the picked style (same look as the opacity "To all") -->
+                <Button
+                    android:id="@+id/element_style_all_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textSize="11sp"
+                    android:paddingTop="8dp"
+                    android:text="@string/control_element_opacity_all"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/element_style_s"
+                    app:layout_constraintBottom_toBottomOf="@+id/element_style_s"/>
+
                 <!-- Custom image icon -->
                 <Button
                     android:id="@+id/element_custom_icon_b"
@@ -421,6 +449,18 @@
                     android:text="@string/control_element_custom_icon"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/element_style_s"/>
+
+                <!-- An icon from an icon pack (IconPacks) -->
+                <Button
+                    android:id="@+id/element_pack_icon_b"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="12sp"
+                    android:text="@string/control_element_icon_from_pack"
+                    android:visibility="gone"
+                    app:layout_constraintStart_toEndOf="@id/element_custom_icon_b"
+                    app:layout_constraintTop_toTopOf="@id/element_custom_icon_b"/>
 
                 <CheckBox
                     android:id="@+id/element_icon_no_tint_cb"

@@ -32,6 +32,8 @@ import com.valdroid.game.NativeInput;
 public class NativeGameOverlay extends FrameLayout {
     private final InputControlsView controls;
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private java.io.File snapshotDir;   // the instance folder: native_engine.log and the snapshots
+    private int snapshotCount;
 
     // HUD, global setting (Settings → Frame rate): off, the classic FPS counter or the full bar.
     private TextView fpsText;
@@ -47,8 +49,10 @@ public class NativeGameOverlay extends FrameLayout {
                 ? ((Activity) context).getIntent().getStringExtra(NativeEngine.EXTRA_INSTANCE) : null;
         // The game's own log for "Report a bug": first, so it has as much of the start as possible.
         AppStorage storage = AppStorage.getSingleton();
-        if (storage != null && instanceName != null)
-            com.valdroid.game.NativeLog.start(storage.getInstanceDir(instanceName));
+        if (storage != null && instanceName != null) {
+            snapshotDir = storage.getInstanceDir(instanceName);
+            com.valdroid.game.NativeLog.start(snapshotDir);
+        }
         if (context instanceof Activity) applyWindowSettings((Activity) context, instanceName);
 
         InputSink.setBackend(new NativeInput());
@@ -141,7 +145,82 @@ public class NativeGameOverlay extends FrameLayout {
         super.onDetachedFromWindow();
     }
 
+    // ------------------------------------------------------------------ snapshots
+
+    /** Files the snapshots go to, in turn; "Report a bug" attaches them (LogExporter). */
+    public static final String[] SNAPSHOT_FILES = { "native_snapshot_1.jpg", "native_snapshot_2.jpg", "native_snapshot_3.jpg" };
+    private static final long SNAPSHOT_PERIOD_MS = 10_000;
+    private static final int SNAPSHOT_WIDTH = 480;
+
+    /**
+     * Every few seconds a small copy of what is in Unity's own surface right now (PixelCopy), kept as
+     * the last three JPEGs in the instance folder, with a line in the log. For a phone where the screen
+     * shows something else than the game: the copy tells whether Unity's surface still holds that
+     * picture or the game moved on and the picture never reached the screen.
+     */
+    private final Runnable snapshotTick = new Runnable() {
+        @Override public void run() {
+            takeSnapshot();
+            ui.postDelayed(this, SNAPSHOT_PERIOD_MS);
+        }
+    };
+
+    private void takeSnapshot() {
+        if (snapshotDir == null) return;
+        android.view.SurfaceView surface = findSurfaceView(getRootView());
+        if (surface == null || surface.getWidth() <= 0 || !surface.getHolder().getSurface().isValid()) {
+            android.util.Log.w("ValDroid/Snapshot", "snapshot: no usable SurfaceView ("
+                    + (surface == null ? "none in the window" : surface.getWidth() + "x" + surface.getHeight()) + ")");
+            return;
+        }
+        int h = Math.max(1, Math.round((float) SNAPSHOT_WIDTH * surface.getHeight() / surface.getWidth()));
+        final android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(SNAPSHOT_WIDTH, h, android.graphics.Bitmap.Config.ARGB_8888);
+        final int n = snapshotCount++;
+        try {
+            android.view.PixelCopy.request(surface, bmp, result -> saveSnapshot(n, bmp, result), ui);
+        } catch (RuntimeException e) {
+            android.util.Log.w("ValDroid/Snapshot", "snapshot " + n + " failed: " + e);
+        }
+    }
+
+    /** Unity's SurfaceView, wherever the player put it in the window. */
+    private static android.view.SurfaceView findSurfaceView(View v) {
+        if (v instanceof android.view.SurfaceView) return (android.view.SurfaceView) v;
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                android.view.SurfaceView found = findSurfaceView(g.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private void saveSnapshot(int n, android.graphics.Bitmap bmp, int result) {
+        if (result != android.view.PixelCopy.SUCCESS) {
+            android.util.Log.w("ValDroid/Snapshot", "snapshot " + n + ": PixelCopy result " + result);
+            return;
+        }
+        // A cheap fingerprint, so the log alone shows whether the picture in the surface changes.
+        long sum = 0;
+        for (int y = 0; y < bmp.getHeight(); y += 8)
+            for (int x = 0; x < bmp.getWidth(); x += 8) sum = sum * 31 + bmp.getPixel(x, y);
+        java.io.File f = new java.io.File(snapshotDir, SNAPSHOT_FILES[n % SNAPSHOT_FILES.length]);
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(f)) {
+            bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out);
+        } catch (java.io.IOException e) {
+            android.util.Log.w("ValDroid/Snapshot", "snapshot " + n + ": " + e);
+            return;
+        }
+        android.util.Log.i("ValDroid/Snapshot", "snapshot " + n + " -> " + f.getName() + ", fingerprint "
+                + Long.toHexString(sum));
+    }
+
     private void startHud() {
+        ui.removeCallbacks(snapshotTick);
+        // Snapshots only for diagnosis (VALDROID_DIAG=1 in the environment field): copying a frame back
+        // from the GPU and compressing it can show as a hitch on a weak phone.
+        if ("1".equals(System.getenv("VALDROID_DIAG"))) ui.postDelayed(snapshotTick, SNAPSHOT_PERIOD_MS);
         if (fpsText != null) {
             fpsLastTimeMs = 0;                          // the first interval would be skewed
             ui.removeCallbacks(fpsTextTick);
@@ -154,6 +233,7 @@ public class NativeGameOverlay extends FrameLayout {
     }
 
     private void stopHud() {
+        ui.removeCallbacks(snapshotTick);
         ui.removeCallbacks(fpsTextTick);
         if (perfHandler != null) perfHandler.removeCallbacks(perfTick);
     }

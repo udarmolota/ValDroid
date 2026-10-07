@@ -120,6 +120,9 @@ public final class LogExporter {
                 put(candidates, "bepinex-LogOutput.log", new File(gamePath, "BepInEx/LogOutput.log"));
                 caps.put("bepinex-LogOutput.log", new long[] { LAUNCHER_HEAD_BYTES, LAUNCHER_TAIL_BYTES });
                 put(candidates, "bepinex-preloader.log", newestPreloaderLog(gamePath));
+                // Small copies of the native engine's picture (NativeGameOverlay), the last three.
+                for (String n : com.valdroid.NativeGameOverlay.SNAPSHOT_FILES)
+                    put(candidates, n, new File(gamePath, n));
                 // RIMDROID_STUTTER_DIAG=1: long frames, Mono collections and slow shader compiles,
                 // all with wall-clock times, to see what each stutter was.
                 put(candidates, "stutter_diag.log", new File(gamePath, "stutter_diag.log"));

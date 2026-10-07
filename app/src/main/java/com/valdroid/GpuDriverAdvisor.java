@@ -44,7 +44,8 @@ public final class GpuDriverAdvisor {
             s.setVulkanDriverSo(so);
             applied = true;
         }
+        // The native engine (the default on Adreno) does not use the renderer: no MobileGlues note there.
         return new Result(gpu.displayName(), label, so, applied,
-                s.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES);
+                s.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES && !s.isNativeEngine());
     }
 }

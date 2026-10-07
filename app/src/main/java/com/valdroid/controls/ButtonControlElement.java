@@ -6,6 +6,10 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import java.io.File;
 import android.graphics.Rect;
@@ -30,6 +34,9 @@ public class ButtonControlElement extends AbstractControlElement {
     private boolean isToggledOn = false;
     // Attention-color indicator shown while a toggle button is switched ON.
     private static final int TOGGLE_ON_COLOR = android.graphics.Color.parseColor("#FFA726");
+    // The same ON colour for an icon in the CONSOLE style, made once instead of on every frame.
+    private static final ColorFilter TOGGLE_ON_ICON_FILTER =
+            new PorterDuffColorFilter(TOGGLE_ON_COLOR, PorterDuff.Mode.SRC_ATOP);
 
     // ---- Drag to look (see ControlElementDescription.dragLook) ----
     // Finger travel before looking starts, so a plain tap (a thumb always wobbles a little) never
@@ -45,9 +52,12 @@ public class ButtonControlElement extends AbstractControlElement {
     // sensitivity, which works through the radius above exactly as in the gamepad mode).
     private static final float LOOK_MOUSE_SPEED_DP_PER_S = 700f;
 
-    private enum LookMode { NONE, MOUSE, STICK }
+    // TOUCHPAD: the mouse moves by the finger's own travel (ControlElementDescription.dragLookTouchpad).
+    private enum LookMode { NONE, MOUSE, STICK, TOUCHPAD }
 
     private boolean dragLook;
+    private boolean dragLookTouchpad;
+    private float lookLastX, lookLastY;         // TOUCHPAD mode: the finger at the previous move
     private float sensitivity;
     private LookMode lookMode = LookMode.NONE;   // decided on touch-down from the bindings
     private boolean lookActive;                 // the finger has left the slop circle
@@ -62,6 +72,7 @@ public class ButtonControlElement extends AbstractControlElement {
         this.drawable = new ButtonControlDrawable(parentView, elementDescription);
         this.bindings.addAll(Arrays.asList(elementDescription.bindings));
         this.dragLook = elementDescription.dragLook;
+        this.dragLookTouchpad = elementDescription.dragLookTouchpad;
         // Layouts from before buttons kept a sensitivity carry 0 or the default; both mean default.
         this.sensitivity = elementDescription.sensitivity > 0f
                 ? clamp(elementDescription.sensitivity, ControlElementDescription.MIN_SENSITIVITY,
@@ -78,6 +89,15 @@ public class ButtonControlElement extends AbstractControlElement {
         this.dragLook = dragLook;
     }
 
+    public boolean isDragLookTouchpad() {
+        return dragLookTouchpad;
+    }
+
+    public void setDragLookTouchpad(boolean touchpad) {
+        stopLook();
+        this.dragLookTouchpad = touchpad;
+    }
+
     public float getSensitivity() {
         return sensitivity;
     }
@@ -91,7 +111,8 @@ public class ButtonControlElement extends AbstractControlElement {
      * type picks the dispatch path in dispatchEvent, the bindings say whether it sends anything.
      * A gamepad button must never move the mouse - Valheim switches its UI between mouse and
      * gamepad prompts by the last input, and mixing the two makes the UI flicker. UI actions
-     * (overlay / keyboard toggles) never look.
+     * (overlay / keyboard toggles) never look. The touchpad style is the exception the player picks
+     * knowingly: it is mouse movement whatever the button sends (the editor says the prompts may switch).
      */
     private LookMode resolveLookMode() {
         if (!dragLook) return LookMode.NONE;
@@ -102,6 +123,7 @@ public class ButtonControlElement extends AbstractControlElement {
             if (n.startsWith("MOUSE_") || n.startsWith("KEY_")) mnk = true;
             else if (n.startsWith("GAMEPAD_")) pad = true;
         }
+        if (dragLookTouchpad) return (mnk || pad) ? LookMode.TOUCHPAD : LookMode.NONE;
         if (this.inputType == InputType.GAMEPAD) return pad ? LookMode.STICK : LookMode.NONE;
         if (this.inputType == InputType.MNK) return mnk ? LookMode.MOUSE : LookMode.NONE;
         return LookMode.NONE;
@@ -126,6 +148,18 @@ public class ButtonControlElement extends AbstractControlElement {
             float ddx = x - lookDownX, ddy = y - lookDownY;
             if (ddx * ddx + ddy * ddy < slop * slop) return;
             lookActive = true;
+            // The touchpad starts from here: the slop itself is not turned into a jump.
+            lookLastX = x;
+            lookLastY = y;
+            if (lookMode == LookMode.TOUCHPAD) return;
+        }
+        if (lookMode == LookMode.TOUCHPAD) {
+            // Like the touchpad element: finger travel times the sensitivity (the same scale).
+            float dx = (x - lookLastX) * sensitivity, dy = (y - lookLastY) * sensitivity;
+            lookLastX = x;
+            lookLastY = y;
+            if (dx != 0f || dy != 0f) parentView.moveCursorBy(dx, dy);
+            return;
         }
         // Both modes are a virtual stick centred on the touch-down point: holding the finger off
         // centre keeps turning, like a right stick. A plain finger-travel mouse (the first version)
@@ -277,6 +311,8 @@ public class ButtonControlElement extends AbstractControlElement {
                 if (!getToggle()) {
                     this.dispatchEvent(false);
                 }
+                // The CONSOLE style draws a pressed state, which has to go away on release.
+                this.parentView.invalidate();
                 return true;
             case MotionEvent.ACTION_CANCEL: {
                 if (this.pointerId != -1) {
@@ -401,11 +437,18 @@ public class ButtonControlElement extends AbstractControlElement {
         return this.drawable.icon;
     }
 
+    @Override
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return ControlElementDescription.Style.values();
+    }
+
+    @Override
     public void setStyle(ControlElementDescription.Style style) {
         this.drawable.setStyle(style);
         this.parentView.invalidate();
     }
 
+    @Override
     public ControlElementDescription.Style getStyle() {
         return this.drawable.getStyle();
     }
@@ -465,7 +508,10 @@ public class ButtonControlElement extends AbstractControlElement {
                 this.drawable.iconFile,
                 this.drawable.noTint,
                 false,
-                this.dragLook);
+                this.dragLook,
+                false,
+                0f,
+                this.dragLookTouchpad);
     }
 
     private static String defaultArrow(Type t) {
@@ -487,6 +533,8 @@ public class ButtonControlElement extends AbstractControlElement {
         private static final float BUTTON_CIRCLE_DIAMETER = 160.f;
         private static final float BUTTON_RECT_WIDTH = 240.f;
         private static final float BUTTON_RECT_HEIGHT = 120.f;
+        // CONSOLE style: rectangles become rounded ones, corner radius as a share of the height.
+        private static final float CONSOLE_CORNER_K = 0.28f;
 
         private final Type type;
         private int color;
@@ -508,6 +556,11 @@ public class ButtonControlElement extends AbstractControlElement {
         private ControlElementDescription.Style style;
         private String iconFile;      // user image filename in controls/icons, or null
         private boolean noTint;       // keep custom image original colors when true
+        // CONSOLE style geometry, updated with the bounds so drawing allocates nothing.
+        private final ConsolePainter console = new ConsolePainter();
+        private final RectF consoleRect = new RectF();
+        private final Path consoleArrow = new Path();
+        private float consoleRingWidth;
 
         public ButtonControlDrawable(InputControlsView parent, ControlElementDescription description) {
             this.type = description.type;
@@ -517,6 +570,7 @@ public class ButtonControlElement extends AbstractControlElement {
 
             this.colorFilter = null;
             this.style = (description.style != null) ? description.style : ControlElementDescription.DEFAULT_STYLE;
+            applyStyleToText();
 
             // Split d-pad buttons (DPAD_UP...) are drawn as round buttons; Zomdroid gave them no
             // shape and no size, so they were invisible and could not be touched.
@@ -542,6 +596,10 @@ public class ButtonControlElement extends AbstractControlElement {
         }
 
         public void draw(@NonNull Canvas canvas) {
+            if (this.style == ControlElementDescription.Style.CONSOLE) {
+                drawConsole(canvas);
+                return;
+            }
             // --- Outline pass (black, a bit thicker) ---
             Paint p = this.shapeDrawable.getPaint();
 
@@ -647,6 +705,84 @@ public class ButtonControlElement extends AbstractControlElement {
             }
         }
 
+        /**
+         * CONSOLE style: dark see-through body, thin ring in the button colour with a soft glow,
+         * white label. Rectangles are drawn rounded. Pressed: darker body with a colour wash and a
+         * brighter ring. Toggle ON: the ring, glow and label turn the ON colour, as in OUTLINE.
+         */
+        private void drawConsole(@NonNull Canvas canvas) {
+            boolean editMode = parentView.isEditMode();
+            boolean toggledOn = getToggle() && ButtonControlElement.this.isToggledOn && !editMode;
+            boolean pressed = ButtonControlElement.this.pointerId != -1 && !editMode;
+            int ringColor = toggledOn ? TOGGLE_ON_COLOR : this.color;
+
+            if (this.type == Type.BUTTON_RECT) {
+                this.console.roundRect(this.consoleRect, this.height * CONSOLE_CORNER_K);
+            } else {
+                this.console.circle(this.centerX, this.centerY, this.width / 2f);
+            }
+            this.console.drawBody(canvas, ringColor, this.alpha, pressed);
+            this.console.drawRing(canvas, ringColor, this.alpha, pressed, this.consoleRingWidth);
+
+            int labelAlpha = ConsolePainter.scaleAlpha(this.alpha, ConsolePainter.LABEL_K);
+            if (this.iconDrawable != null) {
+                this.iconDrawable.setAlpha(labelAlpha);
+                if (toggledOn) {
+                    this.iconDrawable.setColorFilter(TOGGLE_ON_ICON_FILTER);
+                    this.iconDrawable.draw(canvas);
+                    this.iconDrawable.setColorFilter(this.colorFilter);
+                } else {
+                    this.iconDrawable.draw(canvas);
+                }
+                this.iconDrawable.setAlpha(this.alpha);
+            } else if (isDefaultArrow()) {
+                // Split d-pad buttons: a white triangle instead of the arrow glyph.
+                this.console.fillPath(canvas, this.consoleArrow,
+                        toggledOn ? TOGGLE_ON_COLOR : android.graphics.Color.WHITE, labelAlpha);
+            } else if (this.text != null) {
+                this.textPaint.setColor(toggledOn ? TOGGLE_ON_COLOR : android.graphics.Color.WHITE);
+                this.textPaint.setAlpha(labelAlpha);
+                this.textPaint.setColorFilter(toggledOn ? null : this.colorFilter);
+                canvas.drawText(this.text, this.centerX, this.textY, this.textPaint);
+                this.textPaint.setColor(this.color);
+                this.textPaint.setAlpha(this.alpha);
+                this.textPaint.setColorFilter(this.colorFilter);
+            }
+        }
+
+        /** A split d-pad button still showing its default arrow glyph (no own text or icon). */
+        private boolean isDefaultArrow() {
+            String arrow = defaultArrow(this.type);
+            return arrow != null && arrow.equals(this.text);
+        }
+
+        /** The white triangle of a split d-pad button; empty for any other button. */
+        private void updateConsoleArrow() {
+            this.consoleArrow.reset();
+            float dx = 0f, dy = 0f;
+            switch (this.type) {
+                case DPAD_UP: dy = -1f; break;
+                case DPAD_RIGHT: dx = 1f; break;
+                case DPAD_DOWN: dy = 1f; break;
+                case DPAD_LEFT: dx = -1f; break;
+                default: return;
+            }
+            ConsolePainter.addArrow(this.consoleArrow, this.centerX, this.centerY, dx, dy,
+                    this.width * 0.28f, this.width * 0.32f);
+        }
+
+        /** Bold label in CONSOLE (as on a console pad), the regular one otherwise. */
+        private void applyStyleToText() {
+            this.textPaint.setTypeface(this.style == ControlElementDescription.Style.CONSOLE
+                    ? Typeface.DEFAULT_BOLD : null);
+        }
+
+        /** CONSOLE labels are white, so built-in icons are too; other styles tint by the colour. */
+        private int iconTint() {
+            return this.style == ControlElementDescription.Style.CONSOLE
+                    ? android.graphics.Color.WHITE : this.color;
+        }
+
         public boolean isPointOver(float x, float y) {
             return x >= this.x && x <= this.x + this.width && y >= this.y && y <= this.y + this.height;
         }
@@ -656,7 +792,7 @@ public class ButtonControlElement extends AbstractControlElement {
             this.shapeDrawable.getPaint().setColor(this.color);
             this.textPaint.setColor(this.color);
             if (this.iconDrawable != null && shouldTintIcon())
-                iconDrawable.setTint(this.color);
+                iconDrawable.setTint(iconTint());
         }
 
         private boolean shouldTintIcon() {
@@ -677,12 +813,18 @@ public class ButtonControlElement extends AbstractControlElement {
             this.colorFilter = colorFilter;
             this.shapeDrawable.getPaint().setColorFilter(this.colorFilter);
             this.textPaint.setColorFilter(this.colorFilter);
+            this.console.setColorFilter(this.colorFilter);
             if (this.iconDrawable != null)
                 this.iconDrawable.setColorFilter(this.colorFilter);
         }
 
         public void setStyle(ControlElementDescription.Style style) {
             this.style = (style != null) ? style : ControlElementDescription.DEFAULT_STYLE;
+            // The label's weight and box and the icon's tint and box depend on the style.
+            applyStyleToText();
+            if (this.iconDrawable != null && shouldTintIcon()) this.iconDrawable.setTint(iconTint());
+            setTextSizeToFit();
+            updateIconDrawable();
         }
 
         public ControlElementDescription.Style getStyle() {
@@ -723,7 +865,7 @@ public class ButtonControlElement extends AbstractControlElement {
                     this.iconDrawable = null;
                 } else {
                     this.iconDrawable = shared.mutate();
-                    this.iconDrawable.setTint(this.color);
+                    this.iconDrawable.setTint(iconTint());
                     this.iconDrawable.setAlpha(this.alpha);
                     this.iconDrawable.setColorFilter(this.colorFilter);
                     updateIconDrawable();
@@ -751,7 +893,7 @@ public class ButtonControlElement extends AbstractControlElement {
             this.iconFile = fileName;
             BitmapDrawable bd = new BitmapDrawable(parentView.getResources(), bmp);
             if (shouldTintIcon()) {
-                bd.setTint(this.color);
+                bd.setTint(iconTint());
             } else {
                 bd.setTintList(null);
             }
@@ -779,6 +921,10 @@ public class ButtonControlElement extends AbstractControlElement {
                     Math.round(this.x + this.width), Math.round(this.y + this.height));
             this.shapeDrawable.getPaint().setStrokeWidth(PAINT_STROKE_WIDTH * parentView.pixelScale
                     * (float) Math.sqrt(this.scale));
+
+            this.consoleRect.set(this.x, this.y, this.x + this.width, this.y + this.height);
+            this.consoleRingWidth = ConsolePainter.ringWidth(parentView.pixelScale, this.scale);
+            updateConsoleArrow();
 
             setTextSizeToFit();
             updateIconDrawable();
@@ -832,7 +978,17 @@ public class ButtonControlElement extends AbstractControlElement {
             RectF bounds = new RectF();
             float contentW = 0;
             float contentH = 0;
-            if (this.type == Type.BUTTON_RECT) {
+            if (this.style == ControlElementDescription.Style.CONSOLE) {
+                // Console pads keep the label well inside the ring: the letter is about a third
+                // of the button's height, not as large as the shape allows.
+                if (this.type == Type.BUTTON_RECT) {
+                    contentW = this.width * contentScale;
+                    contentH = this.height * 0.42f;
+                } else {
+                    contentW = this.width * 0.62f;
+                    contentH = this.width * 0.36f;
+                }
+            } else if (this.type == Type.BUTTON_RECT) {
                 contentW = this.width * contentScale;
                 contentH = this.height * contentScale;
             } else {

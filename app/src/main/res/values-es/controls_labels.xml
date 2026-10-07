@@ -15,6 +15,7 @@
     <string name="ctl_style_outline">Contorno</string>
     <string name="ctl_style_filled">Relleno</string>
     <string name="ctl_style_glass">Cristal</string>
+    <string name="ctl_style_console">Consola</string>
     <string name="ctl_key_space">Espacio</string>
     <string name="ctl_key_left">%1$s izquierdo</string>
     <string name="ctl_key_right">%1$s derecho</string>
@@ -43,6 +44,7 @@
     <string name="control_element_sensitivity">Sensibilidad</string>
     <string name="control_element_tap_click">Toque = clic izquierdo</string>
     <string name="control_element_drag_look">Arrastrar gira la cámara</string>
+    <string name="control_element_drag_look_touchpad">Como un touchpad: la cámara sigue al dedo (mueve el ratón; con un diseño de mando las indicaciones del juego pueden cambiar al teclado)</string>
     <string name="control_element_floating">Joystick flotante</string>
     <string name="control_element_float_zone">Tamaño de la zona</string>
     <string name="control_element_text">Texto</string>

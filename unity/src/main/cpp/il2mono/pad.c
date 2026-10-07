@@ -44,6 +44,12 @@ typedef struct
 static ValDroidKbmState g_kbm;
 static pthread_mutex_t g_kbm_lock = PTHREAD_MUTEX_INITIALIZER;
 
+// Keys and mouse buttons pressed since the last take. A tap (the touchpad's click holds the button for
+// 50 ms) can start and end between two Input System updates when a frame takes longer than that, as on
+// a weak phone at 27 fps: it would never reach the game. A latched press is taken as held for one update.
+static uint32_t g_keys_pressed[KEY_WORDS];
+static uint32_t g_mouse_pressed;
+
 // ValDroid.VirtualKeyboardMouse::Take (returns a MonoBoolean, one byte) — copies the state when it changed since the last take and
 // clears the accumulated mouse delta and wheel. Called once per Input System update.
 static uint8_t kbm_take(ValDroidKbmState* out, uint32_t last_sequence)
@@ -53,6 +59,18 @@ static uint8_t kbm_take(ValDroidKbmState* out, uint32_t last_sequence)
     if (changed)
     {
         *out = g_kbm;
+        bool released_early = (g_mouse_pressed & ~g_kbm.mouse_buttons) != 0;
+        out->mouse_buttons |= g_mouse_pressed;
+        g_mouse_pressed = 0;
+        for (int w = 0; w < KEY_WORDS; w++)
+        {
+            released_early |= (g_keys_pressed[w] & ~g_kbm.keys[w]) != 0;
+            out->keys[w] |= g_keys_pressed[w];
+            g_keys_pressed[w] = 0;
+        }
+        // The release is still to be sent: the next take must see a change.
+        if (released_early)
+            g_kbm.sequence++;
         g_kbm.delta_x = g_kbm.delta_y = 0;
         g_kbm.scroll = 0;
     }
@@ -108,7 +126,10 @@ IL2MONO_API void JNICALL Java_com_valdroid_game_NativeInput_nativeKey(JNIEnv* en
     uint32_t bit = 1u << (key & 31);
     pthread_mutex_lock(&g_kbm_lock);
     if (down)
+    {
         g_kbm.keys[key >> 5] |= bit;
+        g_keys_pressed[key >> 5] |= bit;
+    }
     else
         g_kbm.keys[key >> 5] &= ~bit;
     g_kbm.sequence++;
@@ -122,7 +143,10 @@ IL2MONO_API void JNICALL Java_com_valdroid_game_NativeInput_nativeMouseButton(
         return;
     pthread_mutex_lock(&g_kbm_lock);
     if (down)
+    {
         g_kbm.mouse_buttons |= 1u << button;
+        g_mouse_pressed |= 1u << button;
+    }
     else
         g_kbm.mouse_buttons &= ~(1u << button);
     g_kbm.sequence++;

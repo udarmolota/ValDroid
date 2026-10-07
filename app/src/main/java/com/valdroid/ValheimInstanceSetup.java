@@ -204,6 +204,16 @@ public final class ValheimInstanceSetup {
             "AntiAliasing=0", "Bloom=0", "ChromaticAberration=0", "SunShafts=0", "SoftPart=0",
             "PointLights=0", "ClutterQuality=0", "LodBias=0", "Target3DResolutionVertical=360",
     };
+    // Very low with fewer pixels, scaled up pixelated (UpscalingAlgorithm: 0 Bilinear, 1 NearestNeighbor),
+    // for weak GPUs: what took a Mali-G57 to its 30 fps cap in the native engine (2026-10-06).
+    private static final String[] GFX_MINIMAL = {
+            "AntiAliasing=0", "Bloom=0", "ChromaticAberration=0", "SunShafts=0", "SoftPart=0",
+            "PointLights=0", "ClutterQuality=0", "LodBias=0", "Target3DResolutionVertical=270",
+            "UpscalingAlgorithm=1",
+    };
+    // Written with Very low and Low, not compared: puts back smooth scaling after Minimal, while
+    // settings that never had the key still read as their profile.
+    private static final String[] GFX_SMOOTH_SCALING = { "UpscalingAlgorithm=0" };
 
     // Not graphics quality: frame pacing and the intro film. The game can change them for its own
     // reasons, and that must not make "Very low" read as "custom" in the launcher.
@@ -230,6 +240,7 @@ public final class ValheimInstanceSetup {
             Log.w(TAG, "graphics preset detect: " + e);
             return GFX_KEEP_RESULT;
         }
+        if (profileMatches(have, GFX_MINIMAL)) return com.valdroid.InstanceSettings.GFX_MINIMAL;
         if (profileMatches(have, GFX_ULTRA)) return com.valdroid.InstanceSettings.GFX_ULTRA;
         if (profileMatches(have, GFX_LOW))   return com.valdroid.InstanceSettings.GFX_LOW;
         return GFX_KEEP_RESULT;
@@ -270,11 +281,20 @@ public final class ValheimInstanceSetup {
 
     /** Applies {@link com.valdroid.InstanceSettings#getGraphicsPending()}; KEEP writes nothing. */
     public static void applyGraphicsPreset(File instanceDir, int preset) {
-        if (preset != com.valdroid.InstanceSettings.GFX_LOW
-                && preset != com.valdroid.InstanceSettings.GFX_ULTRA) return;
-        String[] tier = (preset == com.valdroid.InstanceSettings.GFX_ULTRA) ? GFX_ULTRA : GFX_LOW;
+        String[] tier, extra;
+        String name;
+        switch (preset) {
+            case com.valdroid.InstanceSettings.GFX_LOW:
+                tier = GFX_LOW; extra = GFX_SMOOTH_SCALING; name = "LOW"; break;
+            case com.valdroid.InstanceSettings.GFX_ULTRA:
+                tier = GFX_ULTRA; extra = GFX_SMOOTH_SCALING; name = "ULTRA"; break;
+            case com.valdroid.InstanceSettings.GFX_MINIMAL:
+                tier = GFX_MINIMAL; extra = new String[0]; name = "MINIMAL"; break;
+            default:
+                return;
+        }
         int written = 0;
-        for (String[] set : new String[][]{ GFX_COMMON, tier }) {
+        for (String[] set : new String[][]{ GFX_COMMON, tier, extra }) {
             for (String kv : set) {
                 int eq = kv.indexOf('=');
                 try {
@@ -285,8 +305,7 @@ public final class ValheimInstanceSetup {
                 }
             }
         }
-        Log.i(TAG, "graphics preset " + (preset == com.valdroid.InstanceSettings.GFX_ULTRA ? "ULTRA" : "LOW")
-                + ": " + written + " settings written");
+        Log.i(TAG, "graphics preset " + name + ": " + written + " settings written");
     }
 
     /**

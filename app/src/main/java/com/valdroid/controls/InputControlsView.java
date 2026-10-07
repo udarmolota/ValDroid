@@ -192,6 +192,9 @@ public class InputControlsView extends View {
         if (isEditMode && snapToGrid) drawGrid(canvas);
         for (AbstractControlElement controlElement : controlElements) {
             if (!controlElement.isVisible()) continue;
+            // 0% opacity hides the element in the game completely: some elements draw a shadow or a
+            // label of their own, which used to stay visible (a player's touchpad, 2026-10-07).
+            if (!isEditMode && controlElement.getAlpha() == 0) continue;
             controlElement.draw(canvas);
             // A fully transparent element still works in the game (touches don't depend on alpha),
             // but in the editor it would be impossible to find: mark where it is.

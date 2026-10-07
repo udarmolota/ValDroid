@@ -31,7 +31,13 @@ namespace ValDroid
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Initialize()
         {
+            // A managed stack walk for every line the game logs costs time on a weak phone and fills
+            // the log: plain lines and warnings go out bare, errors and exceptions keep their trace.
+            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.None);
             ApplyLauncherSettings();
+            LowGpu.Initialize();
+            NoCinematics.Initialize();
             VirtualPad.Initialize();
             VirtualKeyboardMouse.Initialize();
             try
@@ -81,6 +87,9 @@ namespace ValDroid
             state->frames++;
             state->cursorVisible = Cursor.visible ? 1 : 0;
             state->cursorLocked = Cursor.lockState != CursorLockMode.None ? 1 : 0;
+            LowGpu.Tick();
+            NoCinematics.Tick();
+            Diagnostics.Tick();
         }
     }
 }

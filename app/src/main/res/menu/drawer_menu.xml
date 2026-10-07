@@ -17,6 +17,11 @@
             android:id="@+id/action_install_content"
             android:icon="@drawable/mt_icon_mods"
             android:title="@string/nav_mods" />
+        <!-- Icon packs: pictures for the on-screen buttons, put on an instance's layout at once -->
+        <item
+            android:id="@+id/action_icon_packs"
+            android:icon="@drawable/mt_icon_stack"
+            android:title="@string/nav_icon_packs" />
     </group>
 
     <!-- 2) Get the game from a store you own it on (Steam, GOG) -->

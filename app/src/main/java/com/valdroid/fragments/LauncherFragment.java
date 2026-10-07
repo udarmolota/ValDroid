@@ -381,7 +381,13 @@ public class LauncherFragment extends Fragment {
         LauncherPreferences.requireSingleton().setLastInstanceName(gi.getName());
         clearLog();
 
-        if (com.valdroid.game.NativeEngine.isAvailable() && gi.settings().isNativeEngine()) {
+        // Which engine this launch uses, in launcher.log: a report then says it for every run.
+        boolean nativeEngine = com.valdroid.game.NativeEngine.isAvailable() && gi.settings().isNativeEngine();
+        int engine = gi.settings().getEngine();
+        com.valdroid.LauncherLog.line("launch '" + gi.getName() + "': engine = "
+                + (nativeEngine ? "native engine"
+                   : engine == com.valdroid.InstanceSettings.ENGINE_BOX64_MONO ? "box64 + native Mono" : "box64 (full emulation)"));
+        if (nativeEngine) {
             startNativeEngine(gi);
             return;
         }

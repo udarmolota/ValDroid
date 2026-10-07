@@ -93,6 +93,15 @@
                 android:alpha="0.7"
                 android:text="@string/engine_native_hint" />
         </RadioGroup>
+
+        <TextView
+            android:id="@+id/tv_engine_weak_gpu_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:text="@string/engine_weak_gpu_note"
+            android:visibility="gone" />
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -285,11 +294,11 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/gfx_preset_ultra"
+                android:text="@string/gfx_preset_low"
                 android:textAppearance="?attr/textAppearanceBodyLarge" />
 
             <Button
-                android:id="@+id/btn_gfx_ultra"
+                android:id="@+id/btn_gfx_low"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/gfx_preset_apply" />
@@ -305,11 +314,44 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/gfx_preset_low"
+                android:text="@string/gfx_preset_ultra"
                 android:textAppearance="?attr/textAppearanceBodyLarge" />
 
             <Button
-                android:id="@+id/btn_gfx_low"
+                android:id="@+id/btn_gfx_ultra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gfx_preset_apply" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gfx_preset_minimal"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gfx_preset_minimal_hint"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_gfx_minimal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/gfx_preset_apply" />

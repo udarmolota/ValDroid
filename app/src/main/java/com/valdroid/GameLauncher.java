@@ -281,6 +281,8 @@ public class GameLauncher {
         // valdroid.c), run RimWorld 1.6 through our relocatable stand-in launcher instead. No-op
         // everywhere else, and it puts the game's own binary back if the address becomes available.
         UnityShimInstaller.applyTo(ValDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
+        // The native engine may have turned the game's videos off in its files; the Linux player plays them.
+        com.valdroid.game.VideoPatch.restore(new java.io.File(gameInstance.getGamePath()));
 
         // Settings the game changed under the native engine come first (a no-op until it has run),
         // so a pending graphics profile below still lands on top of them.

@@ -89,6 +89,9 @@ public final class NativeEngine {
         addMods(context, instance, gameDir, dataDir, env);
         applyGameSettings(context, instance, gameDir);
         int displayMode = graphicsSettings(context, instance.settings(), env);
+        addUserEnvironment(context, instance.settings(), env);
+        com.valdroid.LauncherLog.line("native engine environment: " + launchSummary(env));
+        VideoPatch.restore(gameDir);   // clips an earlier test build made unreadable
 
         Intent intent = new Intent();
         intent.setClassName(context.getPackageName(), ACTIVITY);
@@ -97,6 +100,18 @@ public final class NativeEngine {
         intent.putExtra(EXTRA_OVERLAY, com.valdroid.NativeGameOverlay.class.getName());
         intent.putExtra(EXTRA_INSTANCE, instance.getName());
         intent.putExtra(EXTRA_DISPLAY_MODE, displayMode);
+        // Unity's own command line (the player reads the "unity" extra): ours (below), then the instance's
+        // environment field for tests, VALDROID_UNITY_ARGS=-force-gfx-direct,-other (commas for spaces).
+        StringBuilder unityArgs = new StringBuilder();
+        String secondary = null, userArgs = null;
+        for (String e : env) {
+            if (e.startsWith(NO_SECONDARY + "=")) secondary = e.substring(NO_SECONDARY.length() + 1);
+            if (e.startsWith("VALDROID_UNITY_ARGS=")) userArgs = e.substring("VALDROID_UNITY_ARGS=".length());
+        }
+        if ("1".equals(secondary)) unityArgs.append("-vulkan-disable-secondary-commandbuffers");
+        if (userArgs != null && !userArgs.isEmpty())
+            unityArgs.append(unityArgs.length() > 0 ? " " : "").append(userArgs.replace(',', ' '));
+        if (unityArgs.length() > 0) intent.putExtra("unity", unityArgs.toString());
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return intent;
     }
@@ -137,6 +152,8 @@ public final class NativeEngine {
             if (pending != com.valdroid.InstanceSettings.GFX_KEEP) {
                 com.valdroid.ValheimInstanceSetup.applyGraphicsPreset(gameDir, pending);
                 is.setGraphicsPending(com.valdroid.InstanceSettings.GFX_KEEP);
+                // The first-launch Minimal on a weak GPU comes here without the button that sets it.
+                if (pending == com.valdroid.InstanceSettings.GFX_MINIMAL) is.setGraphicsMinimal(true);
             }
         } catch (Throwable t) {
             Log.w(TAG, "graphics preset failed", t);
@@ -152,8 +169,25 @@ public final class NativeEngine {
      * rate. Returns the display mode the frame-rate mode wants, 0 = none.
      */
     private static int graphicsSettings(Context context, com.valdroid.InstanceSettings is, List<String> env) {
-        if (is.getTexTier() != com.valdroid.InstanceSettings.TEX_NONE)
+        if (is.isGraphicsMinimal()) {
+            // The Minimal profile: beyond the game's own settings, textures 4x smaller (two mip levels,
+            // also less memory) and no realtime shadows or per-pixel lights (bridge LowGpu.cs).
+            env.add("VALDROID_TEXTURE_MIPMAP_LIMIT=2");
+            env.add("VALDROID_LOW_GPU=1");
+        } else if (is.getTexTier() != com.valdroid.InstanceSettings.TEX_NONE) {
             env.add("VALDROID_TEXTURE_MIPMAP_LIMIT=1");
+        }
+        // Mali: the game's cinematics are off (bridge NoCinematics.cs; VALDROID_SKIP_VIDEO=0 in the user's
+        // environment turns them back on). Starting the intro lost the GPU on a Mali-G615 and froze the
+        // picture; weaker Mali decoders refuse the clip anyway.
+        if (com.valdroid.GpuInfo.isMali()) env.add("VALDROID_SKIP_VIDEO=1");
+        // Mali-G615: Arm's driver loses the device on Unity's secondary command buffers (the main menu,
+        // or the world right after: VK_ERROR_DEVICE_LOST, the picture frozen). Unity then records each
+        // frame into its primary command buffers; the picture is the same, and the G615 ran the native
+        // engine at 50+ fps against 20-30 on the mix (POCO X6 Pro, 2026-10-07). Other Mali GPUs work
+        // without it. VALDROID_NO_SECONDARY_CMDBUFFERS=0/1 in the environment field overrides it.
+        String renderer = com.valdroid.GpuInfo.query().renderer;
+        if (renderer != null && renderer.contains("G615")) env.add(NO_SECONDARY + "=1");
 
         android.hardware.display.DisplayManager dm =
                 (android.hardware.display.DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
@@ -182,6 +216,53 @@ public final class NativeEngine {
         Log.i(TAG, "fps mode " + is.getFpsMode() + " -> cap " + cap + " @ " + fp.refreshHz + " Hz"
                 + (fp.modeId != 0 ? " (display mode " + fp.modeId + ")" : ""));
         return fp.modeId;
+    }
+
+    /**
+     * The instance's own environment variables (card Advanced), as in the box64 launch: applied after
+     * everything above, so a tester can override a setting (VALDROID_SCREEN_WIDTH=0 keeps the screen's
+     * own resolution, for one) without a new build.
+     */
+    private static void addUserEnvironment(Context context, com.valdroid.InstanceSettings is, List<String> env) {
+        String raw = is.getEnvVars();
+        if (raw == null || raw.trim().isEmpty()) return;
+        for (String token : raw.trim().split("\\s+")) {
+            int eq = token.indexOf('=');
+            if (eq <= 0) continue;
+            if (token.startsWith(VULKAN_DRIVER + "="))
+                token = VULKAN_DRIVER + "=" + vulkanDriverPath(context, token.substring(eq + 1));
+            env.add(token);
+        }
+    }
+
+    private static final String VULKAN_DRIVER = "VALDROID_VULKAN_DRIVER";
+    private static final String NO_SECONDARY = "VALDROID_NO_SECONDARY_CMDBUFFERS";
+
+
+    /**
+     * VALDROID_VULKAN_DRIVER (a test switch: the engine on another Vulkan driver, vkshim/driver.c) takes
+     * "custom" for the driver imported in the settings (an AdrenoTools zip or a .so), a bare name for one
+     * of the bundled drivers (the Turnip builds unpacked with the other libraries, or one shipped among
+     * the app's own native libraries, such as a test build's libpanvk.so), or an absolute path.
+     */
+    private static String vulkanDriverPath(Context context, String value) {
+        if (value.startsWith("/")) return value;
+        if (value.equals("custom")) return com.valdroid.CustomDriverInstaller.driverFile().getAbsolutePath();
+        File bundled = new File(com.valdroid.AppStorage.requireSingleton().getHomePath(),
+                com.valdroid.C.deps.LIBS_ANDROID_ARM64 + "/" + value);
+        File own = new File(context.getApplicationInfo().nativeLibraryDir, value);
+        return (!bundled.isFile() && own.isFile() ? own : bundled).getAbsolutePath();
+    }
+
+    /** The launch settings worth seeing in a report: everything but il2mono's paths. */
+    private static String launchSummary(List<String> env) {
+        StringBuilder sb = new StringBuilder();
+        for (String e : env) {
+            if (e.startsWith("VALDROID_IL2MONO_") || e.startsWith("DOORSTOP_")) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(e.startsWith("VALDROID_BEPINEX_PRELOADER=") ? "mods=on" : e);
+        }
+        return sb.length() > 0 ? sb.toString() : "(defaults)";
     }
 
     private static long apkStamp(Context context) {

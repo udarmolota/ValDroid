@@ -15,6 +15,7 @@
     <string name="ctl_style_outline">Контур</string>
     <string name="ctl_style_filled">Заливка</string>
     <string name="ctl_style_glass">Стекло</string>
+    <string name="ctl_style_console">Консоль</string>
     <string name="ctl_key_space">Пробел</string>
     <string name="ctl_key_left">Левый %1$s</string>
     <string name="ctl_key_right">Правый %1$s</string>
@@ -43,6 +44,7 @@
     <string name="control_element_sensitivity">Чувствительность</string>
     <string name="control_element_tap_click">Тап — левый клик</string>
     <string name="control_element_drag_look">Сдвиг пальцем — поворот камеры</string>
+    <string name="control_element_drag_look_touchpad">Как тачпад: камера следует за пальцем (двигает мышь; при геймпадной раскладке подсказки игры могут переключаться на клавиатуру)</string>
     <string name="control_element_floating">Плавающий джойстик</string>
     <string name="control_element_float_zone">Размер зоны</string>
     <string name="control_element_text">Текст</string>

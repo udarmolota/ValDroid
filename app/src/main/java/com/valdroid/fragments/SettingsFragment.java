@@ -34,7 +34,7 @@ public class SettingsFragment extends Fragment {
     // While the native engine is chosen the renderer group shows Vulkan and ignores its own checks.
     private boolean rendererLocked;
     private TextView tvEtc2Cache;
-    private View btnGfxUltra, btnGfxLow;
+    private View btnGfxUltra, btnGfxLow, btnGfxMinimal;
     private InstanceSettings inst;   // per-instance: renderer / driver / debug / scale / controls
     private String instanceName;     // the instance this page edits
 
@@ -445,6 +445,9 @@ public class SettingsFragment extends Fragment {
                 queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_ULTRA, R.string.gfx_preset_ultra));
         btnGfxLow.setOnClickListener(v ->
                 queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_LOW, R.string.gfx_preset_low));
+        btnGfxMinimal = view.findViewById(R.id.btn_gfx_minimal);
+        btnGfxMinimal.setOnClickListener(v ->
+                queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_MINIMAL, R.string.gfx_preset_minimal));
         refreshGraphicsButtons();
 
         // ETC2 compression switch (both ETC2 paths; see GameLauncher). Takes effect on next launch.
@@ -512,13 +515,17 @@ public class SettingsFragment extends Fragment {
                 ? R.id.rb_zink_zfa : R.id.rb_mobileglues);
         rendererLocked = false;
         for (int i = 0; i < rgRenderer.getChildCount(); i++) rgRenderer.getChildAt(i).setEnabled(!nativeEngine);
-        for (int id : new int[]{ R.id.spinner_vulkan_driver, R.id.btn_recommend_driver, R.id.tv_upload_driver,
+        // The driver import stays live: the native engine can test an imported driver
+        // (VALDROID_VULKAN_DRIVER=custom in the environment field).
+        for (int id : new int[]{ R.id.spinner_vulkan_driver, R.id.btn_recommend_driver,
                 R.id.sw_etc2, R.id.sw_shader_cache, R.id.sw_compat_mode }) {
             View v = view.findViewById(id);
             if (v != null) v.setEnabled(!nativeEngine);
         }
         view.findViewById(R.id.tv_native_renderer_note).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
         view.findViewById(R.id.tv_native_driver_note).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
+        boolean weakGpu = nativeEngine && com.valdroid.GpuInfo.query().isWeakForNativeEngine();
+        view.findViewById(R.id.tv_engine_weak_gpu_note).setVisibility(weakGpu ? View.VISIBLE : View.GONE);
     }
 
     // The game's settings change while it runs, so the buttons are re-read on every return here.
@@ -545,6 +552,7 @@ public class SettingsFragment extends Fragment {
 
     private void queueGraphicsProfile(int preset, int nameRes) {
         inst.setGraphicsPending(preset);
+        inst.setGraphicsMinimal(preset == InstanceSettings.GFX_MINIMAL);
         android.widget.Toast.makeText(requireContext(),
                 getString(R.string.gfx_preset_pending, getString(nameRes)),
                 android.widget.Toast.LENGTH_SHORT).show();
@@ -571,6 +579,7 @@ public class SettingsFragment extends Fragment {
                 if (!isAdded() || btnGfxUltra == null) return;
                 btnGfxUltra.setEnabled(current != InstanceSettings.GFX_ULTRA);
                 btnGfxLow.setEnabled(current != InstanceSettings.GFX_LOW);
+                btnGfxMinimal.setEnabled(current != InstanceSettings.GFX_MINIMAL);
             });
         }, "GfxProfileDetect").start();
     }

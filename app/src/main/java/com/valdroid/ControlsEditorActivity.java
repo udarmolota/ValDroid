@@ -245,6 +245,50 @@ public class ControlsEditorActivity extends AppCompatActivity {
                 showFloatZone(element.isFloating());
             }
 
+            /**
+             * Style picker. Buttons offer every style; sticks and the composite d-pad only the
+             * ones that change how they are drawn (getStyleChoices); other elements hide it.
+             * "To all" gives every element the picked style, or the nearest one it has, so a
+             * whole layout can be switched to CONSOLE in one tap.
+             */
+            private void loadStyle(AbstractControlElement element) {
+                ControlElementDescription.Style[] choices = element.getStyleChoices();
+                int visibility = choices != null ? View.VISIBLE : View.GONE;
+                binding.elementStyleTv.setVisibility(visibility);
+                binding.elementStyleS.setVisibility(visibility);
+                binding.elementStyleAllBtn.setVisibility(visibility);
+                if (choices == null) return;
+
+                ArrayAdapter<ControlElementDescription.Style> adapterStyle = new ControlLabels.Adapter<>(ControlsEditorActivity.this,
+                        R.layout.spinner_item,
+                        choices,
+                        st -> ControlLabels.style(ControlsEditorActivity.this, st));
+                binding.elementStyleS.setAdapter(adapterStyle);
+                binding.elementStyleS.setOnItemSelectedListener(null);
+                binding.elementStyleS.setSelection(adapterStyle.getPosition(element.getStyle()));
+                binding.elementStyleS.post(() -> {
+                    binding.elementStyleS.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                        @Override
+                        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                            element.setStyle((ControlElementDescription.Style) parent.getSelectedItem());
+                            binding.inputControlsV.invalidate();
+                        }
+                        @Override
+                        public void onNothingSelected(AdapterView<?> parent) {}
+                    });
+                });
+
+                binding.elementStyleAllBtn.setOnClickListener(v -> {
+                    ControlElementDescription.Style picked = element.getStyle();
+                    for (AbstractControlElement e : binding.inputControlsV.getControlElements()) {
+                        // setStyle narrows a style an element does not have (FILLED on a stick
+                        // draws as OUTLINE), so every element can be handed the pick as is.
+                        if (e.getStyleChoices() != null) e.setStyle(picked);
+                    }
+                    binding.inputControlsV.invalidate();
+                });
+            }
+
             private void showFloatZone(boolean show) {
                 int visibility = show ? View.VISIBLE : View.GONE;
                 binding.elementFloatZoneTv.setVisibility(visibility);
@@ -301,15 +345,25 @@ public class ControlsEditorActivity extends AppCompatActivity {
                     binding.elementDragLookCb.setChecked(button.isDragLook());
                     binding.elementDragLookCb.setOnCheckedChangeListener((v, checked) -> {
                         button.setDragLook(checked);
+                        binding.elementDragLookTouchpadCb.setVisibility(checked ? View.VISIBLE : View.GONE);
                         loadSensitivity(element);
                     });
                     binding.elementDragLookCb.setVisibility(View.VISIBLE);
+                    // The drag's style: a stick (keeps turning while the finger is off centre) or a
+                    // touchpad (turns by the finger's travel, always as mouse movement).
+                    binding.elementDragLookTouchpadCb.setOnCheckedChangeListener(null);
+                    binding.elementDragLookTouchpadCb.setChecked(button.isDragLookTouchpad());
+                    binding.elementDragLookTouchpadCb.setOnCheckedChangeListener(
+                            (v, checked) -> button.setDragLookTouchpad(checked));
+                    binding.elementDragLookTouchpadCb.setVisibility(button.isDragLook() ? View.VISIBLE : View.GONE);
                 } else {
                     binding.elementDragLookCb.setVisibility(View.GONE);
+                    binding.elementDragLookTouchpadCb.setVisibility(View.GONE);
                 }
 
                 loadSensitivity(element);
                 loadFloating(element);
+                loadStyle(element);
 
                 // Tap-to-click, touchpad only. Server admins asked to be able to turn the tap off:
                 // while dragging the cursor an accidental tap clicks whatever is underneath, which
@@ -410,33 +464,7 @@ public class ControlsEditorActivity extends AppCompatActivity {
                             });
                         });
 
-                        // Style — only for buttons
-                        binding.elementStyleTv.setVisibility(View.VISIBLE);
-                        binding.elementStyleS.setVisibility(View.VISIBLE);
-                        ArrayAdapter<ControlElementDescription.Style> adapterStyle = new ControlLabels.Adapter<>(ControlsEditorActivity.this,
-                                R.layout.spinner_item,
-                                ControlElementDescription.Style.values(),
-                                st -> ControlLabels.style(ControlsEditorActivity.this, st));
-                        binding.elementStyleS.setAdapter(adapterStyle);
-                        binding.elementStyleS.setOnItemSelectedListener(null);
-                        if (element instanceof com.valdroid.controls.ButtonControlElement) {
-                            binding.elementStyleS.setSelection(adapterStyle.getPosition(
-                                    ((com.valdroid.controls.ButtonControlElement) element).getStyle()));
-                        }
-                        binding.elementStyleS.post(() -> {
-                            binding.elementStyleS.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                                @Override
-                                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                                    if (element instanceof com.valdroid.controls.ButtonControlElement) {
-                                        ((com.valdroid.controls.ButtonControlElement) element).setStyle(
-                                                (ControlElementDescription.Style) parent.getSelectedItem());
-                                        binding.inputControlsV.invalidate();
-                                    }
-                                }
-                                @Override
-                                public void onNothingSelected(AdapterView<?> parent) {}
-                            });
-                        });
+                        // Style: see loadStyle (shared with the sticks and the d-pad).
 
                         // Custom image icon (load your own picture)
                         binding.elementCustomIconB.setVisibility(View.VISIBLE);
@@ -447,6 +475,8 @@ public class ControlsEditorActivity extends AppCompatActivity {
                                     ((com.valdroid.controls.ButtonControlElement) element).isNoTint());
                         }
                         binding.elementCustomIconB.setOnClickListener(v -> pickIconLauncher.launch("image/*"));
+                        binding.elementPackIconB.setVisibility(View.VISIBLE);
+                        binding.elementPackIconB.setOnClickListener(v -> showPackIconPicker());
                         binding.elementIconNoTintCb.setOnCheckedChangeListener((b, isChecked) -> {
                             if (element instanceof com.valdroid.controls.ButtonControlElement) {
                                 ((com.valdroid.controls.ButtonControlElement) element).setNoTint(isChecked);
@@ -471,8 +501,6 @@ public class ControlsEditorActivity extends AppCompatActivity {
                         binding.elementTogglingCb.setVisibility(View.GONE);
                         binding.elementIconTv.setVisibility(View.GONE);
                         binding.elementIconS.setVisibility(View.GONE);
-                        binding.elementStyleTv.setVisibility(View.GONE);
-                        binding.elementStyleS.setVisibility(View.GONE);
 
                         // Custom center image (same as round buttons).
                         binding.elementCustomIconB.setVisibility(View.VISIBLE);
@@ -483,6 +511,8 @@ public class ControlsEditorActivity extends AppCompatActivity {
                                     ((com.valdroid.controls.RadialMenuControlElement) element).isNoTint());
                         }
                         binding.elementCustomIconB.setOnClickListener(v -> pickIconLauncher.launch("image/*"));
+                        binding.elementPackIconB.setVisibility(View.VISIBLE);
+                        binding.elementPackIconB.setOnClickListener(v -> showPackIconPicker());
                         binding.elementIconNoTintCb.setOnCheckedChangeListener((b, isChecked) -> {
                             if (element instanceof com.valdroid.controls.RadialMenuControlElement) {
                                 ((com.valdroid.controls.RadialMenuControlElement) element).setNoTint(isChecked);
@@ -516,8 +546,6 @@ public class ControlsEditorActivity extends AppCompatActivity {
                         binding.elementTextEt.setVisibility(View.GONE);
                         binding.elementIconTv.setVisibility(View.GONE);
                         binding.elementIconS.setVisibility(View.GONE);
-                        binding.elementStyleTv.setVisibility(View.GONE);
-                        binding.elementStyleS.setVisibility(View.GONE);
 
                         // Custom image: replaces the drawn cross (composite DPAD) or the arrow
                         // (split DPAD_*, which are ButtonControlElements and already supported it).
@@ -532,6 +560,8 @@ public class ControlsEditorActivity extends AppCompatActivity {
                                     ((com.valdroid.controls.ButtonControlElement) element).isNoTint());
                         }
                         binding.elementCustomIconB.setOnClickListener(v -> pickIconLauncher.launch("image/*"));
+                        binding.elementPackIconB.setVisibility(View.VISIBLE);
+                        binding.elementPackIconB.setOnClickListener(v -> showPackIconPicker());
                         binding.elementIconNoTintCb.setOnCheckedChangeListener((b, isChecked) -> {
                             if (element instanceof com.valdroid.controls.DpadControlElement) {
                                 ((com.valdroid.controls.DpadControlElement) element).setNoTint(isChecked);
@@ -552,9 +582,8 @@ public class ControlsEditorActivity extends AppCompatActivity {
                         binding.elementTextEt.setVisibility(View.GONE);
                         binding.elementIconTv.setVisibility(View.GONE);
                         binding.elementIconS.setVisibility(View.GONE);
-                        binding.elementStyleTv.setVisibility(View.GONE);
-                        binding.elementStyleS.setVisibility(View.GONE);
                         binding.elementCustomIconB.setVisibility(View.GONE);
+                        binding.elementPackIconB.setVisibility(View.GONE);
                         binding.elementIconNoTintCb.setVisibility(View.GONE);
                         break;
                     }
@@ -976,33 +1005,54 @@ public class ControlsEditorActivity extends AppCompatActivity {
     }
 
     /**
-     * Crops fully/near-transparent borders off an imported icon so its visible content maps
-     * directly to the on-screen box. Returns the original bitmap if it has no trimmable border
-     * (fully opaque to the edges) or is entirely transparent.
+     * The icons of every pack (built in and imported) as a grid; a tap puts that icon on the selected
+     * element. White pictures, so each sits on a dark tile.
      */
-    private static Bitmap trimTransparentBorder(Bitmap src) {
-        if (src == null) return null;
-        int w = src.getWidth(), h = src.getHeight();
-        if (w <= 0 || h <= 0) return src;
-        int[] px = new int[w * h];
-        src.getPixels(px, 0, w, 0, 0, w, h);
-        final int ALPHA_MIN = 8; // treat alpha <= 8 as transparent
-        int minX = w, minY = h, maxX = -1, maxY = -1;
-        for (int y = 0; y < h; y++) {
-            int row = y * w;
-            for (int x = 0; x < w; x++) {
-                int a = (px[row + x] >>> 24) & 0xff;
-                if (a > ALPHA_MIN) {
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
-                }
+    private void showPackIconPicker() {
+        AbstractControlElement el = binding.inputControlsV.getSelectedElement();
+        if (el == null) return;
+        final java.util.List<com.valdroid.controls.IconPacks.Pack> owner = new java.util.ArrayList<>();
+        final java.util.List<String> names = new java.util.ArrayList<>();
+        for (com.valdroid.controls.IconPacks.Pack p : com.valdroid.controls.IconPacks.list(this))
+            for (String icon : p.icons) { owner.add(p); names.add(icon); }
+        if (names.isEmpty()) return;
+        final float density = getResources().getDisplayMetrics().density;
+        final int tile = Math.round(56 * density), pad = Math.round(8 * density);
+        android.widget.GridView grid = new android.widget.GridView(this);
+        grid.setNumColumns(android.widget.GridView.AUTO_FIT);
+        grid.setColumnWidth(tile + pad);
+        grid.setVerticalSpacing(pad);
+        grid.setPadding(pad, pad, pad, pad);
+        final androidx.appcompat.app.AlertDialog[] dialog = new androidx.appcompat.app.AlertDialog[1];
+        grid.setAdapter(new android.widget.BaseAdapter() {
+            @Override public int getCount() { return names.size(); }
+            @Override public Object getItem(int i) { return names.get(i); }
+            @Override public long getItemId(int i) { return i; }
+            @Override public View getView(int i, View convert, android.view.ViewGroup parent) {
+                android.widget.ImageView iv = convert instanceof android.widget.ImageView
+                        ? (android.widget.ImageView) convert : new android.widget.ImageView(ControlsEditorActivity.this);
+                iv.setLayoutParams(new android.widget.AbsListView.LayoutParams(tile, tile));
+                iv.setPadding(pad, pad, pad, pad);
+                iv.setBackgroundColor(0xFF37474F);
+                iv.setContentDescription(names.get(i));
+                iv.setImageBitmap(com.valdroid.controls.IconPacks.load(ControlsEditorActivity.this, owner.get(i), names.get(i)));
+                return iv;
             }
-        }
-        if (maxX < minX || maxY < minY) return src;               // fully transparent — leave as-is
-        if (minX == 0 && minY == 0 && maxX == w - 1 && maxY == h - 1) return src; // nothing to trim
-        return Bitmap.createBitmap(src, minX, minY, maxX - minX + 1, maxY - minY + 1);
+        });
+        grid.setOnItemClickListener((parent, view, i, id) -> {
+            if (com.valdroid.controls.IconPacks.setIcon(this, owner.get(i), names.get(i), el, binding.inputControlsV)) {
+                binding.elementIconNoTintCb.setChecked(!owner.get(i).tint);
+                binding.inputControlsV.invalidate();
+            } else {
+                Toast.makeText(this, R.string.control_element_custom_icon_failed, Toast.LENGTH_SHORT).show();
+            }
+            if (dialog[0] != null) dialog[0].dismiss();
+        });
+        dialog[0] = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.control_element_icon_from_pack)
+                .setView(grid)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void onIconPicked(Uri uri) {
@@ -1043,7 +1093,7 @@ public class ControlsEditorActivity extends AppCompatActivity {
             // Trim transparent borders so the visible content fills the button regardless of how
             // much padding the source PNG had (otherwise a padded image looks tiny, an edge-to-edge
             // one looks oversized for the same on-screen box).
-            bmp = trimTransparentBorder(bmp);
+            bmp = com.valdroid.controls.IconPacks.trimTransparentBorder(bmp);
             String fileName = "icon_" + System.currentTimeMillis() + ".png";
             File out = new File(dir, fileName);
             try (FileOutputStream fos = new FileOutputStream(out)) {

@@ -14,6 +14,8 @@ public class WasdStickControlElement extends AbstractControlElement {
     private final WasdStickDrawable drawable;
 
     private int pointerId = -1;
+    // OUTLINE (the original look) or CONSOLE; see ControlElementDescription.STICK_STYLES.
+    private ControlElementDescription.Style style;
 
     private boolean wDown, aDown, sDown, dDown;
 
@@ -36,6 +38,7 @@ public class WasdStickControlElement extends AbstractControlElement {
         this.bindings.clear();
 
         this.drawable = new WasdStickDrawable(parentView, desc);
+        this.style = ControlElementDescription.stickStyle(desc.style);
     }
 
     @Override
@@ -179,7 +182,27 @@ public class WasdStickControlElement extends AbstractControlElement {
 
     @Override
     public void draw(Canvas canvas) {
-        drawable.draw(canvas);
+        if (style == ControlElementDescription.Style.CONSOLE) {
+            drawable.drawConsole(canvas, pointerId != -1 && !parentView.isEditMode());
+        } else {
+            drawable.draw(canvas);
+        }
+    }
+
+    @Override
+    public ControlElementDescription.Style[] getStyleChoices() {
+        return ControlElementDescription.STICK_STYLES;
+    }
+
+    @Override
+    public ControlElementDescription.Style getStyle() {
+        return style;
+    }
+
+    @Override
+    public void setStyle(ControlElementDescription.Style style) {
+        this.style = ControlElementDescription.stickStyle(style);
+        this.parentView.invalidate();
     }
 
     @Override
@@ -250,7 +273,7 @@ public class WasdStickControlElement extends AbstractControlElement {
                 ControlElementDescription.Icon.NO_ICON,
                 false,
                 ControlElementDescription.DEFAULT_SENSITIVITY,
-                ControlElementDescription.DEFAULT_STYLE,
+                style,
                 null, false, false, false,
                 floating, floatZone
         );
@@ -278,6 +301,7 @@ public class WasdStickControlElement extends AbstractControlElement {
 
         private final Paint fillPaint   = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final ConsolePainter console = new ConsolePainter();
 
         private final InputControlsView parentView;
 
@@ -315,6 +339,7 @@ public class WasdStickControlElement extends AbstractControlElement {
         void setColorFilter(@Nullable ColorFilter cf) {
             fillPaint.setColorFilter(cf);
             strokePaint.setColorFilter(cf);
+            console.setColorFilter(cf);
         }
 
         void setScale(float s) {
@@ -383,6 +408,15 @@ public class WasdStickControlElement extends AbstractControlElement {
             // inner
             canvas.drawCircle(innerCenterX, innerCenterY, innerRadius, strokePaint);
             canvas.drawCircle(innerCenterX, innerCenterY, innerRadius, fillPaint);
+        }
+
+        /** CONSOLE style, same look as StickControlElement's (no letter: it always sends WASD). */
+        void drawConsole(Canvas canvas, boolean pressed) {
+            float ring = ConsolePainter.ringWidth(parentView.pixelScale, scale);
+            console.circle(outerCenterX, outerCenterY, outerRadius);
+            console.drawStickBase(canvas, color, alpha, pressed, ring);
+            console.circle(innerCenterX, innerCenterY, innerRadius);
+            console.drawStickKnob(canvas, color, alpha, ring);
         }
     }
 }

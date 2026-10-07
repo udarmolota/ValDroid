@@ -87,6 +87,7 @@ Na nuvem: %2$s
     <string name="engine_box64_mono_hint">O motor é emulado; o código do próprio jogo roda de forma nativa. Mais rápido; os mods funcionam.</string>
     <string name="engine_native">Motor nativo (experimental)</string>
     <string name="engine_native_hint">O próprio motor Android da Unity, sem emulação. O mais rápido. Só Vulkan; mods com bibliotecas x86 não serão carregados.</string>
+    <string name="engine_weak_gpu_note">Com a GPU deste telefone o motor nativo precisa do perfil Mínima: toque em Aplicar ao lado de Mínima no cartão Gráficos.</string>
     <string name="engine_native_renderer_note">O motor nativo sempre renderiza diretamente com Vulkan.</string>
     <string name="engine_native_driver_note">O motor nativo usa o driver Vulkan do próprio celular.</string>
     <string name="native_mono_off_msg">O jogo vai rodar no modo anterior, mais lento. Se você desativou por causa de um problema, envie os logs para nós — isso nos ajuda a corrigir.</string>
@@ -272,6 +273,8 @@ Na nuvem: %2$s
     <string name="gfx_preset_keep">Não mexer</string>
     <string name="gfx_preset_low">Baixa</string>
     <string name="gfx_preset_ultra">Muito baixa</string>
+    <string name="gfx_preset_minimal">Mínima</string>
+    <string name="gfx_preset_minimal_hint">Para telefones fracos: resolução 3D menor, pixelada. No motor nativo, também texturas 4 vezes menores e sem sombras.</string>
     <string name="gfx_preset_hint">O jogo sempre começa em Muito baixa, um perfil ajustado para a emulação. Depois você pode adaptar os gráficos ao seu telefone nas configurações do próprio jogo: o launcher não mexe mais neles. Um botão volta as configurações para esse perfil na próxima inicialização. Botão cinza significa que esse perfil já está aplicado.</string>
     <string name="instance_downloading">baixando, espere terminar</string>
     <string name="instance_incomplete">não terminado</string>
@@ -305,6 +308,24 @@ Na nuvem: %2$s
     <string name="fps_mode_resolved_off">Tela até %1$d Hz</string>
     <!-- Mods (BepInEx) screen -->
     <string name="nav_mods">Mods</string>
+    <string name="nav_icon_packs">Ícones dos botões</string>
+    <string name="icon_packs_title">Pacotes de ícones</string>
+    <string name="icon_packs_note">Um pacote coloca uma imagem em cada botão da tela conforme o que ele faz: atacar, bloquear, pular etc. Escolha a instância e toque em Aplicar ao lado de um pacote. Botões sem imagem correspondente mantêm o texto. Um botão por vez: o editor de controles, De um pacote.</string>
+    <string name="icon_packs_format">Seu próprio pacote: um zip de imagens brancas em fundo transparente (PNG), com o nome das ações: %1$s. Qualquer outra imagem do zip pode ser colocada num botão manualmente. Imagens coloridas: adicione \"tint\": false ao pack.json e elas aparecem com as próprias cores.</string>
+    <string name="icon_packs_instance">Instância</string>
+    <string name="icon_packs_apply">Aplicar</string>
+    <string name="icon_packs_delete">Excluir</string>
+    <string name="icon_packs_import">Importar um pacote (zip)</string>
+    <string name="icon_packs_count">%1$d imagens</string>
+    <string name="icon_packs_builtin">embutido</string>
+    <string name="icon_packs_applied">%1$d botões de %2$s ganharam ícones</string>
+    <string name="icon_packs_applied_none">Nenhum botão deste layout corresponde a uma imagem do pacote</string>
+    <string name="icon_packs_apply_failed">Não foi possível alterar o layout</string>
+    <string name="icon_packs_apply_confirm">Colocar o pacote «%1$s» no layout de %2$s? Os botões para os quais ele tem imagem a recebem no lugar do ícone ou texto atual.</string>
+    <string name="icon_packs_delete_confirm">Excluir o pacote «%1$s»? Os botões que já mostram as imagens dele as mantêm.</string>
+    <string name="icon_packs_imported">Pacote «%1$s» importado: %2$d imagens</string>
+    <string name="icon_packs_import_failed">Não foi possível importar o pacote: %1$s</string>
+    <string name="control_element_icon_from_pack">De um pacote…</string>
     <string name="mod_support_label">Suporte a mods (BepInEx)</string>
     <string name="mod_support_hint">Carrega o BepInEx ao iniciar o jogo e, com ele, os mods ativados abaixo. Os mods só funcionam com o Mono ARM64 nativo.</string>
     <string name="mods_native_mono_warning">Os mods precisam do Mono nativo ou do motor nativo. Troque o motor nas configurações da instância.</string>

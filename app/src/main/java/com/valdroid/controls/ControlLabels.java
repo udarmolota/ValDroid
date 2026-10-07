@@ -87,6 +87,7 @@ public final class ControlLabels {
         switch (style) {
             case FILLED: return c.getString(R.string.ctl_style_filled);
             case GLASS: return c.getString(R.string.ctl_style_glass);
+            case CONSOLE: return c.getString(R.string.ctl_style_console);
             default: return c.getString(R.string.ctl_style_outline);
         }
     }

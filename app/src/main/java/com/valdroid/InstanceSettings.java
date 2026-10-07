@@ -197,9 +197,11 @@ public class InstanceSettings {
      * Graphics preset written into the game's own settings before launch (see
      * ValheimInstanceSetup.applyGraphicsPreset). Valheim's own presets are built for a PC: even
      * "Very low" leaves on what costs the most under emulation (tessellation, shadows, draw
-     * distance). KEEP = do not touch the game's settings at all.
+     * distance). KEEP = do not touch the game's settings at all. MINIMAL = Very low at a lower 3D
+     * resolution, pixelated; in the native engine it also cuts what the game's settings cannot (see
+     * isGraphicsMinimal).
      */
-    public static final int GFX_KEEP = 0, GFX_LOW = 1, GFX_ULTRA = 2;
+    public static final int GFX_KEEP = 0, GFX_LOW = 1, GFX_ULTRA = 2, GFX_MINIMAL = 3;
 
     /**
      * The graphics profile to write into the game on the NEXT launch, once — GFX_KEEP when there is
@@ -207,7 +209,8 @@ public class InstanceSettings {
      * whatever the player changed in game.
      *
      * With no stored value: an instance whose game has never saved graphics settings gets
-     * GFX_ULTRA, so it starts on the emulation-tuned profile without anyone opening the settings.
+     * GFX_ULTRA, so it starts on the emulation-tuned profile without anyone opening the settings
+     * (GFX_MINIMAL on the native engine with a weak GPU).
      * One whose game has saved them gets GFX_KEEP — it was played before. "Has saved them" is
      * decided by the GraphicsQualityMode key, NOT by the settings file existing: our own install
      * step creates that file, which made every new instance look played (see
@@ -216,11 +219,26 @@ public class InstanceSettings {
     public int getGraphicsPending() {
         if (p.contains(pfx + "gfx_pending")) return p.getInt(pfx + "gfx_pending", GFX_KEEP);
         java.io.File dir = com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
-        return com.valdroid.ValheimInstanceSetup.hasGameGraphicsSettings(dir) ? GFX_KEEP : GFX_ULTRA;
+        if (com.valdroid.ValheimInstanceSetup.hasGameGraphicsSettings(dir)) return GFX_KEEP;
+        // A weak GPU on the native engine starts on Minimal (see GpuInfo.isWeakForNativeEngine).
+        return isNativeEngine() && GpuInfo.query().isWeakForNativeEngine() ? GFX_MINIMAL : GFX_ULTRA;
     }
 
     public void setGraphicsPending(int preset) {
         p.edit().putInt(pfx + "gfx_pending", preset).apply();
+    }
+
+    /**
+     * Whether the last profile pressed was Minimal. Unlike the profile itself (written into the game
+     * once) this lasts: the native engine then also runs with textures 4x smaller and without realtime
+     * shadows, on every launch, until another profile is pressed. Changes made in game keep it.
+     */
+    public boolean isGraphicsMinimal() {
+        return p.getBoolean(pfx + "gfx_minimal", false);
+    }
+
+    public void setGraphicsMinimal(boolean on) {
+        p.edit().putBoolean(pfx + "gfx_minimal", on).apply();
     }
 
     // --- ETC2 compression on the GL path (MobileGlues). Default ON. ---

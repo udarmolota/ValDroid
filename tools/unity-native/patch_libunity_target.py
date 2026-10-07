@@ -2,6 +2,9 @@
 for another target: in SerializedFile::ReadMetadata,
     0xa2c270  cmp  w1, #0xd        ->  mov w1, #0xd   (the file is treated as an Android file)
     0xa2c27c  b.ne <error>         ->  nop
+and makes it open Vulkan through ValDroid's observing shim: its one dlopen("libvulkan.so") name becomes
+"libvkshim.so" (same length; the shim loads the system libvulkan.so itself, see
+unity/src/main/cpp/vkshim/vkshim.c).
 The original bytes are verified first, so the script refuses any other libunity build.
 usage: patch_libunity_target.py IN OUT
 """
@@ -24,5 +27,10 @@ if cur_a != CMP_W1_13 or (cur_b & 0xFF00001F) != 0x54000001:
     raise SystemExit(f"unexpected bytes: {cur_a:#x} {cur_b:#x} - not the analysed libunity")
 struct.pack_into("<I", d, a, MOV_W1_13)
 struct.pack_into("<I", d, b, NOP)
+VULKAN, SHIM = b"libvulkan.so\0", b"libvkshim.so\0"
+if d.count(VULKAN) != 1:
+    raise SystemExit(f"expected one {VULKAN!r} in libunity, found {d.count(VULKAN)}")
+v = d.find(VULKAN)
+d[v:v + len(SHIM)] = SHIM
 open(dst, "wb").write(d)
 print("patched", dst)

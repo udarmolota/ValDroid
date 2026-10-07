@@ -19,6 +19,7 @@
     <string name="ctl_style_outline">Outline</string>
     <string name="ctl_style_filled">Filled</string>
     <string name="ctl_style_glass">Glass</string>
+    <string name="ctl_style_console">Console</string>
     <string name="ctl_key_space">Space</string>
     <string name="ctl_key_left">Left %1$s</string>
     <string name="ctl_key_right">Right %1$s</string>
@@ -48,6 +49,7 @@
     <string name="control_element_sensitivity">Sensitivity</string>
     <string name="control_element_tap_click">Tap = left click</string>
     <string name="control_element_drag_look">Drag turns the camera</string>
+    <string name="control_element_drag_look_touchpad">Like a touchpad: the camera follows the finger (moves the mouse; with a gamepad layout the game\'s hints may switch to the keyboard)</string>
     <string name="control_element_floating">Floating joystick</string>
     <string name="control_element_float_zone">Zone size</string>
     <string name="control_element_text">Text</string>

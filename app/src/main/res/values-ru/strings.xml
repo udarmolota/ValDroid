@@ -82,6 +82,7 @@
     <string name="engine_box64_mono_hint">Движок эмулируется, код игры работает нативно. Быстрее, моды работают.</string>
     <string name="engine_native">Нативный движок (экспериментальный)</string>
     <string name="engine_native_hint">Собственный Android-движок Unity, без эмуляции. Самый быстрый. Только Vulkan; моды с x86-библиотеками не загрузятся.</string>
+    <string name="engine_weak_gpu_note">Для видеокарты этого телефона нативному движку нужен профиль «Минимальная»: нажми «Применить» рядом с ним в карточке «Графика».</string>
     <string name="engine_native_renderer_note">Нативный движок всегда рисует напрямую через Vulkan.</string>
     <string name="engine_native_driver_note">Нативный движок использует системный драйвер Vulkan.</string>
     <string name="native_mono_off_msg">Игра будет работать в прежнем, более медленном режиме. Если вы выключили из-за проблемы, пришлите нам логи — это поможет её исправить.</string>
@@ -265,6 +266,8 @@
     <string name="gfx_preset_keep">Не трогать</string>
     <string name="gfx_preset_low">Низкая</string>
     <string name="gfx_preset_ultra">Очень низкая</string>
+    <string name="gfx_preset_minimal">Минимальная</string>
+    <string name="gfx_preset_minimal_hint">Для слабых телефонов: ниже 3D-разрешение, пиксельное масштабирование. В нативном движке ещё текстуры в 4 раза меньше и без теней.</string>
     <string name="gfx_preset_hint">Игра всегда стартует с «Очень низкой» — это профиль, подобранный под эмуляцию. Дальше графику можно подстраивать под свой телефон в настройках самой игры: лаунчер её больше не трогает. Кнопка возвращает настройки к профилю при следующем запуске. Серая кнопка — этот профиль уже стоит.</string>
     <string name="release_notes_body" translatable="false"><b>– Версия игры</b>\nСтавьте Valheim 1.0.15 или новее — на 1.0.7 земля чёрная.\n\n<b>– Пауза в фоне</b>\nИгра замирает, когда вы выходите из приложения (отключается в настройках).\n\n<b>– Поворот камеры с кнопок</b>\nЗажмите Атаку, Блок или Alt и ведите пальцем.\n\n<b>– Плавающий джойстик</b>\nЛевый стик появляется там, куда вы поставили палец.\n\n<b>– Невидимые кнопки</b>\nПрозрачность можно опустить до 0%.\n\n<b>– Геймпады</b>\nБольше нет двойных нажатий на консолях; LT и RT в переназначении геймпада.\n\n<b>– Режим совместимости</b>\nТеперь намного быстрее.\n\n<b>– Понятные сообщения</b>\nПри установке и скачивании игры.\n\n<b>– Мультиплеер</b>\nПока не поддерживается, но в планах.</string>
     <string name="instance_downloading">скачивается, дождитесь окончания</string>
@@ -299,6 +302,24 @@
     <string name="fps_mode_resolved_off">Экран до %1$d Гц</string>
     <!-- Mods (BepInEx) screen -->
     <string name="nav_mods">Моды</string>
+    <string name="nav_icon_packs">Иконки кнопок</string>
+    <string name="icon_packs_title">Наборы иконок</string>
+    <string name="icon_packs_note">Набор ставит картинку на каждую экранную кнопку по тому, что она делает: атака, блок, прыжок и так далее. Выбери инстанс и нажми «Применить» у набора. Кнопки без подходящей картинки остаются с текстом. Для одной кнопки: редактор управления, «Из набора».</string>
+    <string name="icon_packs_format">Свой набор: zip с белыми картинками на прозрачном фоне (PNG), названными по действиям: %1$s. Любую другую картинку из zip можно поставить на кнопку вручную. Цветные картинки: добавь в pack.json \"tint\": false, и они будут показаны в своих цветах.</string>
+    <string name="icon_packs_instance">Инстанс</string>
+    <string name="icon_packs_apply">Применить</string>
+    <string name="icon_packs_delete">Удалить</string>
+    <string name="icon_packs_import">Импортировать набор (zip)</string>
+    <string name="icon_packs_count">Картинок: %1$d</string>
+    <string name="icon_packs_builtin">встроенный</string>
+    <string name="icon_packs_applied">Иконки получили кнопок: %1$d (%2$s)</string>
+    <string name="icon_packs_applied_none">Ни одна кнопка этой раскладки не подходит к картинкам набора</string>
+    <string name="icon_packs_apply_failed">Не удалось изменить раскладку</string>
+    <string name="icon_packs_apply_confirm">Поставить набор «%1$s» на раскладку инстанса %2$s? Кнопки, для которых в наборе есть картинка, получат её вместо текущей иконки или текста.</string>
+    <string name="icon_packs_delete_confirm">Удалить набор «%1$s»? На кнопках, где он уже стоит, иконки останутся.</string>
+    <string name="icon_packs_imported">Набор «%1$s» импортирован: картинок %2$d</string>
+    <string name="icon_packs_import_failed">Не удалось импортировать набор: %1$s</string>
+    <string name="control_element_icon_from_pack">Из набора…</string>
     <string name="mod_support_label">Поддержка модов (BepInEx)</string>
     <string name="mod_support_hint">При запуске игры загружает BepInEx, а с ним — моды, включённые ниже. Моды работают только с нативным ARM64 Mono.</string>
     <string name="mods_native_mono_warning">Модам нужен нативный Mono или нативный движок. Сменить движок можно в настройках инстанса.</string>

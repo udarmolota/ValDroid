@@ -1,0 +1,5 @@
+ValDroid Control Icons
+
+These original icon images were generated for ValDroid. They may be used, modified, and redistributed with ValDroid, including in ValDroid builds and source distributions.
+
+The icons were created as original artwork and do not copy or trace Valheim's art.
