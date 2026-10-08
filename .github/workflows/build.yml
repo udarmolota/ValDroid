@@ -68,10 +68,12 @@ jobs:
           [ -f "$PKG" ] || curl -fL --retry 3 -o "$PKG" \
             "https://download.unity3d.com/download_unity/26349cd2a5c8/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-6000.0.75f1.pkg"
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools mono-devel
-          # The compiler is the .NET SDK's Roslyn (the bridge uses C# 9); Mono gives the references.
+          sudo apt-get install -y libarchive-tools
+          # The compiler is the .NET SDK's Roslyn (the bridge uses C# 9). The references are the Mono class
+          # libraries Unity's player runs on (tools/unity-native/monoref, MIT): Ubuntu's Mono 6.8 describes
+          # ReadOnlySpan in a way Roslyn refuses (CS0570) when the Input System is compiled against it.
           CSC_DLL=$(ls /usr/share/dotnet/sdk/*/Roslyn/bincore/csc.dll | sort -V | tail -n 1)
-          PYTHON=python3 TAR=bsdtar CSC="dotnet $CSC_DLL" MONO_API=/usr/lib/mono/4.5 \
+          PYTHON=python3 TAR=bsdtar CSC="dotnet $CSC_DLL" MONO_API="$GITHUB_WORKSPACE/tools/unity-native/monoref/4.5" \
             sh tools/unity-native/prepare_unity_module.sh "$PKG"
           echo "ORG_GRADLE_PROJECT_nativeEngine=true" >> "$GITHUB_ENV"
 

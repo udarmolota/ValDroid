@@ -124,6 +124,10 @@ Unity Android player   Proprietary          Copyright (c) Unity Technologies
                        accepts the game's Linux asset bundles, and the name of the Vulkan
                        library it opens (libvkshim.so).
 
+Mono class libraries   MIT License          Copyright (c) .NET Foundation and Contributors;
+(tools/unity-native/                        Unity Technologies' fork of Mono. Build-time
+ monoref/, Unity's fork)                    references only, not shipped in the APK.
+
 UnitySwappyWrapper     Unity Technologies (Unity's Android Support package), built with
 (libswappywrapper.so)  the Android Games SDK frame pacing library (Swappy), Apache License
                        2.0, Copyright (c) Google LLC.

@@ -13,15 +13,15 @@
 # environment:
 #   CSC        C# compiler command: "csc" (Mono, Linux CI) or "<dotnet> <csc.dll>" (the Roslyn that
 #              ships with the Unity Editor: Editor/Data/NetCoreRuntime/dotnet + DotNetSdkRoslyn/csc.dll)
-#   MONO_API   Mono's 4.7.1-api reference assemblies (/usr/lib/mono/4.7.1-api, or the Editor's
-#              Data/MonoBleedingEdge/lib/mono/4.7.1-api)
+#   MONO_API   Mono's framework assemblies to compile against: tools/unity-native/monoref/4.5 (the
+#              4.5 profile of Unity's Mono, MIT, as in the Editor's Data/MonoBleedingEdge/lib/mono/4.5)
 #   INPUTSYSTEM_TGZ  optional local copy of com.unity.inputsystem-1.19.0.tgz (else downloaded)
 set -e
 USAGE="usage: build_bridge.sh <unity-managed-dir> <out-dir>"
 UNITY=${1:?$USAGE}
 OUT=${2:?$USAGE}
 : "${CSC:?set CSC to the C# compiler command}"
-: "${MONO_API:?set MONO_API to Mono's 4.7.1-api directory}"
+: "${MONO_API:?set MONO_API to Mono's framework assemblies (tools/unity-native/monoref/4.5)}"
 HERE=$(cd "$(dirname "$0")" && pwd)
 INPUTSYSTEM_VERSION=1.19.0
 INPUTSYSTEM_URL=https://download.packages.unity.com/com.unity.inputsystem/-/com.unity.inputsystem-$INPUTSYSTEM_VERSION.tgz
