@@ -96,7 +96,9 @@ public class MouseStickControlElement extends AbstractControlElement {
                 if (action != MotionEvent.ACTION_CANCEL) {
                     float totalDist = dist(e.getX(actIndex), e.getY(actIndex), downX, downY);
                     long elapsed = System.currentTimeMillis() - downTime;
-                    if (totalDist < TAP_SLOP && elapsed < TAP_MAX_MS) {
+                    boolean isTap = totalDist < TAP_SLOP && elapsed < TAP_MAX_MS;
+                    InputSink.logTap("mouse stick", isTap, totalDist, elapsed, e.getEventTime() - e.getDownTime());
+                    if (isTap) {
                         parentView.clickCursor(GLFWBinding.MOUSE_BUTTON_LEFT);
                     }
                 }

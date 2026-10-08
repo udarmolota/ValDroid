@@ -132,6 +132,20 @@ public class InstanceSettings {
     // isn't on top of the map. Overrides the render-scale setting while on. Default OFF. ---
     public static final int FIXED_NONE = 0, FIXED_720_16_9 = 1, FIXED_720_4_3 = 2;
 
+    // --- Native engine, Vulkan compatibility: Unity without secondary command buffers
+    // (-vulkan-disable-secondary-commandbuffers). Auto = on for the GPUs known to lose the device on
+    // them (NativeEngine.needsVulkanCompat: the Mali-G615); On is the way out for another GPU.
+    // VALDROID_NO_SECONDARY_CMDBUFFERS=0/1 in the environment field still overrides both. ---
+    public static final int VK_COMPAT_AUTO = 0, VK_COMPAT_ON = 1, VK_COMPAT_OFF = 2;
+
+    public int getVulkanCompat() {
+        return p.getInt(pfx + "vk_compat", VK_COMPAT_AUTO);
+    }
+
+    public void setVulkanCompat(int mode) {
+        p.edit().putInt(pfx + "vk_compat", mode).apply();
+    }
+
     public int getFixedResMode() {
         return p.getInt(pfx + "fixed_res", FIXED_NONE);
     }
@@ -208,9 +222,9 @@ public class InstanceSettings {
      * nothing to write. This replaced "stamp the preset on every launch", which silently undid
      * whatever the player changed in game.
      *
-     * With no stored value: an instance whose game has never saved graphics settings gets
-     * GFX_ULTRA, so it starts on the emulation-tuned profile without anyone opening the settings
-     * (GFX_MINIMAL on the native engine with a weak GPU).
+     * With no stored value: an instance whose game has never saved graphics settings starts on the
+     * profile with the most FPS for its engine without anyone opening the settings: GFX_MINIMAL on
+     * the native engine, GFX_ULTRA (Very low, tuned for emulation) on the box64 engines.
      * One whose game has saved them gets GFX_KEEP — it was played before. "Has saved them" is
      * decided by the GraphicsQualityMode key, NOT by the settings file existing: our own install
      * step creates that file, which made every new instance look played (see
@@ -220,8 +234,7 @@ public class InstanceSettings {
         if (p.contains(pfx + "gfx_pending")) return p.getInt(pfx + "gfx_pending", GFX_KEEP);
         java.io.File dir = com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
         if (com.valdroid.ValheimInstanceSetup.hasGameGraphicsSettings(dir)) return GFX_KEEP;
-        // A weak GPU on the native engine starts on Minimal (see GpuInfo.isWeakForNativeEngine).
-        return isNativeEngine() && GpuInfo.query().isWeakForNativeEngine() ? GFX_MINIMAL : GFX_ULTRA;
+        return isNativeEngine() ? GFX_MINIMAL : GFX_ULTRA;
     }
 
     public void setGraphicsPending(int preset) {
@@ -296,10 +309,10 @@ public class InstanceSettings {
 
     /**
      * The chosen engine. An instance from before the choice existed keeps what it ran with: its two
-     * old switches ("native_mono", default on, and "native_engine"). A new one starts from what suits
-     * the phone: the native engine on Adreno (Snapdragon), box64 + native Mono elsewhere (Mali and
-     * the rest, until the native engine is proven there). The decision is stored the first time, so
-     * it does not change behind the player's back.
+     * old switches ("native_mono", default on, and "native_engine"). A new one starts on the native
+     * engine when the APK carries it (Adreno and Mali both run it, faster than the box64 engines),
+     * box64 + native Mono otherwise. The decision is stored the first time, so it does not change
+     * behind the player's back.
      */
     public int getEngine() {
         if (p.contains(pfx + "engine")) return p.getInt(pfx + "engine", ENGINE_BOX64_MONO);
@@ -317,7 +330,7 @@ public class InstanceSettings {
     }
 
     private static int defaultEngine() {
-        if (com.valdroid.game.NativeEngine.isAvailable() && GpuInfo.query().adrenoModel > 0) return ENGINE_NATIVE;
+        if (com.valdroid.game.NativeEngine.isAvailable()) return ENGINE_NATIVE;
         return ENGINE_BOX64_MONO;
     }
 
@@ -447,6 +460,7 @@ public class InstanceSettings {
                 .remove(pfx + "reverse_landscape")
                 .remove(pfx + "keep_running_bg")
                 .remove(pfx + "fixed_res")
+                .remove(pfx + "vk_compat")
                 .remove(pfx + "fps_cap")
                 .remove(pfx + "fps_mode")
                 .remove(pfx + "render_scale_pct")

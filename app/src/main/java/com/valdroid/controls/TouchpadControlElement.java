@@ -104,8 +104,7 @@ public class TouchpadControlElement extends AbstractControlElement {
                 float totalDist = dist(e.getX(actIndex), e.getY(actIndex), downX, downY);
                 long elapsed    = System.currentTimeMillis() - downTime;
                 boolean isTap   = totalDist < TAP_SLOP && elapsed < TAP_MAX_MS && !tapDisabled;
-                //Log.d(TAG, "UP dist=" + totalDist + " elapsed=" + elapsed
-                //        + "ms isTap=" + isTap);
+                InputSink.logTap("touchpad", isTap, totalDist, elapsed, e.getEventTime() - e.getDownTime());
 
                 if (isTap) {
                     parentView.clickCursor(GLFWBinding.MOUSE_BUTTON_LEFT);

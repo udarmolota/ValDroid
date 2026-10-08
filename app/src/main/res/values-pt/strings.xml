@@ -88,6 +88,12 @@ Na nuvem: %2$s
     <string name="engine_native">Motor nativo (experimental)</string>
     <string name="engine_native_hint">O próprio motor Android da Unity, sem emulação. O mais rápido. Só Vulkan; mods com bibliotecas x86 não serão carregados.</string>
     <string name="engine_weak_gpu_note">Com a GPU deste telefone o motor nativo precisa do perfil Mínima: toque em Aplicar ao lado de Mínima no cartão Gráficos.</string>
+    <string name="vk_compat_label">Compatibilidade Vulkan</string>
+    <string name="vk_compat_auto_on">Auto (ligada para esta GPU)</string>
+    <string name="vk_compat_auto_off">Auto (desligada para esta GPU)</string>
+    <string name="vk_compat_on">Ligada</string>
+    <string name="vk_compat_off">Desligada</string>
+    <string name="vk_compat_hint">Ligue se a imagem congelar no logo ou no menu enquanto o jogo continua. A imagem é a mesma; o Unity monta cada quadro de outro jeito. Vale a partir do próximo início.</string>
     <string name="engine_native_renderer_note">O motor nativo sempre renderiza diretamente com Vulkan.</string>
     <string name="engine_native_driver_note">O motor nativo usa o driver Vulkan do próprio celular.</string>
     <string name="native_mono_off_msg">O jogo vai rodar no modo anterior, mais lento. Se você desativou por causa de um problema, envie os logs para nós — isso nos ajuda a corrigir.</string>
@@ -268,8 +274,8 @@ Na nuvem: %2$s
     <string name="gfx_preset_low">Baixa</string>
     <string name="gfx_preset_ultra">Muito baixa</string>
     <string name="gfx_preset_minimal">Mínima</string>
-    <string name="gfx_preset_minimal_hint">Para telefones fracos: resolução 3D menor, pixelada. No motor nativo, também texturas 4 vezes menores e sem sombras.</string>
-    <string name="gfx_preset_hint">O jogo sempre começa em Muito baixa, um perfil ajustado para a emulação. Depois você pode adaptar os gráficos ao seu telefone nas configurações do próprio jogo: o launcher não mexe mais neles. Um botão volta as configurações para esse perfil na próxima inicialização. Botão cinza significa que esse perfil já está aplicado.</string>
+    <string name="gfx_preset_minimal_hint">Para GPUs fracas</string>
+    <string name="gfx_preset_hint">Mais FPS: Mínima no motor nativo, Muito baixa nos motores box64. Um jogo novo começa nela. Aplicar coloca um perfil de novo na próxima inicialização; cinza significa que já está aplicado.</string>
     <string name="instance_downloading">baixando, espere terminar</string>
     <string name="instance_incomplete">não terminado</string>
     <string name="instance_incomplete_hint">O download parou antes de terminar. Abra o menu lateral → %1$s e baixe de novo com o mesmo nome de instância: ele continua de onde parou.</string>
@@ -328,8 +334,9 @@ Na nuvem: %2$s
     <string name="controls_transfer_export_hint">Salva os controles na tela desta instância e seus ícones como um zip, para guardar ou compartilhar.</string>
     <string name="controls_transfer_export">Exportar…</string>
     <string name="icon_packs_title">Pacotes de ícones</string>
-    <string name="icon_packs_note">Um pacote coloca uma imagem em cada botão da tela conforme o que ele faz: atacar, bloquear, pular etc. Escolha a instância e toque em Aplicar ao lado de um pacote. Botões sem imagem correspondente mantêm o texto. Um botão por vez: o editor de controles, De um pacote.</string>
-    <string name="icon_packs_format">Seu próprio pacote: um zip de imagens brancas em fundo transparente (PNG), com o nome das ações: %1$s. Qualquer outra imagem do zip pode ser colocada num botão manualmente. Imagens coloridas: adicione \"tint\": false ao pack.json e elas aparecem com as próprias cores.</string>
+    <string name="icon_packs_note">Imagens para todos os botões na tela de uma vez, como um pacote, em vez de um por um. Escolha a instância e toque em Aplicar ao lado de um pacote; botões para os quais o pacote não tem imagem mantêm o texto.</string>
+    <string name="icon_packs_howto">Como fazer seu próprio pacote</string>
+    <string name="icon_packs_format">Um conjunto de imagens PNG, quadradas, de 256 a 512 pixels, em fundo transparente. A cor não importa: o botão pinta a imagem com a própria cor (para manter as cores das imagens, adicione um pack.json com \"tint\": false). Os nomes dos arquivos importam, eles dizem qual botão recebe cada imagem: %1$s. Qualquer outra imagem do zip também é importada e pode ser colocada num botão manualmente no editor de controles. Compacte os arquivos em um zip e toque em Importar.</string>
     <string name="icon_packs_instance">Instância</string>
     <string name="icon_packs_apply">Aplicar</string>
     <string name="icon_packs_delete">Excluir</string>

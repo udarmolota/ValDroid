@@ -169,12 +169,14 @@
             are shown in pixels for your screen; a smaller one gives more FPS and a bigger
             interface. <b>Black margins 1280×720</b> keeps a classic 16:9 picture with bars at the
             sides.</li>
-        <li><b>Graphics</b>: the game starts on <b>Very low</b>, a profile tuned for these phones —
-            no tessellation, no shadows, no extra draw distance, which cost the most here. After that
-            you can tune the graphics in the game's own settings; the launcher no longer touches
-            them. <b>Very low</b> or <b>Low</b> (keeps antialiasing, bloom and sun shafts) puts the
-            settings back to that profile on the next launch; a grey button means it is already
-            set.</li>
+        <li><b>Graphics</b>: the profile with the most FPS is <b>Minimal</b> on the native engine
+            and <b>Very low</b> on the box64 engines, and a new game starts on it. <b>Very low</b> has
+            no tessellation, no shadows and no extra draw distance; <b>Low</b> keeps antialiasing,
+            bloom and sun shafts; <b>Minimal</b>, for weak GPUs, also lowers the 3D picture
+            (pixelated), and on the native engine makes textures 4× smaller and turns realtime
+            shadows off. After that you can tune the graphics in the game's own settings; the
+            launcher no longer touches them. <b>Apply</b> puts a profile back on the next launch; a
+            grey button means it is already set.</li>
         <li>Textures are <b>reduced automatically</b>: the biggest ones are shrunk to save video
             memory. There is nothing to set.</li>
         <li><b>Shader cache</b> (card <b>Texture compression</b>, on by default) keeps compiled
@@ -336,26 +338,32 @@
             re-compressed on the way. It appears only in builds that include it.</li>
     </ul>
     <p>
-        A new instance starts on the native engine on Snapdragon (Adreno) phones and on box64 +
-        native Mono on all others. Instances from earlier versions keep what they used. Saves, the
+        A new instance starts on the native engine. Instances from earlier versions keep what they
+        used. Saves, the
         game's own settings, the on-screen controls and the mods are the same for all three, so you
         can switch at any time and nothing is lost.
     </p>
     <h3>Native engine</h3>
+    <p>
+        On most phones it is the best choice: the game loads faster, the frame rate is higher and
+        steadier, and the battery lasts longer than with the box64 engines.
+    </p>
     <ul>
         <li>It always renders with <b>Vulkan</b>, on the phone's own driver. While it is chosen, the
             renderer and Vulkan driver (card <b>Video</b>), the shader and ETC2 caches and
             compatibility mode are greyed out: they do not apply to it.</li>
         <li>Render resolution, frame rate mode, the performance overlay, the mirrored picture and the
-            on-screen controls work as usual. Textures are always reduced by one step.</li>
+            on-screen controls work as usual. Textures are always reduced by one step (two on
+            <b>Minimal</b>).</li>
         <li>The first start after installing or updating ValDroid takes a few seconds longer: the
             launcher prepares the game data for it (about 100 MB).</li>
         <li>Mods work, except the parts of a mod that bring their own x86 libraries (.so files):
             those cannot load without emulation.</li>
         <li>Here the <b>GPU</b> is the limit, not the processor. If the frame rate drops in heavy
             scenes, turn off SSAO, point light shadows and sun shafts in the game first.</li>
-        <li>On Mali GPUs it is not tested yet and may not start. If it does not, choose
-            <b>box64 + native Mono</b>.</li>
+        <li>It runs on Snapdragon (Adreno) and Mali GPUs. If the picture freezes on the logo or in
+            the menu while the game goes on, set <b>Vulkan compatibility</b> (card <b>Engine</b>) to
+            <b>On</b>: some Mali drivers lose the GPU without it.</li>
     </ul>
 </section>
 
@@ -500,9 +508,9 @@
 
     <h3>Phones without an Adreno GPU</h3>
     <p>
-        Valheim has only been brought up on Snapdragon (Adreno) phones. On Mali and other GPUs it
-        may not start at all, or the picture may be wrong. Please send a report with
-        <a href="#report">Report a bug</a>.
+        Valheim was brought up on Snapdragon (Adreno) phones first. It now runs on Mali too, best on
+        the <a href="#engine">native engine</a>. On other GPUs it may not start, or the picture may
+        be wrong. Please send a report with <a href="#report">Report a bug</a>.
     </p>
 
     <h3>Black ground on some Mali GPUs</h3>

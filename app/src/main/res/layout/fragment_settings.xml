@@ -102,6 +102,35 @@
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:text="@string/engine_weak_gpu_note"
             android:visibility="gone" />
+
+        <!-- Native engine only: Unity without secondary command buffers, for GPUs whose driver
+             loses the device on them (InstanceSettings.getVulkanCompat). -->
+        <LinearLayout
+            android:id="@+id/ll_vk_compat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:text="@string/vk_compat_label" />
+
+            <Spinner
+                android:id="@+id/sp_vk_compat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/vk_compat_hint" />
+        </LinearLayout>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -360,9 +389,8 @@
     </com.google.android.material.card.MaterialCardView>
 
     <!-- ============================ TEXTURE COMPRESSION ============================ -->
-    <!-- Texture quality: the GL-layer shim drops the top mips of big textures (4x less texture
-         memory per step) — for weaker phones. The chooser sits ABOVE its explanatory text so the
-         choice reads first and the "why" follows. -->
+    <!-- MobileGlues' ETC2 and shader caches: collapsible to its header (tap), collapsed while the
+         native engine is chosen, which does not use any of it. -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -377,11 +405,19 @@
           android:padding="16dp">
 
         <TextView
+            android:id="@+id/tv_texq_header"
             style="@style/AppTheme.CardHeader"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/texq_label"
-            android:layout_marginBottom="6dp" />
+            android:background="?attr/selectableItemBackground"
+            android:text="@string/texq_label" />
+
+        <LinearLayout
+            android:id="@+id/body_texq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical">
 
         <Switch
             android:id="@+id/sw_etc2"
@@ -466,6 +502,7 @@
                     android:text="@string/etc2_cache_clear" />
             </LinearLayout>
         </LinearLayout>
+        </LinearLayout>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -549,36 +586,10 @@
             android:layout_marginBottom="4dp" />
 
         <!-- Modes, not numbers: the number is picked for this screen (FpsPlanner) and shown below. -->
-        <RadioGroup
-            android:id="@+id/rg_fps_cap"
+        <Spinner
+            android:id="@+id/sp_fps_cap"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <RadioButton
-                android:id="@+id/rb_fps_off"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/fps_cap_off" />
-
-            <RadioButton
-                android:id="@+id/rb_fps_eco"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/fps_mode_eco" />
-
-            <RadioButton
-                android:id="@+id/rb_fps_balanced"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/fps_mode_balanced" />
-
-            <RadioButton
-                android:id="@+id/rb_fps_smooth"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/fps_mode_smooth" />
-        </RadioGroup>
+            android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/tv_fps_resolved"

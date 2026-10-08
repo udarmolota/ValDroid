@@ -18,6 +18,7 @@ namespace ValDroid
 
         // Off unless VALDROID_DIAG=1: looking through the whole scene costs a hitch on a weak phone.
         static readonly bool s_On = System.Environment.GetEnvironmentVariable("VALDROID_DIAG") == "1";
+        internal static bool On => s_On;
 
         internal static void Tick()
         {

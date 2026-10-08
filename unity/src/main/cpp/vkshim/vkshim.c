@@ -49,6 +49,7 @@ static PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR real_surface_caps;
 static PFN_vkGetPhysicalDeviceFeatures real_gpu_features;
 static PFN_vkGetPhysicalDeviceFormatProperties real_format_props;
 static PFN_vkGetPhysicalDeviceProperties real_gpu_props;
+static PFN_vkGetPhysicalDeviceProperties2 real_gpu_props2;
 
 // Device-level calls, per device. A queue shares its device's dispatch table, so the first word of
 // either handle finds the entry.
@@ -104,6 +105,7 @@ static void load_real(void)
     real_gpu_features = (PFN_vkGetPhysicalDeviceFeatures)SYM("vkGetPhysicalDeviceFeatures");
     real_format_props = (PFN_vkGetPhysicalDeviceFormatProperties)SYM("vkGetPhysicalDeviceFormatProperties");
     real_gpu_props = (PFN_vkGetPhysicalDeviceProperties)SYM("vkGetPhysicalDeviceProperties");
+    real_gpu_props2 = (PFN_vkGetPhysicalDeviceProperties2)SYM("vkGetPhysicalDeviceProperties2");
     DeviceFns* t = &g_trampolines;
     t->create_swapchain = (PFN_vkCreateSwapchainKHR)SYM("vkCreateSwapchainKHR");
     t->destroy_swapchain = (PFN_vkDestroySwapchainKHR)SYM("vkDestroySwapchainKHR");
@@ -402,6 +404,22 @@ static void log_texture_compression(VkPhysicalDevice gpu, const VkDeviceCreateIn
         LOG("GPU: %s, vendor 0x%x, device 0x%x, driver version 0x%x, Vulkan %u.%u.%u", props.deviceName,
             props.vendorID, props.deviceID, props.driverVersion, VK_VERSION_MAJOR(props.apiVersion),
             VK_VERSION_MINOR(props.apiVersion), VK_VERSION_PATCH(props.apiVersion));
+        // The driver's own name and release string (Vulkan 1.2): driverVersion above is vendor-encoded
+        // and does not tell which release a phone runs.
+        if (real_gpu_props2 && props.apiVersion >= VK_API_VERSION_1_2)
+        {
+            VkPhysicalDeviceDriverProperties drv;
+            memset(&drv, 0, sizeof(drv));
+            drv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+            VkPhysicalDeviceProperties2 props2;
+            memset(&props2, 0, sizeof(props2));
+            props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            props2.pNext = &drv;
+            real_gpu_props2(gpu, &props2);
+            LOG("driver: %s, %s (id %d, conformance %u.%u.%u.%u)", drv.driverName, drv.driverInfo,
+                (int)drv.driverID, drv.conformanceVersion.major, drv.conformanceVersion.minor,
+                drv.conformanceVersion.subminor, drv.conformanceVersion.patch);
+        }
     }
     if (!real_gpu_features || !real_format_props)
         return;

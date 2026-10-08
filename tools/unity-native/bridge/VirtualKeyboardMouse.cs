@@ -39,6 +39,7 @@ namespace ValDroid
         static Mouse s_Mouse;
         static uint s_LastSequence = uint.MaxValue;
         static readonly uint[] s_LastKeys = new uint[KeyWords];
+        static uint s_LastMouseButtons;
         static readonly Key[] s_GlfwToKey = BuildKeyTable();
 
         internal static unsafe void Initialize()
@@ -101,6 +102,16 @@ namespace ValDroid
             .WithButton(MouseButton.Right, (native.mouseButtons & 2) != 0)
             .WithButton(MouseButton.Middle, (native.mouseButtons & 4) != 0);
             InputSystem.QueueStateEvent(s_Mouse, mouse);
+
+            // Diagnosis of lost taps: each button edge as the game gets it, in which frame and update.
+            if (native.mouseButtons != s_LastMouseButtons)
+            {
+                if (Diagnostics.On)
+                    Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null,
+                        "VALDROID kbm: mouse buttons {0} -> {1}, frame {2}, update {3}",
+                        s_LastMouseButtons, native.mouseButtons, Time.frameCount, InputState.currentUpdateType);
+                s_LastMouseButtons = native.mouseButtons;
+            }
         }
 
         // GLFW key code (what the on-screen controls send) -> Input System key.

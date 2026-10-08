@@ -86,6 +86,12 @@ En la nube: %2$s
     <string name="engine_native">Motor nativo (experimental)</string>
     <string name="engine_native_hint">El propio motor Android de Unity, sin emulación. El más rápido. Solo Vulkan; los mods con bibliotecas x86 no se cargarán.</string>
     <string name="engine_weak_gpu_note">Con la GPU de este teléfono el motor nativo necesita el perfil Mínima: pulsa Aplicar junto a Mínima en la tarjeta Gráficos.</string>
+    <string name="vk_compat_label">Compatibilidad Vulkan</string>
+    <string name="vk_compat_auto_on">Auto (activada para esta GPU)</string>
+    <string name="vk_compat_auto_off">Auto (desactivada para esta GPU)</string>
+    <string name="vk_compat_on">Activada</string>
+    <string name="vk_compat_off">Desactivada</string>
+    <string name="vk_compat_hint">Actívala si la imagen se congela en el logo o en el menú mientras el juego sigue. La imagen es la misma; Unity arma cada fotograma de otra forma. Se aplica en el próximo inicio.</string>
     <string name="engine_native_renderer_note">El motor nativo siempre dibuja directamente con Vulkan.</string>
     <string name="engine_native_driver_note">El motor nativo usa el controlador Vulkan del propio teléfono.</string>
     <string name="native_mono_off_msg">El juego funcionará en el modo anterior, más lento. Si lo desactivaste por un problema, envíanos los registros: nos ayuda a solucionarlo.</string>
@@ -266,8 +272,8 @@ En la nube: %2$s
     <string name="gfx_preset_low">Baja</string>
     <string name="gfx_preset_ultra">Muy baja</string>
     <string name="gfx_preset_minimal">Mínima</string>
-    <string name="gfx_preset_minimal_hint">Para teléfonos débiles: menor resolución 3D, pixelada. En el motor nativo, además, texturas 4 veces más pequeñas y sin sombras.</string>
-    <string name="gfx_preset_hint">El juego siempre arranca en Muy baja, un perfil ajustado para la emulación. Después puedes adaptar los gráficos a tu teléfono en los ajustes del propio juego: el lanzador ya no los toca. Un botón devuelve los ajustes a ese perfil en el siguiente inicio. Un botón gris significa que ese perfil ya está puesto.</string>
+    <string name="gfx_preset_minimal_hint">Para GPU débiles</string>
+    <string name="gfx_preset_hint">Más FPS: Mínima en el motor nativo, Muy baja en los motores box64. Una partida nueva empieza con ella. Aplicar vuelve a poner un perfil en el siguiente inicio; en gris significa que ya está puesto.</string>
     <string name="instance_downloading">descargando, espera a que termine</string>
     <string name="instance_incomplete">sin terminar</string>
     <string name="instance_incomplete_hint">La descarga se detuvo antes de terminar. Abre el menú lateral → %1$s y descarga de nuevo con el mismo nombre de instancia: continuará donde se detuvo.</string>
@@ -326,8 +332,9 @@ En la nube: %2$s
     <string name="controls_transfer_export_hint">Guarda los controles en pantalla de esta instancia y sus iconos como un zip, para conservarlos o compartirlos.</string>
     <string name="controls_transfer_export">Exportar…</string>
     <string name="icon_packs_title">Paquetes de iconos</string>
-    <string name="icon_packs_note">Un paquete pone una imagen en cada botón de la pantalla según lo que hace: atacar, bloquear, saltar, etc. Elige la instancia y pulsa Aplicar junto a un paquete. Los botones sin imagen correspondiente conservan su texto. Un botón cada vez: el editor de controles, Desde un paquete.</string>
-    <string name="icon_packs_format">Tu propio paquete: un zip de imágenes blancas sobre fondo transparente (PNG), con el nombre de las acciones: %1$s. Cualquier otra imagen del zip se puede poner en un botón a mano. Imágenes en color: añade \"tint\": false a pack.json y se mostrarán con sus propios colores.</string>
+    <string name="icon_packs_note">Imágenes para todos los botones en pantalla a la vez, como un paquete, en vez de uno por uno. Elige la instancia y pulsa Aplicar junto a un paquete; los botones para los que el paquete no tiene imagen conservan su texto.</string>
+    <string name="icon_packs_howto">Cómo hacer tu propio paquete</string>
+    <string name="icon_packs_format">Un conjunto de imágenes PNG, cuadradas, de 256 a 512 píxeles, sobre fondo transparente. El color no importa: el botón pinta la imagen de su propio color (para conservar los colores de las imágenes, añade un pack.json con \"tint\": false). Los nombres de archivo sí importan, dicen qué botón recibe cada imagen: %1$s. Cualquier otra imagen del zip también se importa y se puede poner en un botón a mano en el editor de controles. Comprime los archivos en un zip y pulsa Importar.</string>
     <string name="icon_packs_instance">Instancia</string>
     <string name="icon_packs_apply">Aplicar</string>
     <string name="icon_packs_delete">Eliminar</string>

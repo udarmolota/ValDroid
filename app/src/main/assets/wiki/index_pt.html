@@ -173,12 +173,14 @@
             As opções aparecem em pixels para a sua tela; uma menor dá mais FPS e uma interface
             maior. <b>Bordas pretas 1280×720</b> mantém uma imagem clássica 16:9 com faixas nas
             laterais.</li>
-        <li><b>Gráficos</b>: o jogo começa em <b>Muito baixa</b>, um perfil ajustado para estes
-            celulares: sem tesselação, sem sombras e sem distância de desenho extra, que é o que
-            mais pesa aqui. Depois você pode ajustar os gráficos nas configurações do próprio jogo;
-            o launcher não mexe mais neles. <b>Muito baixa</b> ou <b>Baixa</b> (mantém antialiasing,
-            bloom e raios de sol) volta as configurações para esse perfil na próxima inicialização;
-            botão cinza significa que ele já está aplicado.</li>
+        <li><b>Gráficos</b>: o perfil com mais FPS é <b>Mínima</b> no motor nativo e <b>Muito
+            baixa</b> nos motores box64, e um jogo novo começa nele. <b>Muito baixa</b> não tem
+            tesselação, sombras nem distância de desenho extra; <b>Baixa</b> mantém antialiasing,
+            bloom e raios de sol; <b>Mínima</b>, para GPUs fracas, também baixa a imagem 3D
+            (pixelada) e, no motor nativo, deixa as texturas 4 vezes menores e tira as sombras.
+            Depois você pode ajustar os gráficos nas configurações do próprio jogo; o launcher não
+            mexe mais neles. <b>Aplicar</b> coloca um perfil de novo na próxima inicialização; botão
+            cinza significa que ele já está aplicado.</li>
         <li>As texturas são <b>reduzidas automaticamente</b>: as maiores encolhem para economizar
             memória de vídeo. Não há nada para configurar.</li>
         <li><b>Cache de shaders</b> (cartão <b>Compressão de texturas</b>, ligado por padrão) guarda
@@ -349,26 +351,32 @@
             recomprimidas no caminho. Só aparece nas versões que o incluem.</li>
     </ul>
     <p>
-        Uma instância nova começa no motor nativo em celulares Snapdragon (Adreno) e em box64 + Mono
-        nativo em todos os outros. Instâncias de versões anteriores continuam com o que usavam. Os
+        Uma instância nova começa no motor nativo. Instâncias de versões anteriores continuam com o
+        que usavam. Os
         saves, as configurações do próprio jogo, os controles na tela e os mods são os mesmos nos
         três, então dá para trocar quando quiser sem perder nada.
     </p>
     <h3>Motor nativo</h3>
+    <p>
+        Na maioria dos celulares é a melhor escolha: o jogo carrega mais rápido, os quadros são
+        mais altos e estáveis, e a bateria dura mais do que nos motores box64.
+    </p>
     <ul>
         <li>Sempre renderiza com <b>Vulkan</b>, no driver do próprio celular. Enquanto ele está
             escolhido, o renderizador e o driver Vulkan (cartão <b>Vídeo</b>), os caches de shaders
             e ETC2 e o modo de compatibilidade ficam cinza: não valem para ele.</li>
         <li>A resolução, o modo de quadros, o painel de desempenho, a imagem espelhada e os controles
-            na tela funcionam como sempre. As texturas são sempre reduzidas um nível.</li>
+            na tela funcionam como sempre. As texturas são sempre reduzidas um nível (dois na
+            <b>Mínima</b>).</li>
         <li>O primeiro início depois de instalar ou atualizar o ValDroid demora alguns segundos a
             mais: o launcher prepara os dados do jogo para ele (cerca de 100 MB).</li>
         <li>Os mods funcionam, menos as partes de um mod que trazem suas próprias bibliotecas x86
             (arquivos .so): sem emulação elas não carregam.</li>
         <li>Aqui o limite é a <b>GPU</b>, não o processador. Se os quadros caírem em cenas pesadas,
             desligue primeiro no jogo o SSAO, as sombras de luzes pontuais e os raios de sol.</li>
-        <li>Em GPUs Mali ainda não foi testado e pode não iniciar. Nesse caso escolha
-            <b>box64 + Mono nativo</b>.</li>
+        <li>Funciona em GPUs Snapdragon (Adreno) e Mali. Se a imagem congelar no logo ou no menu
+            enquanto o jogo continua, coloque <b>Compatibilidade Vulkan</b> (cartão <b>Motor</b>) em
+            <b>Ligada</b>: alguns drivers Mali perdem a GPU sem ela.</li>
     </ul>
 </section>
 
@@ -515,9 +523,9 @@
 
     <h3>Telefones sem GPU Adreno</h3>
     <p>
-        Valheim só foi posto para rodar em telefones Snapdragon (Adreno). Em Mali e outras GPUs pode
-        nem iniciar, ou a imagem pode sair errada. Mande um relato por
-        <a href="#report">Relatar um problema</a>.
+        Valheim foi posto para rodar primeiro em telefones Snapdragon (Adreno). Agora também roda
+        em Mali, melhor no <a href="#engine">motor nativo</a>. Em outras GPUs pode nem iniciar, ou a
+        imagem pode sair errada. Mande um relato por <a href="#report">Relatar um problema</a>.
     </p>
 
     <h3>Chão preto em algumas GPUs Mali</h3>
