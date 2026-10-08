@@ -191,6 +191,84 @@ public class NativeGameOverlay extends FrameLayout implements View.OnKeyListener
         controls.setGamepadConnected(pad);
     }
 
+    // ------------------------------------------------------------------ touches on the bare game
+
+    // A touch the on-screen controls did not take, as on the box64 engine (GameActivity): a tap is a
+    // left click there, a finger held still a right click, a pinch the mouse wheel (the game zooms with
+    // it). All through the virtual mouse; the touch is consumed, so Unity's own Touchscreen never sees
+    // it. Before this, bare touches went to Unity and its UI took them, but a touch whose release Unity
+    // missed left Touchscreen/press held, and the UI's Click action then ignored the virtual mouse
+    // (menus and chests dead to the touchpad, S25 2026-10-08).
+    private static final long LONG_PRESS_MS = 350;
+    private android.view.ScaleGestureDetector scaleDetector;
+    private boolean scaling, tapMoved, longPressFired, gestureOwned;
+    private float tapDownX, tapDownY;
+
+    private final Runnable longPressRunnable = this::longPress;
+
+    private void longPress() {
+        if (!gestureOwned || tapMoved || scaling || longPressFired) return;
+        longPressFired = true;
+        controls.tapAt(tapDownX, tapDownY, com.valdroid.controls.GLFWBinding.MOUSE_BUTTON_RIGHT);
+        controls.maybeHaptic();
+    }
+
+    private class ScaleListener extends android.view.ScaleGestureDetector.SimpleOnScaleGestureListener {
+        private float accum;
+        @Override public boolean onScaleBegin(android.view.ScaleGestureDetector dt) { scaling = true; accum = 0f; return true; }
+        @Override public boolean onScale(android.view.ScaleGestureDetector dt) {
+            accum += dt.getScaleFactor() - 1f;
+            while (accum >  0.15f) { accum -= 0.15f; pinchScroll(dt.getFocusX(), dt.getFocusY(), +1); }
+            while (accum < -0.15f) { accum += 0.15f; pinchScroll(dt.getFocusX(), dt.getFocusY(), -1); }
+            return true;
+        }
+        @Override public void onScaleEnd(android.view.ScaleGestureDetector dt) { scaling = false; }
+    }
+
+    /** One wheel notch at the pinch focus, through the shared cursor as on the box64 engine. */
+    private void pinchScroll(float x, float y, int notches) {
+        controls.moveCursorTo(x, y);
+        InputSink.sendMouseScroll(0, notches);
+    }
+
+    @Override
+    public boolean onTouchEvent(android.view.MotionEvent e) {
+        if (scaleDetector == null) scaleDetector = new android.view.ScaleGestureDetector(getContext(), new ScaleListener());
+        scaleDetector.onTouchEvent(e);
+        if (e.getPointerCount() >= 2 || scaling) {   // pinch: never a tap, never a long press
+            ui.removeCallbacks(longPressRunnable);
+            tapMoved = true;
+            return true;
+        }
+        float d = getResources().getDisplayMetrics().density;
+        switch (e.getActionMasked()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                tapDownX = e.getX(); tapDownY = e.getY();
+                tapMoved = false; longPressFired = false; gestureOwned = true;
+                ui.removeCallbacks(longPressRunnable);
+                ui.postDelayed(longPressRunnable, LONG_PRESS_MS);
+                return true;
+            case android.view.MotionEvent.ACTION_MOVE:
+                if (gestureOwned && !tapMoved
+                        && Math.abs(e.getX() - tapDownX) + Math.abs(e.getY() - tapDownY) > 22 * d) {
+                    tapMoved = true;                        // a drag: neither click
+                    ui.removeCallbacks(longPressRunnable);
+                }
+                return true;
+            case android.view.MotionEvent.ACTION_UP:
+                ui.removeCallbacks(longPressRunnable);
+                if (gestureOwned && !tapMoved && !longPressFired)
+                    controls.tapAt(e.getX(), e.getY(), com.valdroid.controls.GLFWBinding.MOUSE_BUTTON_LEFT);
+                gestureOwned = false;
+                return true;
+            case android.view.MotionEvent.ACTION_CANCEL:
+                ui.removeCallbacks(longPressRunnable);
+                gestureOwned = false;
+                return true;
+        }
+        return true;
+    }
+
     @Override public boolean onKey(View v, int keyCode, android.view.KeyEvent event) {
         return gamepad != null && gamepad.onKey(event);
     }

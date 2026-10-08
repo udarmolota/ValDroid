@@ -98,8 +98,9 @@ static void kbm_push_edge(uint16_t code, bool mouse, bool down)
     e->down = down;
     g_edge_count++;
     g_kbm.sequence++;
-    if (mouse && kbm_diag())
-        LOGI("kbm: mouse %u %s queued at %ld ms, %u edges waiting", code, down ? "down" : "up", now_ms(), g_edge_count);
+    if (kbm_diag())
+        LOGI("kbm: %s %u %s queued at %ld ms, %u edges waiting", mouse ? "mouse" : "key", code, down ? "down" : "up",
+             now_ms(), g_edge_count);
 }
 
 // ValDroid.VirtualKeyboardMouse::Take (returns a MonoBoolean, one byte) — copies the state when it changed since the last take and

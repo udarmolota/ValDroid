@@ -17,8 +17,10 @@ public class TouchpadControlElement extends AbstractControlElement {
 
     private static final float BASE_WIDTH  = 560f;
     private static final float BASE_HEIGHT = 370f;
-    private static final float TAP_SLOP    = 12f;
-    private static final long  TAP_MAX_MS  = 250;
+    // A tap: the finger did not move, however long it stayed. Players press a menu item or a chest
+    // button for half a second and more; a time limit (250 ms once) threw those presses away. The
+    // movement limit is the system's touch slop (~8 dp): a resting finger drifts more than 12 px.
+    private final float tapSlop;
 
     private float sensitivity;
     // See ControlElementDescription.tapDisabled - true turns the pad into a pure cursor mover.
@@ -34,6 +36,7 @@ public class TouchpadControlElement extends AbstractControlElement {
     public TouchpadControlElement(InputControlsView parentView,
                                   ControlElementDescription description) {
         super(parentView, description);
+        this.tapSlop = android.view.ViewConfiguration.get(parentView.getContext()).getScaledTouchSlop();
         this.sensitivity = (description.sensitivity > 0f) ? description.sensitivity : ControlElementDescription.DEFAULT_SENSITIVITY;
         this.tapDisabled = description.tapDisabled;
         this.drawable = new TouchpadDrawable(parentView, description);
@@ -103,7 +106,7 @@ public class TouchpadControlElement extends AbstractControlElement {
 
                 float totalDist = dist(e.getX(actIndex), e.getY(actIndex), downX, downY);
                 long elapsed    = System.currentTimeMillis() - downTime;
-                boolean isTap   = totalDist < TAP_SLOP && elapsed < TAP_MAX_MS && !tapDisabled;
+                boolean isTap   = totalDist < tapSlop && !tapDisabled;
                 InputSink.logTap("touchpad", isTap, totalDist, elapsed, e.getEventTime() - e.getDownTime());
 
                 if (isTap) {
