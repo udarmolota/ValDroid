@@ -373,17 +373,6 @@ public class SettingsFragment extends Fragment {
             }, "rd-gpu-detect").start();
         });
 
-        // --- Edit on-screen controls ---
-        view.findViewById(R.id.btn_edit_controls).setOnClickListener(v -> {
-            android.content.Intent i = new android.content.Intent(requireContext(), com.valdroid.ControlsEditorActivity.class);
-            i.putExtra(com.valdroid.ControlsEditorActivity.EXTRA_INSTANCE_NAME, instanceName);
-            startActivity(i);
-        });
-
-        // --- Gamepad button mapping (fix swapped/inverted controllers) ---
-        view.findViewById(R.id.btn_gamepad_mapper).setOnClickListener(v ->
-            startActivity(new android.content.Intent(requireContext(), com.valdroid.GamepadMapperActivity.class)));
-
         // --- Render resolution (Video card): vertical radios, just the resolution text. Per-device
         // presets from the ~540-row floor up to 72%. Lower = more FPS on weak GPUs. Applied at the next
         // launch.

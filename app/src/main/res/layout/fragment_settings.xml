@@ -610,24 +610,13 @@
             android:text="@string/card_controls"
             android:layout_marginBottom="6dp" />
 
-        <Button
-            android:id="@+id/btn_edit_controls"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/edit_controls" />
-
-        <Button
-            android:id="@+id/btn_gamepad_mapper"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/gamepad_mapper_settings_btn" />
-
+        <!-- The controls editor, icon packs, gamepad mapping and layout import/export live in the
+             drawer's Controls group; only this instance's own options stay here. -->
         <Switch
             android:id="@+id/sw_haptic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="4dp"
             android:textSize="14sp"
             android:text="@string/haptic_label" />
 
