@@ -481,6 +481,8 @@ public class InputControlsView extends View {
             boolean visible;
             if (isEditMode) {
                 visible = true;   // the editor always shows the whole layout
+            } else if (isKeyboardConnected) {
+                visible = false;  // a physical keyboard: no on-screen controls at all, as in Zomdroid
             } else if (overlayHidden) {
                 visible = isOverlayToggleElement(element) || isKeyboardToggleElement(element);
             } else if (isOverlayToggleElement(element) || isKeyboardToggleElement(element)) {
@@ -513,9 +515,11 @@ public class InputControlsView extends View {
         applyInputMode(connected ? InputMode.MNK : InputMode.ALL);
     }
 
-    /** Remembered for later: the overlay deliberately stays visible with a physical keyboard. */
+    /** A physical keyboard hides every on-screen control; they come back when it goes (Zomdroid). */
     public void setKeyboardConnected(boolean connected) {
+        if (isKeyboardConnected == connected) return;
         isKeyboardConnected = connected;
+        applyInputMode(currentInputMode);
     }
 
     public boolean isPhysicalKeyboardConnected() {

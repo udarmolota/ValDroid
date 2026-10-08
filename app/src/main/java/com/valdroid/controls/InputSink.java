@@ -56,6 +56,11 @@ public final class InputSink {
         backend = b;
     }
 
+    /** True in the native engine's process, where a Backend takes the input instead of the evdev pad. */
+    public static boolean hasBackend() {
+        return backend != null;
+    }
+
     /** The game rect in game-buffer px, never 0 (a fraction is taken of it). */
     private static float gameWidthPx() {
         return Math.max(1, Math.round(gameW * renderScale));

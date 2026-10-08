@@ -858,6 +858,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
      *  pad), show them again when it disconnects. Keyboard/mouse helper buttons stay on screen.
      *  Acts only on a connect/disconnect TRANSITION, so it never clobbers the manual hide toggle. */
     private void refreshGamepadControls() {
+        // A keyboard hides all the controls (InputControlsView ignores an unchanged state).
+        if (controls != null) controls.setKeyboardConnected(com.valdroid.input.GamepadHandler.hasExternalKeyboard());
         boolean pad = isGamepadConnected();
         if (pad == lastPadConnected) return;
         lastPadConnected = pad;

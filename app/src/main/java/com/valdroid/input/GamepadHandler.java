@@ -611,6 +611,25 @@ public class GamepadHandler {
         return false;
     }
 
+    /**
+     * A physical keyboard with letters is connected (Zomdroid's rule: then the on-screen controls go).
+     * Only an external, non-virtual alphabetic keyboard counts: volume keys, a fingerprint sensor and
+     * other built-in "keyboards" a phone reports must not hide the controls.
+     */
+    public static boolean hasExternalKeyboard() {
+        for (int id : InputDevice.getDeviceIds()) {
+            try {
+                InputDevice d = InputDevice.getDevice(id);
+                if (d == null || d.isVirtual()) continue;
+                if (d.getKeyboardType() != InputDevice.KEYBOARD_TYPE_ALPHABETIC) continue;
+                if (!d.supportsSource(InputDevice.SOURCE_KEYBOARD)) continue;
+                if (android.os.Build.VERSION.SDK_INT >= 29 && !d.isExternal()) continue;
+                return true;
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
     /** A real (non-virtual) gamepad/joystick with analog axes — see {@link #hasConnectedGamepad}. */
     private static boolean isPadDevice(InputDevice device) {
         if (device == null || device.isVirtual()) return false;

@@ -14,11 +14,11 @@
         <meta-data android:name="unity.auto-set-game-state" android:value="true" />
 
         <!-- Own process: the Unity engine never shares a process with the launcher or box64.
-             exported only while it is started by hand (adb) during the experiment. -->
+             Not exported: only the launcher starts it, with the instance and environment it prepared. -->
         <activity
             android:name="com.valdroid.nativeunity.NativeUnityActivity"
             android:process=":unity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:screenOrientation="sensorLandscape"
             android:hardwareAccelerated="false"

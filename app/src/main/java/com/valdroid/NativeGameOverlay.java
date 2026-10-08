@@ -29,8 +29,11 @@ import com.valdroid.game.NativeInput;
  * GameActivity. The controls' input goes to {@link NativeInput} instead of the X server. Touches no
  * control takes fall through to the player, so menus still work by touch.
  */
-public class NativeGameOverlay extends FrameLayout {
+public class NativeGameOverlay extends FrameLayout implements View.OnKeyListener, View.OnGenericMotionListener {
     private final InputControlsView controls;
+    // A physical controller, as in GameActivity: its buttons and sticks drive the game's virtual gamepad
+    // (VirtualGamepad routes to InputSink's backend here). NativeUnityActivity offers us its events.
+    private final com.valdroid.input.GamepadHandler gamepad;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private java.io.File snapshotDir;   // the instance folder: native_engine.log and the snapshots
     private int snapshotCount;
@@ -64,6 +67,8 @@ public class NativeGameOverlay extends FrameLayout {
         KeyboardCatcher keyboardCatcher = new KeyboardCatcher(context);
         addView(keyboardCatcher, new LayoutParams(1, 1));   // 1px, invisible
         controls.setKeyboardToggleListener(keyboardCatcher::toggle);
+
+        gamepad = context instanceof Activity ? new com.valdroid.input.GamepadHandler((Activity) context, controls) : null;
 
         int hud = LauncherPreferences.getSingleton() != null
                 ? LauncherPreferences.getSingleton().getHudMode() : LauncherPreferences.HUD_OFF;
@@ -131,14 +136,72 @@ public class NativeGameOverlay extends FrameLayout {
 
     @Override protected void onWindowVisibilityChanged(int visibility) {
         super.onWindowVisibilityChanged(visibility);
-        if (visibility == VISIBLE) startHud();
-        else {
+        if (visibility == VISIBLE) {
+            startHud();
+            if (gamepad != null) gamepad.start();
+            startDeviceWatch();
+        } else {
             stopHud();
+            stopDeviceWatch();
+            if (gamepad != null) gamepad.stop();   // releases whatever the controller held
             controls.resetAll();   // nothing stays held while the game is in the background
         }
     }
 
+    // ------------------------------------------------------------------ connected devices
+
+    // As GameActivity: a physical gamepad hides the on-screen gamepad elements, a physical keyboard all
+    // of them; both come back when the device goes.
+    private android.hardware.input.InputManager inputManager;
+    private boolean lastPadConnected;
+    private final android.hardware.input.InputManager.InputDeviceListener deviceListener =
+            new android.hardware.input.InputManager.InputDeviceListener() {
+                @Override public void onInputDeviceAdded(int id) {
+                    if (gamepad != null) gamepad.onInputDeviceChanged(id, "connected");
+                    refreshDevices();
+                }
+                @Override public void onInputDeviceRemoved(int id) {
+                    if (gamepad != null) gamepad.onInputDeviceRemoved(id);
+                    refreshDevices();
+                }
+                @Override public void onInputDeviceChanged(int id) {
+                    if (gamepad != null) gamepad.onInputDeviceChanged(id, "changed");
+                    refreshDevices();
+                }
+            };
+
+    private void startDeviceWatch() {
+        if (inputManager == null)
+            inputManager = (android.hardware.input.InputManager) getContext().getSystemService(Context.INPUT_SERVICE);
+        if (inputManager != null) inputManager.registerInputDeviceListener(deviceListener, null);
+        lastPadConnected = !com.valdroid.input.GamepadHandler.hasConnectedGamepad();   // force the first apply
+        refreshDevices();
+        if (gamepad != null) gamepad.logConnectedGamepads("game start");
+    }
+
+    private void stopDeviceWatch() {
+        if (inputManager != null) inputManager.unregisterInputDeviceListener(deviceListener);
+    }
+
+    private void refreshDevices() {
+        controls.setKeyboardConnected(com.valdroid.input.GamepadHandler.hasExternalKeyboard());
+        boolean pad = com.valdroid.input.GamepadHandler.hasConnectedGamepad();
+        if (pad == lastPadConnected) return;   // only on a change: never undo the manual hide toggle
+        lastPadConnected = pad;
+        controls.setGamepadConnected(pad);
+    }
+
+    @Override public boolean onKey(View v, int keyCode, android.view.KeyEvent event) {
+        return gamepad != null && gamepad.onKey(event);
+    }
+
+    @Override public boolean onGenericMotion(View v, android.view.MotionEvent event) {
+        return gamepad != null && gamepad.onMotion(event);
+    }
+
     @Override protected void onDetachedFromWindow() {
+        stopDeviceWatch();
+        if (gamepad != null) gamepad.stop();
         stopHud();
         controls.resetAll();
         if (perfThread != null) perfThread.quitSafely();

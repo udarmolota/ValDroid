@@ -41,7 +41,7 @@ public class NativeUnityActivity extends Activity
         FrameLayout root = mUnityPlayer.getFrameLayout();
         setContentView(root);
         root.requestFocus();
-        View overlay = createOverlay(getIntent().getStringExtra(EXTRA_OVERLAY));
+        overlay = createOverlay(getIntent().getStringExtra(EXTRA_OVERLAY));
         if (overlay != null) {
             root.addView(overlay, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -59,6 +59,11 @@ public class NativeUnityActivity extends Activity
      * and not the other way round. Touches the overlay does not take reach the player.
      */
     public static final String EXTRA_OVERLAY = "valdroid.overlay";
+
+    // The overlay, and through it the launcher's controller handling: a physical gamepad's buttons and
+    // sticks are offered to it first (View.OnKeyListener / OnGenericMotionListener), because the game's
+    // Input System, built for Linux, has no Android controller support.
+    private View overlay;
 
     private View createOverlay(String className) {
         if (className == null) return null;
@@ -149,7 +154,15 @@ public class NativeUnityActivity extends Activity
     // The NDK does not deliver ACTION_MULTIPLE key events; inject them.
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_MULTIPLE) return mUnityPlayer.injectEvent(event);
+        if (overlay instanceof View.OnKeyListener
+                && ((View.OnKeyListener) overlay).onKey(overlay, event.getKeyCode(), event)) return true;
         return super.dispatchKeyEvent(event);
+    }
+
+    @Override public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if (overlay instanceof View.OnGenericMotionListener
+                && ((View.OnGenericMotionListener) overlay).onGenericMotion(overlay, event)) return true;
+        return super.dispatchGenericMotionEvent(event);
     }
 
     @Override public void requestPermissions(PermissionRequest request) { mUnityPlayer.addPermissionRequest(request); }
