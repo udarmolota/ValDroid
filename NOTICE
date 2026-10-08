@@ -10,6 +10,18 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
+Additional permission under GNU GPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or combining it with
+the Unity runtime (the Unity Android player libraries such as libunity.so and
+libmain.so, and the UnityEngine managed modules, published by Unity Technologies),
+containing parts covered by the terms of the Unity license, the licensor of this
+Program grants you additional permission to convey the resulting work. Corresponding
+Source for a non-source form of such a combination shall not include the source
+code for the parts of the Unity runtime used, but shall include the source code
+of the parts of this Program that are combined with it (il2mono, the Vulkan shim
+and the ValDroid bridge assembly, among others).
+
 ValDroid is an unofficial, community-developed compatibility launcher for running
 the Linux x86_64 version of Valheim on ARM64 Android devices. It grew out of
 RimDroid (github.com/udarmolota/RimDroid) by the same author.
@@ -100,6 +112,27 @@ libsteam_api.so        ValDroid original work (GPL-3.0): an ARM64 stub that only
 libDiskSpacePlugin.so  ValDroid original work (GPL-3.0): ARM64 replacement for the game's
                        free-disk-space plugin.
 
+--- Native engine (experimental; built when the native engine is enabled) ---
+
+Unity Android player   Proprietary          Copyright (c) Unity Technologies
+(libunity.so,                               Downloaded from Unity's servers at build time
+ libmain.so,                                (Unity Android Support for 6000.0.75f1); not
+ UnityEngine.*.dll)                         stored in the ValDroid repository. Not covered
+                                            by ValDroid's GPL-3.0 license; combined with
+                                            ValDroid under the additional permission above.
+                       ValDroid patches libunity.so at build time: the platform check that
+                       accepts the game's Linux asset bundles, and the name of the Vulkan
+                       library it opens (libvkshim.so).
+
+UnitySwappyWrapper     Unity Technologies (Unity's Android Support package), built with
+(libswappywrapper.so)  the Android Games SDK frame pacing library (Swappy), Apache License
+                       2.0, Copyright (c) Google LLC.
+
+il2mono (libil2cpp.so),  ValDroid original work (GPL-3.0 with the additional permission
+Vulkan shim (libvkshim.so,  above): the IL2CPP embedding API on ARM64 Mono, the Vulkan
+libvkdriverhook.so),        observing shim and its driver loader, and the managed bridge
+ValDroidBridge.dll          (on-screen controls, graphics settings, diagnostics).
+
 --- Bundled runtime libraries (assets/bundles/libs.tar.xz) ---
 
 MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
@@ -169,6 +202,14 @@ ICONS
 Donate icon (app/src/main/res/drawable/ic_donate.xml): "Donate" by Edward Boatman
 from the Noun Project, licensed under CC BY 3.0.
 https://thenounproject.com/icon/donate-285/
+
+On-screen control icon packs (app/src/main/assets/control_icon_packs/), original
+artwork, not taken from Valheim; each folder has its LICENSE.txt:
+- "ValDroid Viking": generated for ValDroid; may be used, modified and
+  redistributed with ValDroid.
+- "Figures by jurises99": made by jurises99 (generated with Copilot, edited in
+  ibisPaintX) and given to ValDroid; may be used, modified and redistributed
+  with ValDroid.
 
 ================================================================================
 Each third-party component remains subject to its own license terms. The links
