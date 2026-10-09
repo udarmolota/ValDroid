@@ -50,6 +50,31 @@
         android:label="@string/nav_custom_driver" />
 
     <fragment
+        android:id="@+id/saves_transfer_fragment"
+        android:name="com.valdroid.fragments.DataTransferFragment"
+        android:label="@string/nav_saves_transfer">
+        <argument
+            android:name="kind"
+            app:argType="string"
+            android:defaultValue="saves" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settings_transfer_fragment"
+        android:name="com.valdroid.fragments.DataTransferFragment"
+        android:label="@string/nav_settings_transfer">
+        <argument
+            android:name="kind"
+            app:argType="string"
+            android:defaultValue="settings" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/controls_transfer_fragment"
+        android:name="com.valdroid.fragments.ControlsTransferFragment"
+        android:label="@string/nav_controls_transfer" />
+
+    <fragment
         android:id="@+id/icon_packs_fragment"
         android:name="com.valdroid.fragments.IconPacksFragment"
         android:label="@string/nav_icon_packs" />
@@ -82,6 +107,15 @@
 
     <action android:id="@+id/action_open_custom_driver"
         app:destination="@id/driver_fragment" />
+
+    <action android:id="@+id/action_open_saves_transfer"
+        app:destination="@id/saves_transfer_fragment" />
+
+    <action android:id="@+id/action_open_settings_transfer"
+        app:destination="@id/settings_transfer_fragment" />
+
+    <action android:id="@+id/action_open_controls_transfer"
+        app:destination="@id/controls_transfer_fragment" />
 
     <action android:id="@+id/action_open_icon_packs"
         app:destination="@id/icon_packs_fragment" />

@@ -39,6 +39,7 @@ namespace ValDroid
         static Mouse s_Mouse;
         static uint s_LastSequence = uint.MaxValue;
         static readonly uint[] s_LastKeys = new uint[KeyWords];
+        static uint s_LastMouseButtons;
         static readonly Key[] s_GlfwToKey = BuildKeyTable();
 
         internal static unsafe void Initialize()
@@ -56,7 +57,62 @@ namespace ValDroid
             s_Keyboard = InputSystem.AddDevice<Keyboard>("ValDroid Virtual Keyboard");
             s_Mouse = InputSystem.AddDevice<Mouse>("ValDroid Virtual Mouse");
             InputSystem.onBeforeUpdate += Push;
+            InputSystem.onAfterUpdate += UnbindTouchscreenFromUi;
             Debug.Log("VALDROID keyboard/mouse: virtual devices added, ids " + s_Keyboard.deviceId + ", " + s_Mouse.deviceId);
+        }
+
+        // The UI module's actions (Click, RightClick...) are bound to the mouse buttons AND to the
+        // touchscreen, and an action follows the control pressed right now. A touch that reached Unity's
+        // Touchscreen without its release (the on-screen controls took it) left Touchscreen/press held,
+        // and from then on the virtual mouse's clicks on menus and chests were ignored, while hovering
+        // and the game's own Attack (mouse only) still worked (S25, 2026-10-08, VALDROID uidiag log).
+        // The touchscreen stays a device (the game zooms with a pinch on it); only its bindings in the
+        // UI map are blanked, once per input module instance (the main menu and the game have their own).
+        static Type s_EventSystemType;
+        static int s_UnboundModule;
+
+        static void UnbindTouchscreenFromUi()
+        {
+            try
+            {
+                if (s_EventSystemType == null)
+                    s_EventSystemType = Type.GetType("UnityEngine.EventSystems.EventSystem, UnityEngine.UI");
+                if (s_EventSystemType == null)
+                    return;
+                object es = s_EventSystemType.GetProperty("current").GetValue(null, null);
+                var module = es != null ? s_EventSystemType.GetProperty("currentInputModule").GetValue(es, null) as UnityEngine.Object : null;
+                if (module == null || module.GetInstanceID() == s_UnboundModule)
+                    return;
+                var assetProperty = module.GetType().GetProperty("actionsAsset");
+                var asset = assetProperty != null ? assetProperty.GetValue(module, null) as InputActionAsset : null;
+                if (asset == null)
+                    return;
+                s_UnboundModule = module.GetInstanceID();
+                int blanked = 0;
+                foreach (var map in asset.actionMaps)
+                {
+                    foreach (var action in map.actions)
+                    {
+                        var bindings = action.bindings;
+                        for (int i = 0; i < bindings.Count; i++)
+                        {
+                            string path = bindings[i].effectivePath;
+                            if (path != null && path.Contains("Touchscreen"))
+                            {
+                                action.ApplyBindingOverride(i, "");
+                                blanked++;
+                            }
+                        }
+                    }
+                }
+                Debug.Log("VALDROID keyboard/mouse: UI module " + module.GetType().Name + ": " + blanked + " touchscreen bindings blanked");
+            }
+            catch (Exception e)
+            {
+                Debug.Log("VALDROID keyboard/mouse: touchscreen unbind failed: " + e.GetType().Name + ": " + e.Message);
+                s_UnboundModule = -1;
+                InputSystem.onAfterUpdate -= UnbindTouchscreenFromUi;
+            }
         }
 
         static unsafe void Push()
@@ -101,6 +157,16 @@ namespace ValDroid
             .WithButton(MouseButton.Right, (native.mouseButtons & 2) != 0)
             .WithButton(MouseButton.Middle, (native.mouseButtons & 4) != 0);
             InputSystem.QueueStateEvent(s_Mouse, mouse);
+
+            // Diagnosis of lost taps: each button edge as the game gets it, in which frame and update.
+            if (native.mouseButtons != s_LastMouseButtons)
+            {
+                if (Diagnostics.On)
+                    Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null,
+                        "VALDROID kbm: mouse buttons {0} -> {1}, frame {2}, update {3}",
+                        s_LastMouseButtons, native.mouseButtons, Time.frameCount, InputState.currentUpdateType);
+                s_LastMouseButtons = native.mouseButtons;
+            }
         }
 
         // GLFW key code (what the on-screen controls send) -> Input System key.

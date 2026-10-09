@@ -49,13 +49,23 @@
             android:layout_marginTop="8dp"
             android:text="@string/icon_packs_import" />
 
+        <!-- "How to make a pack yourself": folded to its header, a tap opens the requirements. -->
+        <TextView
+            android:id="@+id/tv_icon_packs_howto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:textAppearance="?attr/textAppearanceTitleSmall" />
+
         <TextView
             android:id="@+id/tv_icon_packs_format"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:textAppearance="?attr/textAppearanceBodySmall"
-            android:alpha="0.7" />
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>

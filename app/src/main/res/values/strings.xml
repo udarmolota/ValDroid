@@ -84,6 +84,12 @@ In the cloud: %2$s
     <string name="engine_native">Native engine (experimental)</string>
     <string name="engine_native_hint">Unity\'s own Android engine, nothing emulated. Fastest. Vulkan only; mods with x86 libraries won\'t load.</string>
     <string name="engine_weak_gpu_note">For this phone\'s GPU the native engine needs the Minimal profile: press Apply next to Minimal in the Graphics card.</string>
+    <string name="vk_compat_label">Vulkan compatibility</string>
+    <string name="vk_compat_auto_on">Auto (on for this GPU)</string>
+    <string name="vk_compat_auto_off">Auto (off for this GPU)</string>
+    <string name="vk_compat_on">On</string>
+    <string name="vk_compat_off">Off</string>
+    <string name="vk_compat_hint">Turn it on if the picture freezes on the logo or in the menu while the game keeps running. The picture is the same; Unity builds each frame differently. Takes effect at the next launch.</string>
     <string name="engine_native_renderer_note">The native engine always renders with Vulkan directly.</string>
     <string name="engine_native_driver_note">The native engine uses the phone\'s own Vulkan driver.</string>
     <string name="native_mono_off_msg">The game will run in the previous, slower mode. If you turned it off because of a problem, please send us the logs — it helps us fix it.</string>
@@ -115,13 +121,7 @@ In the cloud: %2$s
     <string name="renderer_default_title">Renderer: MobileGlues</string>
     <string name="renderer_default_msg">MobileGlues is selected: it gives the highest FPS. If the ground or textures look black, get game version 1.0.15 or newer — it doesn\'t have this problem. Until then, a Snapdragon (Adreno) phone can switch to Zink for now in the instance settings (the gear icon on the instance card); it is a bit slower. There is no fix for Mali yet.</string>
     <string name="nav_import_mods">Import Mods (ZIP)…</string>
-    <string name="nav_export_saves">Export saves</string>
-    <string name="nav_import_saves">Import saves</string>
-    <string name="nav_export_settings">Export settings</string>
-    <string name="nav_import_settings">Import settings</string>
     <string name="nav_export_logs">Export logs (ZIP)</string>
-    <string name="nav_export_layout">Export controls layout</string>
-    <string name="nav_import_layout">Import controls layout</string>
     <string name="nav_updates">New versions (GitHub)</string>
     <string name="nav_bug_report">Report a bug</string>
     <string name="nav_wiki">Wiki</string>
@@ -289,9 +289,9 @@ In the cloud: %2$s
     <string name="gfx_preset_low">Low</string>
     <string name="gfx_preset_ultra">Very low</string>
     <string name="gfx_preset_minimal">Minimal</string>
-    <string name="gfx_preset_minimal_hint">For weak phones: lower 3D resolution, pixelated. In the native engine also textures 4× smaller and no shadows.</string>
-    <string name="gfx_preset_hint">The game always starts on Very low — a profile tuned for emulation. After that you can tune the graphics to your phone in the game\'s own settings: the launcher no longer touches them. A button puts the settings back to that profile on the next launch. A grey button means that profile is already set.</string>
-    <string name="release_notes_body" translatable="false"><b>– Game version</b>\nUse Valheim 1.0.15 or newer — on 1.0.7 the ground renders black.\n\n<b>– Pause in the background</b>\nThe game freezes when you leave the app (can be turned off in Settings).\n\n<b>– Turn the camera with buttons</b>\nHold Attack, Block or Alt and slide your finger.\n\n<b>– Floating joystick</b>\nThe left stick appears where your thumb lands.\n\n<b>– Invisible buttons</b>\nOpacity can go down to 0%.\n\n<b>– Gamepads</b>\nNo more double inputs on handhelds; LT and RT in Gamepad mapping.\n\n<b>– Compatibility mode</b>\nMuch faster now.\n\n<b>– Clearer messages</b>\nWhen installing and downloading the game.\n\n<b>– Multiplayer</b>\nNot supported yet, but it\'s planned.</string>
+    <string name="gfx_preset_minimal_hint">For weak GPUs</string>
+    <string name="gfx_preset_hint">Most FPS: Minimal on the native engine, Very low on the box64 engines. A new game starts on it. Apply sets a profile again at the next launch; grey means it is already set.</string>
+    <string name="release_notes_body" translatable="false"><b>– Native engine</b>\nNothing is emulated: faster loading, higher FPS, much less battery. New instances start on it; switch in Settings → Engine.\n\n<b>– Works on Mali</b>\nIf the picture freezes on the logo or in the menu, set Vulkan compatibility (card Engine) to On.\n\n<b>– Minimal graphics profile</b>\nFor weak GPUs. Most FPS: Minimal on the native engine, Very low on box64.\n\n<b>– Icon packs</b>\nPictures for all on-screen buttons at once: two built-in packs and your own zips. Drawer → Icon packs.\n\n<b>– Physical keyboard</b>\nHides the on-screen controls while it is plugged in.\n\n<b>– Touchpad mode for camera buttons</b>\nA camera button can work like a touchpad instead of a stick.\n\n<b>– Import / export</b>\nControls, saves and settings: one screen each, in the drawer.\n\n<b>– Taps</b>\nA tap counts however long you held it; only a moving finger moves the cursor.\n\n<b>– Multiplayer</b>\nNot supported yet, but it\'s planned.</string>
     <string name="instance_downloading">downloading, wait until it finishes</string>
     <string name="instance_incomplete">not finished</string>
     <string name="instance_incomplete_hint">The download stopped before it finished. Open side menu → %1$s and download again with the same instance name — it continues where it stopped.</string>
@@ -325,9 +325,34 @@ In the cloud: %2$s
     <!-- Mods (BepInEx) screen -->
     <string name="nav_mods">Mods</string>
     <string name="nav_icon_packs">Button icons</string>
+    <string name="nav_controls_transfer">Import / export controls</string>
+    <string name="nav_saves_transfer">Import / export saves</string>
+    <string name="nav_settings_transfer">Import / export settings</string>
+    <string name="saves_transfer_import_title">Import saves</string>
+    <string name="saves_transfer_import_hint">A saves zip exported from ValDroid (worlds and characters). Worlds and characters with the same names in this instance are replaced.</string>
+    <string name="saves_transfer_import_confirm">Import %1$s into the saves of %2$s? Worlds and characters with the same names are replaced.</string>
+    <string name="saves_transfer_export_title">Export saves</string>
+    <string name="saves_transfer_export_hint">Saves this instance\'s worlds and characters as a zip, to back them up or to move them to another device.</string>
+    <string name="settings_transfer_import_title">Import settings</string>
+    <string name="settings_transfer_import_hint">A settings zip exported from ValDroid. It replaces this instance\'s game settings.</string>
+    <string name="settings_transfer_import_confirm">Import %1$s into the game settings of %2$s? Its current settings are replaced.</string>
+    <string name="settings_transfer_export_title">Export settings</string>
+    <string name="settings_transfer_export_hint">Saves this instance\'s game settings (graphics, sound, key bindings) as a zip.</string>
+    <string name="transfer_exported">Exported %1$s (%2$d KB)</string>
+    <string name="transfer_export_failed">Export failed: %1$s</string>
+    <string name="transfer_imported">Restored %1$s → %2$s</string>
+    <string name="transfer_import_failed">Import failed: %1$s</string>
+    <string name="controls_transfer_import_title">Import a layout</string>
+    <string name="controls_transfer_import_hint">A controls zip (controls.json and its icons) or a controls .json. It replaces this instance\'s on-screen controls.</string>
+    <string name="controls_transfer_import">Import…</string>
+    <string name="controls_transfer_import_confirm">Replace the on-screen controls of %1$s with %2$s?</string>
+    <string name="controls_transfer_export_title">Export the layout</string>
+    <string name="controls_transfer_export_hint">Saves this instance\'s on-screen controls and their icons as a zip, to keep or to share.</string>
+    <string name="controls_transfer_export">Export…</string>
     <string name="icon_packs_title">Icon packs</string>
-    <string name="icon_packs_note">A pack puts a picture on every on-screen button by what it does: attack, block, jump and so on. Pick the instance and press Apply next to a pack. Buttons without a matching picture keep their text. One button at a time: the controls editor, From a pack.</string>
-    <string name="icon_packs_format">Your own pack: a zip of white pictures on a transparent background (PNG), named after the actions: %1$s. Any other picture in the zip can be put on a button by hand. Colour pictures: add \"tint\": false to pack.json and they are shown in their own colours.</string>
+    <string name="icon_packs_note">Pictures for all on-screen buttons at once, as a set, instead of one by one. Pick the instance and press Apply next to a pack; buttons the pack has no picture for keep their text.</string>
+    <string name="icon_packs_howto">How to make a pack yourself</string>
+    <string name="icon_packs_format">A set of PNG pictures, square, 256 to 512 pixels, on a transparent background. The colour does not matter: a button paints the picture its own colour (to keep the pictures\u2019 own colours, add a pack.json with \"tint\": false). The file names matter, they say which button gets which picture: %1$s. Any other picture in the zip is imported too and can be put on a button by hand in the controls editor. Zip the files and press Import.</string>
     <string name="icon_packs_instance">Instance</string>
     <string name="icon_packs_apply">Apply</string>
     <string name="icon_packs_delete">Delete</string>

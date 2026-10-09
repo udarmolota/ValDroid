@@ -61,6 +61,22 @@ public final class InputSink {
         return backend != null;
     }
 
+    // VALDROID_DIAG=1 in the game's environment: the touchpad and mouse stick log every tap they
+    // accept or reject, to follow a lost click from the finger to the game.
+    private static Boolean diag;
+
+    public static boolean isDiag() {
+        if (diag == null) diag = "1".equals(System.getenv("VALDROID_DIAG"));
+        return diag;
+    }
+
+    /** A tap decision of the touchpad or the mouse stick, under VALDROID_DIAG=1. */
+    public static void logTap(String who, boolean accepted, float dist, long elapsedMs, long eventMs) {
+        if (!isDiag()) return;
+        Log.i(TAG, "tap " + (accepted ? "accepted" : "rejected") + " on " + who + ": moved " + (int) dist
+                + " px, " + elapsedMs + " ms by the clock, " + eventMs + " ms by the touch times");
+    }
+
     /** The game rect in game-buffer px, never 0 (a fraction is taken of it). */
     private static float gameWidthPx() {
         return Math.max(1, Math.round(gameW * renderScale));

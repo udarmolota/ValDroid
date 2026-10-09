@@ -59,8 +59,15 @@ public class IconPacksFragment extends Fragment {
         super.onViewCreated(v, savedInstanceState);
         spInstance = v.findViewById(R.id.sp_icon_packs_instance);
         packList = v.findViewById(R.id.ll_icon_packs);
-        ((TextView) v.findViewById(R.id.tv_icon_packs_format))
-                .setText(getString(R.string.icon_packs_format, ACTION_NAMES));
+        final TextView howto = v.findViewById(R.id.tv_icon_packs_howto);
+        final TextView format = v.findViewById(R.id.tv_icon_packs_format);
+        format.setText(getString(R.string.icon_packs_format, ACTION_NAMES));
+        howto.setText(getString(R.string.icon_packs_howto) + " \u25B8");
+        howto.setOnClickListener(b -> {
+            boolean open = format.getVisibility() != View.VISIBLE;
+            format.setVisibility(open ? View.VISIBLE : View.GONE);
+            howto.setText(getString(R.string.icon_packs_howto) + (open ? " \u25BE" : " \u25B8"));
+        });
         v.findViewById(R.id.btn_icon_packs_import).setOnClickListener(b ->
                 pickPack.launch(new String[]{"application/zip", "application/octet-stream", "*/*"}));
 

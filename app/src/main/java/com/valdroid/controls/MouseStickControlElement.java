@@ -18,8 +18,8 @@ public class MouseStickControlElement extends AbstractControlElement {
     // OUTLINE (the original look) or CONSOLE; see ControlElementDescription.STICK_STYLES.
     private ControlElementDescription.Style style;
     private float sensitivity;
-    private static final float TAP_SLOP    = 12f;
-    private static final long  TAP_MAX_MS  = 250;
+    // A tap: the finger did not move, however long it stayed (see TouchpadControlElement).
+    private final float tapSlop;
 
     private float lastX, lastY;
     private float downX, downY;
@@ -30,6 +30,7 @@ public class MouseStickControlElement extends AbstractControlElement {
 
     public MouseStickControlElement(InputControlsView parentView, ControlElementDescription desc) {
         super(parentView, desc);
+        this.tapSlop = android.view.ViewConfiguration.get(parentView.getContext()).getScaledTouchSlop();
 
         this.inputType = InputType.MNK;
         this.bindings.clear();
@@ -96,7 +97,9 @@ public class MouseStickControlElement extends AbstractControlElement {
                 if (action != MotionEvent.ACTION_CANCEL) {
                     float totalDist = dist(e.getX(actIndex), e.getY(actIndex), downX, downY);
                     long elapsed = System.currentTimeMillis() - downTime;
-                    if (totalDist < TAP_SLOP && elapsed < TAP_MAX_MS) {
+                    boolean isTap = totalDist < tapSlop;
+                    InputSink.logTap("mouse stick", isTap, totalDist, elapsed, e.getEventTime() - e.getDownTime());
+                    if (isTap) {
                         parentView.clickCursor(GLFWBinding.MOUSE_BUTTON_LEFT);
                     }
                 }

@@ -181,13 +181,18 @@ public final class NativeEngine {
         // environment turns them back on). Starting the intro lost the GPU on a Mali-G615 and froze the
         // picture; weaker Mali decoders refuse the clip anyway.
         if (com.valdroid.GpuInfo.isMali()) env.add("VALDROID_SKIP_VIDEO=1");
-        // Mali-G615: Arm's driver loses the device on Unity's secondary command buffers (the main menu,
-        // or the world right after: VK_ERROR_DEVICE_LOST, the picture frozen). Unity then records each
-        // frame into its primary command buffers; the picture is the same, and the G615 ran the native
-        // engine at 50+ fps against 20-30 on the mix (POCO X6 Pro, 2026-10-07). Other Mali GPUs work
-        // without it. VALDROID_NO_SECONDARY_CMDBUFFERS=0/1 in the environment field overrides it.
-        String renderer = com.valdroid.GpuInfo.query().renderer;
-        if (renderer != null && renderer.contains("G615")) env.add(NO_SECONDARY + "=1");
+        // Unity without secondary command buffers. On a Mali-G615 Arm's driver loses the device on them
+        // (the main menu, or the world right after: VK_ERROR_DEVICE_LOST, the picture frozen); with the
+        // flag it ran the native engine at 50+ fps against 20-30 on the mix (POCO X6 Pro, 2026-10-07).
+        // The G57, G720 and G925 run without it, and on the G720 it cost about 10 fps of 120
+        // (2026-10-08), so Auto turns it on for the G615 only; another GPU with the same fault has the
+        // setting. The player's Vulkan compatibility setting (Auto / On / Off) decides, and
+        // VALDROID_NO_SECONDARY_CMDBUFFERS=0/1 in the environment field overrides that (added later).
+        int vkCompat = is.getVulkanCompat();
+        boolean noSecondary = vkCompat == com.valdroid.InstanceSettings.VK_COMPAT_ON
+                || (vkCompat == com.valdroid.InstanceSettings.VK_COMPAT_AUTO && needsVulkanCompat());
+        if (noSecondary) env.add(NO_SECONDARY + "=1");
+        Log.i(TAG, "vulkan compatibility " + vkCompat + " -> no secondary command buffers: " + noSecondary);
 
         android.hardware.display.DisplayManager dm =
                 (android.hardware.display.DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
@@ -237,6 +242,12 @@ public final class NativeEngine {
 
     private static final String VULKAN_DRIVER = "VALDROID_VULKAN_DRIVER";
     private static final String NO_SECONDARY = "VALDROID_NO_SECONDARY_CMDBUFFERS";
+
+    /** Vulkan compatibility's Auto: the GPUs known to need it, the Mali-G615 (see graphicsSettings). */
+    public static boolean needsVulkanCompat() {
+        String renderer = com.valdroid.GpuInfo.query().renderer;
+        return renderer != null && renderer.contains("G615");
+    }
 
 
     /**

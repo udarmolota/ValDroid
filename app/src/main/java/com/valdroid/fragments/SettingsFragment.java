@@ -147,6 +147,26 @@ public class SettingsFragment extends Fragment {
                         .show();
             }
         });
+        // Vulkan compatibility (native engine): Auto / On / Off, in the order of the VK_COMPAT_ values.
+        // Auto says what it comes to on this phone.
+        Spinner spVkCompat = view.findViewById(R.id.sp_vk_compat);
+        ArrayAdapter<String> vkCompatAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item, new String[]{
+                        getString(com.valdroid.game.NativeEngine.needsVulkanCompat()
+                                ? R.string.vk_compat_auto_on : R.string.vk_compat_auto_off),
+                        getString(R.string.vk_compat_on), getString(R.string.vk_compat_off) });
+        vkCompatAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spVkCompat.setAdapter(vkCompatAdapter);
+        spVkCompat.setSelection(inst.getVulkanCompat());
+        spVkCompat.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+                inst.setVulkanCompat(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // In-game overlay — GLOBAL: off / classic FPS counter / full performance bar. Shows the true
@@ -373,17 +393,6 @@ public class SettingsFragment extends Fragment {
             }, "rd-gpu-detect").start();
         });
 
-        // --- Edit on-screen controls ---
-        view.findViewById(R.id.btn_edit_controls).setOnClickListener(v -> {
-            android.content.Intent i = new android.content.Intent(requireContext(), com.valdroid.ControlsEditorActivity.class);
-            i.putExtra(com.valdroid.ControlsEditorActivity.EXTRA_INSTANCE_NAME, instanceName);
-            startActivity(i);
-        });
-
-        // --- Gamepad button mapping (fix swapped/inverted controllers) ---
-        view.findViewById(R.id.btn_gamepad_mapper).setOnClickListener(v ->
-            startActivity(new android.content.Intent(requireContext(), com.valdroid.GamepadMapperActivity.class)));
-
         // --- Render resolution (Video card): vertical radios, just the resolution text. Per-device
         // presets from the ~540-row floor up to 72%. Lower = more FPS on weak GPUs. Applied at the next
         // launch.
@@ -476,26 +485,35 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btn_etc2_cache_clear).setOnClickListener(v -> clearEtc2Cache());
         showEtc2CacheRow(inst.getRenderer() == LauncherPreferences.Renderer.MOBILEGLUES);
 
-        // Frame-rate mode: off / Economy ~30 / Balanced ~40 / Smooth ~60. The concrete number is
-        // picked for this screen (FpsPlanner) and shown under the choice, so nobody has to know
-        // their panel's refresh rates. Takes effect on next launch.
-        android.widget.RadioGroup rgFps = view.findViewById(R.id.rg_fps_cap);
+        // Frame-rate mode, a dropdown: off / Economy ~30 / Balanced ~40 / Smooth ~60. The concrete
+        // number is picked for this screen (FpsPlanner) and shown under the choice, so nobody has to
+        // know their panel's refresh rates. Takes effect on next launch.
+        final int[] fpsModes = { com.valdroid.FpsPlanner.OFF, com.valdroid.FpsPlanner.ECONOMY,
+                com.valdroid.FpsPlanner.BALANCED, com.valdroid.FpsPlanner.SMOOTH };
+        Spinner spFps = view.findViewById(R.id.sp_fps_cap);
+        ArrayAdapter<String> fpsAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item, new String[]{ getString(R.string.fps_cap_off),
+                        getString(R.string.fps_mode_eco), getString(R.string.fps_mode_balanced),
+                        getString(R.string.fps_mode_smooth) });
+        fpsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spFps.setAdapter(fpsAdapter);
         final TextView tvFpsResolved = view.findViewById(R.id.tv_fps_resolved);
-        switch (inst.getFpsMode()) {
-            case com.valdroid.FpsPlanner.ECONOMY:  rgFps.check(R.id.rb_fps_eco);      break;
-            case com.valdroid.FpsPlanner.BALANCED: rgFps.check(R.id.rb_fps_balanced); break;
-            case com.valdroid.FpsPlanner.SMOOTH:   rgFps.check(R.id.rb_fps_smooth);   break;
-            default:                               rgFps.check(R.id.rb_fps_off);      break;
-        }
+        for (int i = 0; i < fpsModes.length; i++) if (fpsModes[i] == inst.getFpsMode()) spFps.setSelection(i);
         showFpsResolved(tvFpsResolved, inst.getFpsMode());
-        rgFps.setOnCheckedChangeListener((group, checkedId) -> {
-            int mode = checkedId == R.id.rb_fps_eco      ? com.valdroid.FpsPlanner.ECONOMY
-                     : checkedId == R.id.rb_fps_balanced ? com.valdroid.FpsPlanner.BALANCED
-                     : checkedId == R.id.rb_fps_smooth   ? com.valdroid.FpsPlanner.SMOOTH
-                     : com.valdroid.FpsPlanner.OFF;
-            inst.setFpsMode(mode);
-            showFpsResolved(tvFpsResolved, mode);
+        spFps.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+                inst.setFpsMode(fpsModes[position]);
+                showFpsResolved(tvFpsResolved, fpsModes[position]);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
+
+        // Texture compression card: folds to its header on a tap (applyEngineState sets it per engine).
+        view.findViewById(R.id.tv_texq_header).setOnClickListener(v ->
+                setTexqOpen(view, view.findViewById(R.id.body_texq).getVisibility() != View.VISIBLE));
 
         applyEngineState(view, engine);
     }
@@ -508,6 +526,7 @@ public class SettingsFragment extends Fragment {
      */
     private void applyEngineState(View view, int engine) {
         boolean nativeEngine = engine == InstanceSettings.ENGINE_NATIVE;
+        setTexqOpen(view, !nativeEngine);   // all MobileGlues: of no use to the native engine
         RadioGroup rgRenderer = view.findViewById(R.id.rg_renderer);
         rendererLocked = true;
         if (nativeEngine) rgRenderer.check(R.id.rb_zink_zfa);
@@ -526,6 +545,13 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.tv_native_driver_note).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
         boolean weakGpu = nativeEngine && com.valdroid.GpuInfo.query().isWeakForNativeEngine();
         view.findViewById(R.id.tv_engine_weak_gpu_note).setVisibility(weakGpu ? View.VISIBLE : View.GONE);
+        view.findViewById(R.id.ll_vk_compat).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
+    }
+
+    private void setTexqOpen(View view, boolean open) {
+        view.findViewById(R.id.body_texq).setVisibility(open ? View.VISIBLE : View.GONE);
+        ((TextView) view.findViewById(R.id.tv_texq_header)).setText(
+                getString(R.string.texq_label) + (open ? " \u25BE" : " \u25B8"));
     }
 
     // The game's settings change while it runs, so the buttons are re-read on every return here.

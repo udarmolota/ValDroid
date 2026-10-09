@@ -40,6 +40,7 @@ namespace ValDroid
             NoCinematics.Initialize();
             VirtualPad.Initialize();
             VirtualKeyboardMouse.Initialize();
+            UiClickDiag.Initialize();
             try
             {
                 s_State = GetGameStatePointer();
@@ -90,6 +91,7 @@ namespace ValDroid
             LowGpu.Tick();
             NoCinematics.Tick();
             Diagnostics.Tick();
+            UiClickDiag.Tick();
         }
     }
 }

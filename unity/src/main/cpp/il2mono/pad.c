@@ -5,7 +5,10 @@
 #include <jni.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "il2mono.h"
 
@@ -41,14 +44,64 @@ typedef struct
     float scroll;               // wheel notches since the last take, + = up
 } ValDroidKbmState;
 
+// g_kbm.keys / mouse_buttons are what the game has been given so far. Presses and releases do not go
+// there directly: the game samples the state once per Input System update, and whatever happened
+// between two updates would collapse (a tap holds the button for 50 ms, a frame on a weak phone takes
+// longer: the press and the release, or a release and the next press, would fall into one update and
+// the game would see one of them or neither). They queue as edges instead, and a take applies them in
+// order, changing any one key or button at most once per update: the rest wait for the next take.
 static ValDroidKbmState g_kbm;
 static pthread_mutex_t g_kbm_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// Keys and mouse buttons pressed since the last take. A tap (the touchpad's click holds the button for
-// 50 ms) can start and end between two Input System updates when a frame takes longer than that, as on
-// a weak phone at 27 fps: it would never reach the game. A latched press is taken as held for one update.
-static uint32_t g_keys_pressed[KEY_WORDS];
-static uint32_t g_mouse_pressed;
+typedef struct
+{
+    uint16_t code;   // GLFW key code, or the mouse button
+    uint8_t mouse;   // 1 = mouse button, 0 = key
+    uint8_t down;
+} KbmEdge;
+
+#define EDGE_CAPACITY 256
+static KbmEdge g_edges[EDGE_CAPACITY];
+static unsigned g_edge_head, g_edge_count;
+
+// VALDROID_DIAG=1: every mouse edge and every take that holds edges back goes to the log.
+static int g_kbm_diag = -1;
+
+static bool kbm_diag(void)
+{
+    if (g_kbm_diag < 0)
+    {
+        const char* v = getenv("VALDROID_DIAG");
+        g_kbm_diag = v && v[0] == '1';
+    }
+    return g_kbm_diag;
+}
+
+static long now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+}
+
+// Under the lock.
+static void kbm_push_edge(uint16_t code, bool mouse, bool down)
+{
+    if (g_edge_count == EDGE_CAPACITY)
+    {
+        LOGW("kbm: edge queue full, %s %u %s dropped", mouse ? "mouse" : "key", code, down ? "down" : "up");
+        return;
+    }
+    KbmEdge* e = &g_edges[(g_edge_head + g_edge_count) % EDGE_CAPACITY];
+    e->code = code;
+    e->mouse = mouse;
+    e->down = down;
+    g_edge_count++;
+    g_kbm.sequence++;
+    if (kbm_diag())
+        LOGI("kbm: %s %u %s queued at %ld ms, %u edges waiting", mouse ? "mouse" : "key", code, down ? "down" : "up",
+             now_ms(), g_edge_count);
+}
 
 // ValDroid.VirtualKeyboardMouse::Take (returns a MonoBoolean, one byte) — copies the state when it changed since the last take and
 // clears the accumulated mouse delta and wheel. Called once per Input System update.
@@ -58,19 +111,38 @@ static uint8_t kbm_take(ValDroidKbmState* out, uint32_t last_sequence)
     bool changed = g_kbm.sequence != last_sequence;
     if (changed)
     {
-        *out = g_kbm;
-        bool released_early = (g_mouse_pressed & ~g_kbm.mouse_buttons) != 0;
-        out->mouse_buttons |= g_mouse_pressed;
-        g_mouse_pressed = 0;
-        for (int w = 0; w < KEY_WORDS; w++)
+        // Apply queued edges in order until one would flip a bit this take already flipped.
+        uint32_t flipped_keys[KEY_WORDS];
+        uint32_t flipped_mouse = 0;
+        memset(flipped_keys, 0, sizeof(flipped_keys));
+        unsigned applied = 0;
+        while (g_edge_count > 0)
         {
-            released_early |= (g_keys_pressed[w] & ~g_kbm.keys[w]) != 0;
-            out->keys[w] |= g_keys_pressed[w];
-            g_keys_pressed[w] = 0;
+            KbmEdge* e = &g_edges[g_edge_head];
+            uint32_t bit = 1u << (e->code & 31);
+            uint32_t* state = e->mouse ? &g_kbm.mouse_buttons : &g_kbm.keys[e->code >> 5];
+            uint32_t* flipped = e->mouse ? &flipped_mouse : &flipped_keys[e->code >> 5];
+            bool flips = ((*state & bit) != 0) != e->down;
+            if (flips && (*flipped & bit))
+                break;
+            if (e->down)
+                *state |= bit;
+            else
+                *state &= ~bit;
+            if (flips)
+                *flipped |= bit;
+            g_edge_head = (g_edge_head + 1) % EDGE_CAPACITY;
+            g_edge_count--;
+            applied++;
         }
-        // The release is still to be sent: the next take must see a change.
-        if (released_early)
+        *out = g_kbm;
+        // Edges held back: the next take must see a change.
+        if (g_edge_count > 0)
+        {
             g_kbm.sequence++;
+            if (kbm_diag())
+                LOGI("kbm: take applied %u edges, %u held back for the next update", applied, g_edge_count);
+        }
         g_kbm.delta_x = g_kbm.delta_y = 0;
         g_kbm.scroll = 0;
     }
@@ -123,16 +195,8 @@ IL2MONO_API void JNICALL Java_com_valdroid_game_NativeInput_nativeKey(JNIEnv* en
 {
     if (key < 0 || key >= KEY_WORDS * 32)
         return;
-    uint32_t bit = 1u << (key & 31);
     pthread_mutex_lock(&g_kbm_lock);
-    if (down)
-    {
-        g_kbm.keys[key >> 5] |= bit;
-        g_keys_pressed[key >> 5] |= bit;
-    }
-    else
-        g_kbm.keys[key >> 5] &= ~bit;
-    g_kbm.sequence++;
+    kbm_push_edge((uint16_t)key, false, down);
     pthread_mutex_unlock(&g_kbm_lock);
 }
 
@@ -142,14 +206,7 @@ IL2MONO_API void JNICALL Java_com_valdroid_game_NativeInput_nativeMouseButton(
     if (button < 0 || button > 31)
         return;
     pthread_mutex_lock(&g_kbm_lock);
-    if (down)
-    {
-        g_kbm.mouse_buttons |= 1u << button;
-        g_mouse_pressed |= 1u << button;
-    }
-    else
-        g_kbm.mouse_buttons &= ~(1u << button);
-    g_kbm.sequence++;
+    kbm_push_edge((uint16_t)button, true, down);
     pthread_mutex_unlock(&g_kbm_lock);
 }
 

@@ -88,6 +88,12 @@ Na nuvem: %2$s
     <string name="engine_native">Motor nativo (experimental)</string>
     <string name="engine_native_hint">O próprio motor Android da Unity, sem emulação. O mais rápido. Só Vulkan; mods com bibliotecas x86 não serão carregados.</string>
     <string name="engine_weak_gpu_note">Com a GPU deste telefone o motor nativo precisa do perfil Mínima: toque em Aplicar ao lado de Mínima no cartão Gráficos.</string>
+    <string name="vk_compat_label">Compatibilidade Vulkan</string>
+    <string name="vk_compat_auto_on">Auto (ligada para esta GPU)</string>
+    <string name="vk_compat_auto_off">Auto (desligada para esta GPU)</string>
+    <string name="vk_compat_on">Ligada</string>
+    <string name="vk_compat_off">Desligada</string>
+    <string name="vk_compat_hint">Ligue se a imagem congelar no logo ou no menu enquanto o jogo continua. A imagem é a mesma; o Unity monta cada quadro de outro jeito. Vale a partir do próximo início.</string>
     <string name="engine_native_renderer_note">O motor nativo sempre renderiza diretamente com Vulkan.</string>
     <string name="engine_native_driver_note">O motor nativo usa o driver Vulkan do próprio celular.</string>
     <string name="native_mono_off_msg">O jogo vai rodar no modo anterior, mais lento. Se você desativou por causa de um problema, envie os logs para nós — isso nos ajuda a corrigir.</string>
@@ -119,13 +125,7 @@ Na nuvem: %2$s
     <string name="renderer_default_title">Renderizador: MobileGlues</string>
     <string name="renderer_default_msg">O MobileGlues está selecionado: ele dá o maior FPS. Se o chão ou as texturas ficarem pretos, use a versão 1.0.15 do jogo ou mais nova: ela não tem esse problema. Enquanto isso, num celular Snapdragon (Adreno) dá para mudar temporariamente para Zink nas configurações da instância (a engrenagem no cartão da instância); ele é um pouco mais lento. Para Mali ainda não há solução.</string>
     <string name="nav_import_mods">Importar mods (ZIP)…</string>
-    <string name="nav_export_saves">Exportar jogos salvos</string>
-    <string name="nav_import_saves">Importar jogos salvos</string>
-    <string name="nav_export_settings">Exportar configurações</string>
-    <string name="nav_import_settings">Importar configurações</string>
     <string name="nav_export_logs">Exportar registros (ZIP)</string>
-    <string name="nav_export_layout">Exportar layout dos controles</string>
-    <string name="nav_import_layout">Importar layout dos controles</string>
     <string name="nav_updates">Novas versões (GitHub)</string>
     <string name="nav_bug_report">Relatar um problema</string>
     <string name="nav_wiki">Wiki</string>
@@ -274,8 +274,8 @@ Na nuvem: %2$s
     <string name="gfx_preset_low">Baixa</string>
     <string name="gfx_preset_ultra">Muito baixa</string>
     <string name="gfx_preset_minimal">Mínima</string>
-    <string name="gfx_preset_minimal_hint">Para telefones fracos: resolução 3D menor, pixelada. No motor nativo, também texturas 4 vezes menores e sem sombras.</string>
-    <string name="gfx_preset_hint">O jogo sempre começa em Muito baixa, um perfil ajustado para a emulação. Depois você pode adaptar os gráficos ao seu telefone nas configurações do próprio jogo: o launcher não mexe mais neles. Um botão volta as configurações para esse perfil na próxima inicialização. Botão cinza significa que esse perfil já está aplicado.</string>
+    <string name="gfx_preset_minimal_hint">Para GPUs fracas</string>
+    <string name="gfx_preset_hint">Mais FPS: Mínima no motor nativo, Muito baixa nos motores box64. Um jogo novo começa nela. Aplicar coloca um perfil de novo na próxima inicialização; cinza significa que já está aplicado.</string>
     <string name="instance_downloading">baixando, espere terminar</string>
     <string name="instance_incomplete">não terminado</string>
     <string name="instance_incomplete_hint">O download parou antes de terminar. Abra o menu lateral → %1$s e baixe de novo com o mesmo nome de instância: ele continua de onde parou.</string>
@@ -309,9 +309,34 @@ Na nuvem: %2$s
     <!-- Mods (BepInEx) screen -->
     <string name="nav_mods">Mods</string>
     <string name="nav_icon_packs">Ícones dos botões</string>
+    <string name="nav_controls_transfer">Importar / exportar controles</string>
+    <string name="nav_saves_transfer">Importar / exportar saves</string>
+    <string name="nav_settings_transfer">Importar / exportar configurações</string>
+    <string name="saves_transfer_import_title">Importar saves</string>
+    <string name="saves_transfer_import_hint">Um zip de saves exportado do ValDroid (mundos e personagens). Mundos e personagens com o mesmo nome nesta instância são substituídos.</string>
+    <string name="saves_transfer_import_confirm">Importar %1$s nos saves de %2$s? Mundos e personagens com o mesmo nome são substituídos.</string>
+    <string name="saves_transfer_export_title">Exportar saves</string>
+    <string name="saves_transfer_export_hint">Salva os mundos e personagens desta instância num zip, como cópia ou para levar a outro aparelho.</string>
+    <string name="settings_transfer_import_title">Importar configurações</string>
+    <string name="settings_transfer_import_hint">Um zip de configurações exportado do ValDroid. Substitui as configurações do jogo desta instância.</string>
+    <string name="settings_transfer_import_confirm">Importar %1$s nas configurações do jogo de %2$s? As configurações atuais são substituídas.</string>
+    <string name="settings_transfer_export_title">Exportar configurações</string>
+    <string name="settings_transfer_export_hint">Salva as configurações do jogo desta instância (gráficos, som, teclas) num zip.</string>
+    <string name="transfer_exported">Exportado: %1$s (%2$d KB)</string>
+    <string name="transfer_export_failed">Falha ao exportar: %1$s</string>
+    <string name="transfer_imported">Restaurado: %1$s → %2$s</string>
+    <string name="transfer_import_failed">Falha ao importar: %1$s</string>
+    <string name="controls_transfer_import_title">Importar um layout</string>
+    <string name="controls_transfer_import_hint">Um zip de controles (controls.json e seus ícones) ou um .json de controles. Substitui os controles na tela desta instância.</string>
+    <string name="controls_transfer_import">Importar…</string>
+    <string name="controls_transfer_import_confirm">Substituir os controles na tela de %1$s por %2$s?</string>
+    <string name="controls_transfer_export_title">Exportar o layout</string>
+    <string name="controls_transfer_export_hint">Salva os controles na tela desta instância e seus ícones como um zip, para guardar ou compartilhar.</string>
+    <string name="controls_transfer_export">Exportar…</string>
     <string name="icon_packs_title">Pacotes de ícones</string>
-    <string name="icon_packs_note">Um pacote coloca uma imagem em cada botão da tela conforme o que ele faz: atacar, bloquear, pular etc. Escolha a instância e toque em Aplicar ao lado de um pacote. Botões sem imagem correspondente mantêm o texto. Um botão por vez: o editor de controles, De um pacote.</string>
-    <string name="icon_packs_format">Seu próprio pacote: um zip de imagens brancas em fundo transparente (PNG), com o nome das ações: %1$s. Qualquer outra imagem do zip pode ser colocada num botão manualmente. Imagens coloridas: adicione \"tint\": false ao pack.json e elas aparecem com as próprias cores.</string>
+    <string name="icon_packs_note">Imagens para todos os botões na tela de uma vez, como um pacote, em vez de um por um. Escolha a instância e toque em Aplicar ao lado de um pacote; botões para os quais o pacote não tem imagem mantêm o texto.</string>
+    <string name="icon_packs_howto">Como fazer seu próprio pacote</string>
+    <string name="icon_packs_format">Um conjunto de imagens PNG, quadradas, de 256 a 512 pixels, em fundo transparente. A cor não importa: o botão pinta a imagem com a própria cor (para manter as cores das imagens, adicione um pack.json com \"tint\": false). Os nomes dos arquivos importam, eles dizem qual botão recebe cada imagem: %1$s. Qualquer outra imagem do zip também é importada e pode ser colocada num botão manualmente no editor de controles. Compacte os arquivos em um zip e toque em Importar.</string>
     <string name="icon_packs_instance">Instância</string>
     <string name="icon_packs_apply">Aplicar</string>
     <string name="icon_packs_delete">Excluir</string>
@@ -345,5 +370,6 @@ Na nuvem: %2$s
     <string name="mods_install_header">Instalar um mod</string>
     <string name="shader_cache_label">Cache de shaders</string>
     <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado. Em GPUs Mali vem desligado: lá ele pode deixar a água preta.</string>
-    <string name="release_notes_body" translatable="false"><b>– Versão do jogo</b>\nUse Valheim 1.0.15 ou mais novo: no 1.0.7 o chão fica preto.\n\n<b>– Pausa em segundo plano</b>\nO jogo congela quando você sai do app (pode ser desativado nas configurações).\n\n<b>– Girar a câmera com botões</b>\nSegure Ataque, Bloqueio ou Alt e deslize o dedo.\n\n<b>– Joystick flutuante</b>\nO analógico esquerdo aparece onde você põe o polegar.\n\n<b>– Botões invisíveis</b>\nA opacidade pode ir até 0%.\n\n<b>– Controles</b>\nSem toques duplos em portáteis; LT e RT no mapeamento do controle.\n\n<b>– Modo de compatibilidade</b>\nAgora muito mais rápido.\n\n<b>– Mensagens mais claras</b>\nAo instalar e baixar o jogo.\n\n<b>– Multijogador</b>\nAinda não é suportado, mas está nos planos.</string>
+    <string name="release_notes_title" translatable="false">Novidades da v%1$s</string>
+    <string name="release_notes_body" translatable="false"><b>– Motor nativo</b>\nSem emulação: carregamento mais rápido, mais FPS, muito menos bateria. Instâncias novas começam nele; troque em Configurações → Motor.\n\n<b>– Funciona em Mali</b>\nSe a imagem congelar no logo ou no menu, coloque Compatibilidade Vulkan (cartão Motor) em Ligada.\n\n<b>– Perfil gráfico Mínima</b>\nPara GPUs fracas. Mais FPS: Mínima no motor nativo, Muito baixa no box64.\n\n<b>– Pacotes de ícones</b>\nImagens para todos os botões na tela de uma vez: dois pacotes embutidos e seus próprios zips. Menu lateral → Pacotes de ícones.\n\n<b>– Teclado físico</b>\nEsconde os controles na tela enquanto está conectado.\n\n<b>– Modo touchpad nos botões de câmera</b>\nUm botão que gira a câmera pode funcionar como touchpad em vez de stick.\n\n<b>– Importar / exportar</b>\nControles, saves e configurações: uma tela para cada um, no menu lateral.\n\n<b>– Toques</b>\nUm toque conta por mais que você segure; só um dedo em movimento move o cursor.\n\n<b>– Multijogador</b>\nAinda não é suportado, mas está nos planos.</string>
 </resources>

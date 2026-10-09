@@ -49,14 +49,6 @@ public class LauncherActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
                     uri -> { if (uri != null) ContentInstaller.showTargetDialog(this, uri); });
 
-    private final ActivityResultLauncher<String> exportDataLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> { if (uri != null) exportGameData(uri); });
-
-    private final ActivityResultLauncher<String[]> importDataLauncher =
-            registerForActivityResult(new ActivityResultContracts.OpenDocument(),
-                    uri -> { if (uri != null) importGameData(uri); });
-
     private final ActivityResultLauncher<String> exportLogsLauncher =
             registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
                     uri -> {
@@ -64,18 +56,6 @@ public class LauncherActivity extends AppCompatActivity {
                         else pendingLogInstanceName = null;
                     });
 
-    private final ActivityResultLauncher<String> exportLayoutLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> { if (uri != null) exportLayout(uri); });
-
-    private final ActivityResultLauncher<String[]> importLayoutLauncher =
-            registerForActivityResult(new ActivityResultContracts.OpenDocument(),
-                    uri -> { if (uri != null) importLayout(uri); });
-
-    /** Which user-data parts the pending export/import targets — saves vs. settings (set per menu item). */
-    private String[] pendingDataParts = { GameDataTransfer.SAVES, GameDataTransfer.CONFIG };
-    private static final String[] ZIP_MIME =
-            { "application/zip", "application/x-zip-compressed", "application/octet-stream" };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,31 +102,27 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_install_content) {
                 navController.navigate(R.id.action_open_mods);   // Mods (BepInEx): instance, master switch, list
                 return true;
+            } else if (id == R.id.action_edit_controls) {
+                chooseInstanceThen(gi -> {
+                    Intent i = new Intent(this, ControlsEditorActivity.class);
+                    i.putExtra(ControlsEditorActivity.EXTRA_INSTANCE_NAME, gi.getName());
+                    startActivity(i);
+                });
+                return true;
+            } else if (id == R.id.action_gamepad_mapper) {
+                startActivity(new Intent(this, GamepadMapperActivity.class));   // device-wide, no instance
+                return true;
             } else if (id == R.id.action_icon_packs) {
                 navController.navigate(R.id.action_open_icon_packs);   // icon packs for the on-screen buttons
                 return true;
             } else if (id == R.id.action_custom_driver) {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import
                 return true;
-            } else if (id == R.id.action_export_saves) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
-                        pendingDataParts = new String[]{ GameDataTransfer.SAVES };
-                        exportDataLauncher.launch(dataFileName("saves", gi)); });
+            } else if (id == R.id.action_saves_transfer) {
+                navController.navigate(R.id.action_open_saves_transfer);   // import / export saves, one screen
                 return true;
-            } else if (id == R.id.action_import_saves) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
-                        pendingDataParts = new String[]{ GameDataTransfer.SAVES };
-                        importDataLauncher.launch(ZIP_MIME); });
-                return true;
-            } else if (id == R.id.action_export_settings) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
-                        pendingDataParts = new String[]{ GameDataTransfer.CONFIG };
-                        exportDataLauncher.launch(dataFileName("settings", gi)); });
-                return true;
-            } else if (id == R.id.action_import_settings) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
-                        pendingDataParts = new String[]{ GameDataTransfer.CONFIG };
-                        importDataLauncher.launch(ZIP_MIME); });
+            } else if (id == R.id.action_settings_transfer) {
+                navController.navigate(R.id.action_open_settings_transfer);
                 return true;
             } else if (id == R.id.action_export_logs) {
                 // No instance yet still exports: report.txt and launcher.log need none.
@@ -155,14 +131,8 @@ public class LauncherActivity extends AppCompatActivity {
                         () -> { pendingLogInstanceName = null;
                         exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); });
                 return true;
-            } else if (id == R.id.action_export_layout) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
-                        exportLayoutLauncher.launch(dataFileName("controls", gi)); });
-                return true;
-            } else if (id == R.id.action_import_layout) {
-                chooseInstanceThen(gi -> { pendingInstance = gi; importLayoutLauncher.launch(new String[]{
-                        "application/zip", "application/x-zip-compressed", "application/json",
-                        "text/plain", "application/octet-stream"}); });
+            } else if (id == R.id.action_controls_transfer) {
+                navController.navigate(R.id.action_open_controls_transfer);   // import / export, one screen
                 return true;
             } else if (id == R.id.action_bug_report) {
                 sendBugReport();
@@ -425,8 +395,6 @@ public class LauncherActivity extends AppCompatActivity {
         return gi;
     }
 
-    /** Instance chosen up-front for the next save export/import, so the destination is explicit. */
-    private GameInstance pendingInstance;
 
     /** Ask which instance to act on (skips the dialog when there's only one), then continue. */
     private void chooseInstanceThen(java.util.function.Consumer<GameInstance> cont) {
@@ -581,59 +549,6 @@ public class LauncherActivity extends AppCompatActivity {
 
     // ---- Save / settings backup & restore -------------------------------------
 
-    /** Export the selected instance's saves OR settings (per {@link #pendingDataParts}) into a picked .zip. */
-    private void exportGameData(Uri uri) {
-        final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
-        if (instance == null) { toast("Create a game instance first."); return; }
-        final File instanceDir = new File(instance.getGamePath());
-        final String[] parts = pendingDataParts;
-        toast("Exporting…");
-
-        new Thread(() -> {
-            GameDataTransfer.Result res;
-            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                res = GameDataTransfer.export(instanceDir, out, parts);
-            } catch (Exception ex) {
-                ui.post(() -> toast("Export failed: " + ex.getMessage()));
-                return;
-            }
-            final GameDataTransfer.Result fr = res;
-            ui.post(() -> toast(fr.ok()
-                    ? "Exported " + android.text.TextUtils.join(" + ", fr.items)
-                        + " (" + (fr.bytes / 1024) + " KB)"
-                    : "Export failed: " + fr.error));
-        }).start();
-    }
-
-    /** Restore saves OR settings (per {@link #pendingDataParts}) from a picked .zip into the selected instance. */
-    private void importGameData(Uri uri) {
-        final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
-        if (instance == null) { toast("Create a game instance first."); return; }
-        final File instanceDir = new File(instance.getGamePath());
-        final String[] parts = pendingDataParts;
-        toast("Importing…");
-
-        new Thread(() -> {
-            File cacheZip = new File(getCacheDir(), "import_data.zip");
-            try (InputStream in = getContentResolver().openInputStream(uri);
-                 FileOutputStream out = new FileOutputStream(cacheZip)) {
-                byte[] buf = new byte[65536];
-                int n;
-                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-            } catch (Exception ex) {
-                ui.post(() -> toast("Read failed: " + ex.getMessage()));
-                return;
-            }
-            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, instanceDir, parts);
-            //noinspection ResultOfMethodCallIgnored
-            cacheZip.delete();
-            final GameDataTransfer.Result fr = res;
-            ui.post(() -> toast(fr.ok()
-                    ? "Restored " + android.text.TextUtils.join(" + ", fr.items) + " → " + instance.getName()
-                    : "Import failed: " + fr.error));
-        }).start();
-    }
 
     /** Export the selected instance's diagnostic logs into a picked, date-stamped .zip. */
     private void exportLogs(Uri uri) {
@@ -674,36 +589,6 @@ public class LauncherActivity extends AppCompatActivity {
 
     /** Export the chosen instance's on-screen controls as a zip: controls.json + icons/ (the
      *  Zomdroid format). An instance still on the bundled default exports that default. */
-    private void exportLayout(Uri uri) {
-        final GameInstance target = pendingInstance != null ? pendingInstance : currentInstance();
-        final String name = target != null ? target.getName() : null;
-        new Thread(() -> {
-            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                if (out == null) throw new java.io.IOException("cannot open the file");
-                com.valdroid.controls.ControlsStorage.exportZip(this, name, out);
-                ui.post(() -> toast(getString(R.string.controls_exported)));
-            } catch (Exception ex) {
-                ui.post(() -> toast(getString(R.string.controls_export_failed, String.valueOf(ex.getMessage()))));
-            }
-        }).start();
-    }
-
-    /** Import a controls zip (controls.json + icons/) or a bare controls .json into the chosen
-     *  instance. Checked to be a layout before anything is written. */
-    private void importLayout(Uri uri) {
-        final GameInstance target = pendingInstance != null ? pendingInstance : currentInstance();
-        final String name = target != null ? target.getName() : null;
-        new Thread(() -> {
-            try (InputStream in = getContentResolver().openInputStream(uri)) {
-                if (in == null) throw new java.io.IOException("cannot open the file");
-                com.valdroid.controls.ControlsStorage.importLayout(in, name);
-                ui.post(() -> toast(getString(R.string.controls_imported, name != null ? name : "ValDroid")));
-            } catch (Exception ex) {
-                ui.post(() -> toast(getString(R.string.controls_import_failed,
-                        ex.getMessage() == null ? "invalid layout file" : ex.getMessage())));
-            }
-        }).start();
-    }
 
     /** yyyyMMdd_HHmmss — keeps each exported log zip uniquely named (no overwrite). */
     private static String timestamp() {
@@ -711,12 +596,6 @@ public class LauncherActivity extends AppCompatActivity {
                 .format(new java.util.Date());
     }
 
-    /** rimdroid_&lt;kind&gt;_&lt;instance&gt;_&lt;yyyyMMdd_HHmmss&gt;.zip — dated + descriptive, never overwrites. */
-    private static String dataFileName(String kind, GameInstance gi) {
-        String n = (gi == null || gi.getName() == null) ? "instance"
-                : gi.getName().replaceAll("[^A-Za-z0-9._-]", "_");
-        return "valdroid_" + kind + "_" + n + "_" + timestamp() + ".zip";
-    }
 
     /** Open a URL in the user's browser (community / updates links). */
     private void openUrl(String url) {

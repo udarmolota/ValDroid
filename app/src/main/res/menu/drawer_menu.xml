@@ -17,14 +17,32 @@
             android:id="@+id/action_install_content"
             android:icon="@drawable/mt_icon_mods"
             android:title="@string/nav_mods" />
+    </group>
+
+    <!-- 2) On-screen controls and the gamepad: everything about controls in one place. Actions that
+         need an instance ask for it (or take the only one). -->
+    <group android:id="@+id/group_controls" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_edit_controls"
+            android:icon="@drawable/mt_icon_tune"
+            android:title="@string/edit_controls" />
         <!-- Icon packs: pictures for the on-screen buttons, put on an instance's layout at once -->
         <item
             android:id="@+id/action_icon_packs"
             android:icon="@drawable/mt_icon_stack"
             android:title="@string/nav_icon_packs" />
+        <item
+            android:id="@+id/action_gamepad_mapper"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/gamepad_mapper_settings_btn" />
+        <!-- One screen for both, as Zomdroid's "Import/Export Controls" -->
+        <item
+            android:id="@+id/action_controls_transfer"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_controls_transfer" />
     </group>
 
-    <!-- 2) Get the game from a store you own it on (Steam, GOG) -->
+    <!-- 3) Get the game from a store you own it on (Steam, GOG) -->
     <group android:id="@+id/group_store" android:checkableBehavior="none">
         <item
             android:id="@+id/action_download_game"
@@ -36,39 +54,24 @@
             android:title="@string/nav_cloud_saves" />
     </group>
 
-    <!-- 3) Settings + data transfer (saves / settings / controls layout) -->
+    <!-- 4) Settings + data transfer (saves / settings) -->
     <group android:id="@+id/group_data" android:checkableBehavior="none">
         <item
             android:id="@+id/action_settings"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_settings" />
+        <!-- One screen each for import and export, as the controls one -->
         <item
-            android:id="@+id/action_export_saves"
+            android:id="@+id/action_saves_transfer"
             android:icon="@drawable/mt_icon_save"
-            android:title="@string/nav_export_saves" />
+            android:title="@string/nav_saves_transfer" />
         <item
-            android:id="@+id/action_import_saves"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_import_saves" />
-        <item
-            android:id="@+id/action_export_settings"
+            android:id="@+id/action_settings_transfer"
             android:icon="@drawable/mt_icon_tune"
-            android:title="@string/nav_export_settings" />
-        <item
-            android:id="@+id/action_import_settings"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_import_settings" />
-        <item
-            android:id="@+id/action_export_layout"
-            android:icon="@drawable/mt_icon_folder"
-            android:title="@string/nav_export_layout" />
-        <item
-            android:id="@+id/action_import_layout"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_import_layout" />
+            android:title="@string/nav_settings_transfer" />
     </group>
 
-    <!-- 4) Diagnostics -->
+    <!-- 5) Diagnostics -->
     <group android:id="@+id/group_files" android:checkableBehavior="none">
         <!-- "Manage storage" lives on each instance card's own menu (menu_game_instance.xml), where
              it acts on that instance — a global duplicate only made this drawer longer. -->
