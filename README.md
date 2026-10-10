@@ -69,6 +69,19 @@ A few honest notes so expectations land right:
 - **The first launch is slow.** Shaders (and on the box64 engines, textures) are prepared once and
   cached, and every launch after that is noticeably faster.
 
+## Steam Cloud saves
+
+Play on a PC and on the phone with the same worlds and characters. In the side menu, **Steam Cloud
+saves**: **Get** brings your cloud saves onto the phone, **Send** puts the phone's back. Sync is
+manual — get before you play on the phone, send when you're done. If a save exists on both sides,
+you choose which to keep; nothing is deleted.
+
+On the PC, Valheim keeps the cloud **per world and per character**: move a save to the cloud in the
+game's own menu first, or it won't be there.
+
+Needs the **Steam mobile app with Steam Guard on**: you approve the sign-in there. ValDroid stores
+none of your Steam data — only an access token for that one connection, kept in memory.
+
 ## Device compatibility
 
 - **Adreno (Snapdragon):** the most mature path. Recent flagships play smoothly on the native engine
