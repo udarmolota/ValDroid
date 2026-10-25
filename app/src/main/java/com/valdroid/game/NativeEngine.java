@@ -181,6 +181,9 @@ public final class NativeEngine {
         // environment turns them back on). Starting the intro lost the GPU on a Mali-G615 and froze the
         // picture; weaker Mali decoders refuse the clip anyway.
         if (com.valdroid.GpuInfo.isMali()) env.add("VALDROID_SKIP_VIDEO=1");
+        // The landscape the overlay locks the activity to, for the bridge to lock the player to as well.
+        if (is.isReverseLandscape()) env.add("VALDROID_REVERSE_LANDSCAPE=1");
+        if (is.getHudScale() > 100) env.add("VALDROID_HUD_SCALE=" + is.getHudScale());
         // Unity without secondary command buffers. On a Mali-G615 Arm's driver loses the device on them
         // (the main menu, or the world right after: VK_ERROR_DEVICE_LOST, the picture frozen); with the
         // flag it ran the native engine at 50+ fps against 20-30 on the mix (POCO X6 Pro, 2026-10-07).

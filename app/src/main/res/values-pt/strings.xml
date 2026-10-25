@@ -155,7 +155,7 @@ Na nuvem: %2$s
     <string name="editor_delete">Excluir item</string>
     <string name="editor_layout_gamepad">Gamepad (padrão)</string>
     <string name="editor_layout_vkbd">Teclado e touchpad</string>
-    <string name="nav_launcher">Launcher</string>
+    <string name="nav_launcher" translatable="false">ValDroid</string>
     <string name="nav_settings">Configurações</string>
     <string name="app_settings_theme">Tema</string>
     <string name="app_settings_note">As configurações do jogo (renderizador, driver, depuração, escala de renderização, controles) são de cada instância: abra pelo ícone de engrenagem no cartão dela.</string>
@@ -276,6 +276,9 @@ Na nuvem: %2$s
     <string name="gfx_preset_minimal">Mínima</string>
     <string name="gfx_preset_minimal_hint">Para GPUs fracas</string>
     <string name="gfx_preset_hint">Mais FPS: Mínima no motor nativo, Muito baixa nos motores box64. Um jogo novo começa nela. Aplicar coloca um perfil de novo na próxima inicialização; cinza significa que já está aplicado.</string>
+    <string name="hud_scale_label">Tamanho da interface no jogo</string>
+    <string name="hud_scale_default">Como no jogo</string>
+    <string name="hud_scale_hint">Deixa as barras, a barra de itens, o minimapa, as mensagens, o chat e os textos maiores do que a escala de interface do próprio jogo permite (Configurações \u2192 Acessibilidade, até 115%). Menus e inventário mantêm o tamanho do jogo. Vale a partir do próximo início.</string>
     <string name="instance_downloading">baixando, espere terminar</string>
     <string name="instance_incomplete">não terminado</string>
     <string name="instance_incomplete_hint">O download parou antes de terminar. Abra o menu lateral → %1$s e baixe de novo com o mesmo nome de instância: ele continua de onde parou.</string>
@@ -370,6 +373,7 @@ Na nuvem: %2$s
     <string name="mods_install_header">Instalar um mod</string>
     <string name="shader_cache_label">Cache de shaders</string>
     <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado. Em GPUs Mali vem desligado: lá ele pode deixar a água preta.</string>
+    <string name="news_title">Notícias do Valheim</string>
     <string name="release_notes_title" translatable="false">Novidades da v%1$s</string>
     <string name="release_notes_body" translatable="false"><b>– Motor nativo</b>\nSem emulação: carregamento mais rápido, mais FPS, muito menos bateria. Instâncias novas começam nele; troque em Configurações → Motor.\n\n<b>– Funciona em Mali</b>\nSe a imagem congelar no logo ou no menu, coloque Compatibilidade Vulkan (cartão Motor) em Ligada.\n\n<b>– Perfil gráfico Mínima</b>\nPara GPUs fracas. Mais FPS: Mínima no motor nativo, Muito baixa no box64.\n\n<b>– Pacotes de ícones</b>\nImagens para todos os botões na tela de uma vez: dois pacotes embutidos e seus próprios zips. Menu lateral → Pacotes de ícones.\n\n<b>– Teclado físico</b>\nEsconde os controles na tela enquanto está conectado.\n\n<b>– Modo touchpad nos botões de câmera</b>\nUm botão que gira a câmera pode funcionar como touchpad em vez de stick.\n\n<b>– Importar / exportar</b>\nControles, saves e configurações: uma tela para cada um, no menu lateral.\n\n<b>– Toques</b>\nUm toque conta por mais que você segure; só um dedo em movimento move o cursor.\n\n<b>– Multijogador</b>\nAinda não é suportado, mas está nos planos.</string>
 </resources>

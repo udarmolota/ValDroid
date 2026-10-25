@@ -168,8 +168,8 @@ public class TouchpadControlElement extends AbstractControlElement {
     @Override
     public ControlElementDescription describe() {
         return new ControlElementDescription(
-                drawable.centerX / parentView.getWidth(),
-                drawable.centerY / parentView.getHeight(),
+                drawable.centerX / parentView.layoutWidth(),
+                drawable.centerY / parentView.layoutHeight(),
                 drawable.scale, Type.TOUCHPAD,
                 new GLFWBinding[0], null,
                 drawable.color, drawable.alpha,

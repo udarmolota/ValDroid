@@ -385,6 +385,34 @@
                 android:layout_height="wrap_content"
                 android:text="@string/gfx_preset_apply" />
         </LinearLayout>
+
+        <!-- Native engine only: the in-game interface beyond the game's own scale slider. -->
+        <LinearLayout
+            android:id="@+id/ll_hud_scale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:text="@string/hud_scale_label" />
+
+            <Spinner
+                android:id="@+id/sp_hud_scale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:alpha="0.7"
+                android:text="@string/hud_scale_hint" />
+        </LinearLayout>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

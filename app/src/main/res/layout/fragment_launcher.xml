@@ -77,8 +77,11 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Log header row (sits right under the instances list) -->
+            <!-- Log header row (sits right under the instances list); the header and the log take no
+                 room until a line is written (LauncherFragment.setLogShown). -->
             <LinearLayout
+                android:id="@+id/ll_log_header"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -108,6 +111,7 @@
 
             <ScrollView
                 android:id="@+id/scroll_log"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:background="#14000000">
@@ -121,6 +125,30 @@
                     android:padding="8dp" />
 
             </ScrollView>
+
+            <!-- Valheim news (Iron Gate's Steam announcements), filled by LauncherFragment.showNews;
+                 hidden until there is something to show. -->
+            <LinearLayout
+                android:id="@+id/ll_news"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/news_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+                <LinearLayout
+                    android:id="@+id/ll_news_items"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

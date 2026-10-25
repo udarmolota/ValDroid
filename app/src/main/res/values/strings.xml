@@ -133,6 +133,7 @@ In the cloud: %2$s
     <!-- "What's new" dialog, shown once per version (LauncherFragment.maybeShowReleaseNotes). English
          only, like the release notes it is cut from. Read with getText, so <b>/<i> are kept; keep it on
          one line, because a line break inside a string resource turns into a leading space. -->
+    <string name="news_title">Valheim news</string>
     <string name="release_notes_title" translatable="false">What\'s new in v%1$s</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid on X</string>
@@ -170,7 +171,7 @@ In the cloud: %2$s
     <string name="editor_delete">Delete element</string>
     <string name="editor_layout_gamepad">Gamepad (default)</string>
     <string name="editor_layout_vkbd">Keyboard and touchpad</string>
-    <string name="nav_launcher">Launcher</string>
+    <string name="nav_launcher" translatable="false">ValDroid</string>
     <string name="nav_settings">Settings</string>
     <string name="app_settings_theme">Theme</string>
     <string name="app_settings_note">Game settings (renderer, driver, debug, render scale, controls) are per-instance — open them from a game card\'s gear icon.</string>
@@ -291,6 +292,9 @@ In the cloud: %2$s
     <string name="gfx_preset_minimal">Minimal</string>
     <string name="gfx_preset_minimal_hint">For weak GPUs</string>
     <string name="gfx_preset_hint">Most FPS: Minimal on the native engine, Very low on the box64 engines. A new game starts on it. Apply sets a profile again at the next launch; grey means it is already set.</string>
+    <string name="hud_scale_label">In-game interface size</string>
+    <string name="hud_scale_default">As in the game</string>
+    <string name="hud_scale_hint">Makes the bars, hotbar, minimap, messages, chat and texts bigger than the game\u2019s own interface scale allows (Settings \u2192 Accessibility, up to 115%). Menus and inventory keep the game\u2019s size. Takes effect at the next launch.</string>
     <string name="release_notes_body" translatable="false"><b>– Native engine</b>\nNothing is emulated: faster loading, higher FPS, much less battery. New instances start on it; switch in Settings → Engine.\n\n<b>– Works on Mali</b>\nIf the picture freezes on the logo or in the menu, set Vulkan compatibility (card Engine) to On.\n\n<b>– Minimal graphics profile</b>\nFor weak GPUs. Most FPS: Minimal on the native engine, Very low on box64.\n\n<b>– Icon packs</b>\nPictures for all on-screen buttons at once: two built-in packs and your own zips. Drawer → Icon packs.\n\n<b>– Physical keyboard</b>\nHides the on-screen controls while it is plugged in.\n\n<b>– Touchpad mode for camera buttons</b>\nA camera button can work like a touchpad instead of a stick.\n\n<b>– Import / export</b>\nControls, saves and settings: one screen each, in the drawer.\n\n<b>– Taps</b>\nA tap counts however long you held it; only a moving finger moves the cursor.\n\n<b>– Multiplayer</b>\nNot supported yet, but it\'s planned.</string>
     <string name="instance_downloading">downloading, wait until it finishes</string>
     <string name="instance_incomplete">not finished</string>

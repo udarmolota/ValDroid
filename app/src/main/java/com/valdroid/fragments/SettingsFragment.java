@@ -457,6 +457,25 @@ public class SettingsFragment extends Fragment {
         btnGfxMinimal = view.findViewById(R.id.btn_gfx_minimal);
         btnGfxMinimal.setOnClickListener(v ->
                 queueGraphicsProfile(com.valdroid.InstanceSettings.GFX_MINIMAL, R.string.gfx_preset_minimal));
+        // In-game interface size (native engine): 100 / 125 / 150 / 175 % of the game's own scale.
+        Spinner spHudScale = view.findViewById(R.id.sp_hud_scale);
+        final int[] hudScales = InstanceSettings.HUD_SCALES;
+        String[] hudLabels = new String[hudScales.length];
+        for (int k = 0; k < hudScales.length; k++)
+            hudLabels[k] = hudScales[k] == 100 ? getString(R.string.hud_scale_default) : hudScales[k] + "%";
+        ArrayAdapter<String> hudAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, hudLabels);
+        hudAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spHudScale.setAdapter(hudAdapter);
+        for (int k = 0; k < hudScales.length; k++) if (hudScales[k] == inst.getHudScale()) spHudScale.setSelection(k);
+        spHudScale.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+                inst.setHudScale(hudScales[position]);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
         refreshGraphicsButtons();
 
         // ETC2 compression switch (both ETC2 paths; see GameLauncher). Takes effect on next launch.
@@ -546,6 +565,7 @@ public class SettingsFragment extends Fragment {
         boolean weakGpu = nativeEngine && com.valdroid.GpuInfo.query().isWeakForNativeEngine();
         view.findViewById(R.id.tv_engine_weak_gpu_note).setVisibility(weakGpu ? View.VISIBLE : View.GONE);
         view.findViewById(R.id.ll_vk_compat).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
+        view.findViewById(R.id.ll_hud_scale).setVisibility(nativeEngine ? View.VISIBLE : View.GONE);
     }
 
     private void setTexqOpen(View view, boolean open) {

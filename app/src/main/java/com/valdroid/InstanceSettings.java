@@ -132,6 +132,19 @@ public class InstanceSettings {
     // isn't on top of the map. Overrides the render-scale setting while on. Default OFF. ---
     public static final int FIXED_NONE = 0, FIXED_720_16_9 = 1, FIXED_720_4_3 = 2;
 
+    // --- Native engine, in-game interface size (percent of the game's own interface scale): the
+    // screens seen while playing (HUD, enemies, messages, chat, texts) beyond the game's slider, which
+    // stops at 115%. Menus keep the slider's size. 100 = as the game draws it (bridge HudScale.cs). ---
+    public static final int[] HUD_SCALES = { 100, 125, 150, 175 };
+
+    public int getHudScale() {
+        return p.getInt(pfx + "hud_scale", 100);
+    }
+
+    public void setHudScale(int percent) {
+        p.edit().putInt(pfx + "hud_scale", percent).apply();
+    }
+
     // --- Native engine, Vulkan compatibility: Unity without secondary command buffers
     // (-vulkan-disable-secondary-commandbuffers). Auto = on for the GPUs known to lose the device on
     // them (NativeEngine.needsVulkanCompat: the Mali-G615); On is the way out for another GPU.
@@ -461,6 +474,7 @@ public class InstanceSettings {
                 .remove(pfx + "keep_running_bg")
                 .remove(pfx + "fixed_res")
                 .remove(pfx + "vk_compat")
+                .remove(pfx + "hud_scale")
                 .remove(pfx + "fps_cap")
                 .remove(pfx + "fps_mode")
                 .remove(pfx + "render_scale_pct")

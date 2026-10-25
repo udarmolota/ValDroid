@@ -46,6 +46,14 @@ public class InputControlsView extends View {
     AbstractControlElement pointerOverElement;
     /** Zomdroid's size unit: element dimensions are given for a 2560 px wide view. */
     public float pixelScale = 1.f;
+
+    // The size the elements' pixel positions belong to, while onSizeChanged re-creates them; 0 = the
+    // view's own size. Elements turn their positions into fractions against it (describe()).
+    private int layoutW, layoutH;
+
+    public int layoutWidth() { return layoutW > 0 ? layoutW : getWidth(); }
+
+    public int layoutHeight() { return layoutH > 0 ? layoutH : getHeight(); }
     GestureDetector gestureDetector;
     private String instanceName = null;
     /** Light haptic tick on presses, per-instance setting (default off). */
@@ -171,13 +179,22 @@ public class InputControlsView extends View {
         if (this.controlElements.isEmpty()) {
             loadControlElementsFromDisk();
         } else {
-            // recreate all elements (released first: the new ones start with nothing held)
+            // recreate all elements (released first: the new ones start with nothing held). Their
+            // places are read as fractions of the size they were laid out for (oldw x oldh) and put
+            // back as fractions of the new one. Reading them against the new size moved every element
+            // on a size change and pinned the ones beyond a narrower size to its edge: a rotation
+            // swept the buttons to the middle of the screen for good (S25, 2026-10-11).
             resetAll();
-            for (int i = 0; i < this.controlElements.size(); i++) {
-                AbstractControlElement controlElement = this.controlElements.get(i);
-                ControlElementDescription description = controlElement.describe();
-                controlElement = AbstractControlElement.fromDescription(this, description);
-                this.controlElements.set(i, controlElement);
+            if (oldw > 0 && oldh > 0) { layoutW = oldw; layoutH = oldh; }
+            try {
+                for (int i = 0; i < this.controlElements.size(); i++) {
+                    AbstractControlElement controlElement = this.controlElements.get(i);
+                    ControlElementDescription description = controlElement.describe();
+                    controlElement = AbstractControlElement.fromDescription(this, description);
+                    this.controlElements.set(i, controlElement);
+                }
+            } finally {
+                layoutW = layoutH = 0;
             }
         }
         if (currentInputMode != null) {

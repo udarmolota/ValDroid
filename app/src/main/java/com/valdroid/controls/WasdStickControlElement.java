@@ -261,8 +261,8 @@ public class WasdStickControlElement extends AbstractControlElement {
         // bindings must stay empty
         // getCenterX/Y, not the drawable: a floating stick may be away from home right now.
         return new ControlElementDescription(
-                getCenterX() / parentView.getWidth(),
-                getCenterY() / parentView.getHeight(),
+                getCenterX() / parentView.layoutWidth(),
+                getCenterY() / parentView.layoutHeight(),
                 drawable.scale,
                 Type.STICK_WASD,
                 new GLFWBinding[0],

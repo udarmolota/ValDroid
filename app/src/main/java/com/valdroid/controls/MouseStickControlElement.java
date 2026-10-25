@@ -169,8 +169,8 @@ public class MouseStickControlElement extends AbstractControlElement {
     @Override
     public ControlElementDescription describe() {
         return new ControlElementDescription(
-                drawable.outerCenterX / parentView.getWidth(),
-                drawable.outerCenterY / parentView.getHeight(),
+                drawable.outerCenterX / parentView.layoutWidth(),
+                drawable.outerCenterY / parentView.layoutHeight(),
                 drawable.scale,
                 Type.STICK_MOUSE,
                 new GLFWBinding[0],

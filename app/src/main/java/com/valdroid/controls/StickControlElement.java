@@ -330,8 +330,8 @@ public class StickControlElement extends AbstractControlElement {
     public ControlElementDescription describe() {
         // getCenterX/Y, not the drawable: a floating stick may be away from home right now.
         return new ControlElementDescription(
-                getCenterX() / this.parentView.getWidth(),
-                getCenterY() / this.parentView.getHeight(),
+                getCenterX() / this.parentView.layoutWidth(),
+                getCenterY() / this.parentView.layoutHeight(),
                 this.drawable.scale, Type.STICK,
                 this.bindings.toArray(new GLFWBinding[0]), null, this.drawable.color,
                 this.drawable.alpha,

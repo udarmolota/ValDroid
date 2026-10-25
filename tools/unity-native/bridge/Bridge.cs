@@ -41,6 +41,7 @@ namespace ValDroid
             VirtualPad.Initialize();
             VirtualKeyboardMouse.Initialize();
             UiClickDiag.Initialize();
+            HudScale.Initialize();
             try
             {
                 s_State = GetGameStatePointer();
@@ -68,6 +69,15 @@ namespace ValDroid
                     QualitySettings.globalTextureMipmapLimit = s_MipmapLimit;
                 Debug.Log("VALDROID bridge: texture mipmap limit " + s_MipmapLimit);
             }
+            // One fixed landscape, the launcher's (mirrored on request). The player applies an orientation
+            // of its own on start, and Valheim's PC data leave it on autorotation: the screen turned with
+            // the phone over the activity's lock (S25, 2026-10-11).
+            bool reverse = EnvInt("VALDROID_REVERSE_LANDSCAPE") == 1;
+            Screen.autorotateToPortrait = false;
+            Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = !reverse;
+            Screen.autorotateToLandscapeRight = reverse;
+            Screen.orientation = reverse ? ScreenOrientation.LandscapeRight : ScreenOrientation.LandscapeLeft;
             int width = EnvInt("VALDROID_SCREEN_WIDTH"), height = EnvInt("VALDROID_SCREEN_HEIGHT");
             if (width > 0 && height > 0)
             {
@@ -93,6 +103,7 @@ namespace ValDroid
             Diagnostics.Tick();
             UiClickDiag.Tick();
             MemoryLog.Tick();
+            HudScale.Tick();
         }
     }
 }

@@ -178,7 +178,7 @@ public class RadialMenuControlElement extends AbstractControlElement {
     public ControlElementDescription describe() {
         String combined = centerTitle + "|" + sectorLabels[0] + "|" + sectorLabels[1] + "|" + sectorLabels[2] + "|" + sectorLabels[3];
 
-        return new ControlElementDescription(drawable.centerX / parentView.getWidth(), drawable.centerY / parentView.getHeight(),
+        return new ControlElementDescription(drawable.centerX / parentView.layoutWidth(), drawable.centerY / parentView.layoutHeight(),
                 drawable.scale, Type.RADIAL_MENU, this.bindings.toArray(new GLFWBinding[0]),
                 combined, drawable.color, drawable.alpha, this.inputType, ControlElementDescription.Icon.NO_ICON, false,
                 sensitivity, ControlElementDescription.DEFAULT_STYLE, iconFile, noTint);

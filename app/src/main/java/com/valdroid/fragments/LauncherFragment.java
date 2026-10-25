@@ -103,6 +103,54 @@ public class LauncherFragment extends Fragment {
         }
 
         maybeShowReleaseNotes();
+        showNews(view);
+    }
+
+    /** Fetched once per app start; later visits to the home screen show what is cached. */
+    private static boolean newsFetched;
+
+    /**
+     * Valheim news under the instances: the cached posts at once, then fresh ones from Steam once
+     * per app start (SteamNews). A tap opens the post on Steam.
+     */
+    private void showNews(View view) {
+        android.content.Context app = requireContext().getApplicationContext();
+        fillNews(view, com.valdroid.SteamNews.cached(app));
+        if (newsFetched) return;
+        newsFetched = true;
+        new Thread(() -> {
+            List<com.valdroid.SteamNews.Item> fresh = com.valdroid.SteamNews.fetch(app);
+            if (fresh != null) mainHandler.post(() -> { if (isAdded() && getView() != null) fillNews(getView(), fresh); });
+        }, "rd-news").start();
+    }
+
+    private void fillNews(View view, List<com.valdroid.SteamNews.Item> items) {
+        ViewGroup list = view.findViewById(R.id.ll_news_items);
+        list.removeAllViews();
+        view.findViewById(R.id.ll_news).setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        android.content.Context app = requireContext().getApplicationContext();
+        int width = getResources().getDisplayMetrics().widthPixels;
+        java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        for (com.valdroid.SteamNews.Item item : items) {
+            View card = LayoutInflater.from(requireContext()).inflate(R.layout.item_news, list, false);
+            ((TextView) card.findViewById(R.id.tv_news_date)).setText(df.format(new java.util.Date(item.date * 1000)));
+            ((TextView) card.findViewById(R.id.tv_news_title)).setText(item.title);
+            TextView snippet = card.findViewById(R.id.tv_news_snippet);
+            snippet.setText(item.snippet);
+            snippet.setVisibility(item.snippet.isEmpty() ? View.GONE : View.VISIBLE);
+            card.setOnClickListener(v -> {
+                try {
+                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(item.link)));
+                } catch (Exception ignored) {}   // no browser
+            });
+            android.widget.ImageView image = card.findViewById(R.id.iv_news_image);
+            new Thread(() -> {
+                android.graphics.Bitmap bmp = com.valdroid.SteamNews.image(app, item.imageUrl, width);
+                if (bmp != null) mainHandler.post(() -> { image.setImageBitmap(bmp); image.setVisibility(View.VISIBLE); });
+            }, "rd-news-image").start();
+            list.addView(card);
+        }
     }
 
     /**
@@ -546,6 +594,7 @@ public class LauncherFragment extends Fragment {
             }
             tvLog.append(line + "\n");
             logLineCount++;
+            setLogShown(true);
             scrollLog.post(() -> scrollLog.fullScroll(View.FOCUS_DOWN));
         });
     }
@@ -554,6 +603,16 @@ public class LauncherFragment extends Fragment {
         mainHandler.post(() -> {
             tvLog.setText("");
             logLineCount = 0;
+            setLogShown(false);
         });
+    }
+
+    /** The log and its header take no room while there is nothing in it (as in RimDroid). */
+    private void setLogShown(boolean shown) {
+        View root = getView();
+        if (root == null) return;
+        int v = shown ? View.VISIBLE : View.GONE;
+        root.findViewById(R.id.ll_log_header).setVisibility(v);
+        scrollLog.setVisibility(v);
     }
 }

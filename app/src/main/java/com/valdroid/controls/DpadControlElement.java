@@ -273,8 +273,8 @@ public class DpadControlElement extends AbstractControlElement {
 
     public ControlElementDescription describe() {
         return new ControlElementDescription(
-                this.drawable.centerX / this.parentView.getWidth(),
-                this.drawable.centerY / this.parentView.getHeight(),
+                this.drawable.centerX / this.parentView.layoutWidth(),
+                this.drawable.centerY / this.parentView.layoutHeight(),
                 this.drawable.scale,
                 //Type.DPAD,
                 this.type,

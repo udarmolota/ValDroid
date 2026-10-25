@@ -493,8 +493,8 @@ public class ButtonControlElement extends AbstractControlElement {
     @Override
     public ControlElementDescription describe() {
         return new ControlElementDescription(
-                this.drawable.centerX / this.parentView.getWidth(),
-                this.drawable.centerY / this.parentView.getHeight(),
+                this.drawable.centerX / this.parentView.layoutWidth(),
+                this.drawable.centerY / this.parentView.layoutHeight(),
                 // The element's own type, not one guessed from the shape: the guess turned the
                 // split DPAD_* buttons into plain circles on save, and NPE'd on a shapeless one.
                 this.drawable.scale, this.type,

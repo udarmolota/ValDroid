@@ -122,8 +122,8 @@ public class ScrollBarControlElement extends AbstractControlElement {
     @Override
     public ControlElementDescription describe() {
         return new ControlElementDescription(
-                drawable.centerX / parentView.getWidth(),
-                drawable.centerY / parentView.getHeight(),
+                drawable.centerX / parentView.layoutWidth(),
+                drawable.centerY / parentView.layoutHeight(),
                 drawable.scale,
                 Type.SCROLL_BAR,
                 new GLFWBinding[0],
