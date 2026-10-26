@@ -312,7 +312,8 @@ public class InstanceSettings {
     }
 
     // --- Engine: how the game runs (Settings → Engine).
-    //   ENGINE_BOX64       the Linux player and the game's C# both under box64 (x86 Mono);
+    //   ENGINE_BOX64       full emulation, the C# on x86 Mono under box64: no longer offered, an
+    //                      instance that had it reads as ENGINE_BOX64_MONO (getEngine);
     //   ENGINE_BOX64_MONO  the Linux player under box64, the C# on our native ARM64 Mono
     //                      (com.valdroid.game.NativeMono, box64 wrappedlibmonobdwgc.c);
     //   ENGINE_NATIVE      Unity's own ARM64 Android player, the C# on ARM64 Mono through il2mono
@@ -321,20 +322,21 @@ public class InstanceSettings {
     public static final int ENGINE_BOX64 = 0, ENGINE_BOX64_MONO = 1, ENGINE_NATIVE = 2;
 
     /**
-     * The chosen engine. An instance from before the choice existed keeps what it ran with: its two
-     * old switches ("native_mono", default on, and "native_engine"). A new one starts on the native
-     * engine when the APK carries it (Adreno and Mali both run it, faster than the box64 engines),
-     * box64 + native Mono otherwise. The decision is stored the first time, so it does not change
+     * The chosen engine. An instance from before the choice existed keeps what it ran with: its old
+     * "native_engine" switch, else box64 + native Mono (full emulation is no longer offered). A new
+     * one starts on the native engine when the APK carries it (Adreno and Mali both run it, faster
+     * than the box64 engines), box64 + native Mono otherwise. The decision is stored the first time, so it does not change
      * behind the player's back.
      */
     public int getEngine() {
-        if (p.contains(pfx + "engine")) return p.getInt(pfx + "engine", ENGINE_BOX64_MONO);
         int engine;
-        if (p.getBoolean(pfx + "native_engine", false)) engine = ENGINE_NATIVE;
-        else if (p.contains(pfx + "native_mono") || hasBeenPlayed())
-            engine = p.getBoolean(pfx + "native_mono", true) ? ENGINE_BOX64_MONO : ENGINE_BOX64;
+        if (p.contains(pfx + "engine")) engine = p.getInt(pfx + "engine", ENGINE_BOX64_MONO);
+        else if (p.getBoolean(pfx + "native_engine", false)) engine = ENGINE_NATIVE;
+        else if (p.contains(pfx + "native_mono") || hasBeenPlayed()) engine = ENGINE_BOX64_MONO;
         else engine = defaultEngine();
-        setEngine(engine);
+        // Full emulation is gone from the choice: its instances move to box64 + native Mono.
+        if (engine == ENGINE_BOX64) engine = ENGINE_BOX64_MONO;
+        if (!p.contains(pfx + "engine") || p.getInt(pfx + "engine", -1) != engine) setEngine(engine);
         return engine;
     }
 
@@ -377,24 +379,15 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "mod_support", v).apply();
     }
 
-    // Safety net for the native runtime (NativeMono.settlePreviousLaunch): when a launch with it started,
-    // and how many launches in a row crashed early. Written with commit(): the process may die right after.
-    public long getNativeMonoLaunchTime() {
-        return p.getLong(pfx + "native_mono_launch_ms", 0L);
+    // Crossplay (native engine): sign in to Steam before the launch and hand the game a session ticket
+    // for its PlayFab login (SteamTicketLogin). Off by default: every launch then asks for the Steam
+    // sign-in and its Steam Mobile approval.
+    public boolean isCrossplay() {
+        return p.getBoolean(pfx + "crossplay", false);
     }
 
-    public void setNativeMonoLaunchTime(long millis) {
-        if (millis <= 0) p.edit().remove(pfx + "native_mono_launch_ms").commit();
-        else p.edit().putLong(pfx + "native_mono_launch_ms", millis).commit();
-    }
-
-    public int getNativeMonoFailures() {
-        return p.getInt(pfx + "native_mono_failures", 0);
-    }
-
-    public void setNativeMonoFailures(int count) {
-        if (count <= 0) p.edit().remove(pfx + "native_mono_failures").commit();
-        else p.edit().putInt(pfx + "native_mono_failures", count).commit();
+    public void setCrossplay(boolean v) {
+        p.edit().putBoolean(pfx + "crossplay", v).apply();
     }
 
     // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
@@ -468,6 +461,7 @@ public class InstanceSettings {
                 .remove(pfx + "native_mono_launch_ms")
                 .remove(pfx + "native_mono_failures")
                 .remove(pfx + "mod_support")
+                .remove(pfx + "crossplay")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")

@@ -177,7 +177,7 @@
             y una interfaz más grande. <b>Bordes negros 1280×720</b> mantiene una imagen clásica
             16:9 con franjas a los lados.</li>
         <li><b>Gráficos</b>: el perfil con más FPS es <b>Mínima</b> en el motor nativo y <b>Muy
-            baja</b> en los motores box64, y una partida nueva empieza con él. <b>Muy baja</b> no
+            baja</b> en el motor box64, y una partida nueva empieza con él. <b>Muy baja</b> no
             tiene teselación, sombras ni distancia de dibujado extra; <b>Baja</b> mantiene
             antialiasing, bloom y rayos de sol; <b>Mínima</b>, para GPU débiles, además baja la
             imagen 3D (pixelada) y, en el motor nativo, hace las texturas 4 veces más pequeñas y
@@ -346,8 +346,6 @@
         Decide cómo se ejecuta el juego y, con ello, cuáles de los demás ajustes se aplican.
     </p>
     <ul>
-        <li><b>Emulación completa (box64)</b> — la versión de PC se ejecuta tal cual, toda con
-            emulación x86. La más compatible y la más lenta. Los mods no se cargan.</li>
         <li><b>box64 + Mono nativo</b> — se emula el motor Unity, pero el código del propio juego
             (todo lo escrito en C#) se ejecuta directamente en el procesador del teléfono. Mucho más
             rápido en zonas cargadas; los mods funcionan.</li>
@@ -363,7 +361,7 @@
     <h3>Motor nativo</h3>
     <p>
         En la mayoría de los teléfonos es la mejor opción: el juego carga más rápido, hay más
-        fotogramas y más estables, y la batería dura más que con los motores box64.
+        fotogramas y más estables, y la batería dura más que con el motor box64.
     </p>
     <ul>
         <li>Siempre dibuja con <b>Vulkan</b>, con el controlador del propio teléfono. Mientras está
@@ -394,7 +392,7 @@
         Hay dos.
     </p>
     <p>
-        Estos ajustes se aplican a los dos motores con box64. El <a href="#engine">motor nativo</a>
+        Estos ajustes se aplican al motor con box64. El <a href="#engine">motor nativo</a>
         siempre dibuja con Vulkan, con el controlador del propio teléfono.
     </p>
     <ul>
@@ -435,7 +433,7 @@
     <ul>
         <li>Elige la instancia arriba y activa <b>Soporte de mods (BepInEx)</b>: carga BepInEx al
             iniciar el juego y, con él, los mods activados abajo.</li>
-        <li>Los mods funcionan con <b>box64 + Mono nativo</b> y con el <b>motor nativo</b>, no con la emulación completa (ver <a href="#engine">Motor</a>).</li>
+        <li>Los mods funcionan con <b>box64 + Mono nativo</b> y con el <b>motor nativo</b> (ver <a href="#engine">Motor</a>).</li>
         <li>Para instalar un mod, toca <b>Elegir archivo del mod (zip)</b>, selecciona el .zip y toca
             <b>Instalar</b>.</li>
         <li>Cada mod instalado tiene su propio interruptor para activarlo o desactivarlo.</li>
@@ -471,7 +469,7 @@
         vegetación — cuesta mucho más que la resolución o el tamaño de las texturas.
     </p>
     <p>
-        Esto se refiere a los dos motores con box64. Con el <a href="#engine">motor nativo</a> no se
+        Esto se refiere al motor con box64. Con el <a href="#engine">motor nativo</a> no se
         emula nada y el límite pasa a ser la GPU: baja primero los efectos pesados (SSAO, sombras de
         luces puntuales, rayos de sol).
     </p>

@@ -43,23 +43,6 @@
             android:orientation="vertical">
 
             <RadioButton
-                android:id="@+id/rb_engine_box64"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="14sp"
-                android:text="@string/engine_box64" />
-
-            <TextView
-                android:id="@+id/tv_engine_box64_hint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="32dp"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:alpha="0.7"
-                android:text="@string/engine_box64_hint" />
-
-            <RadioButton
                 android:id="@+id/rb_engine_box64_mono"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

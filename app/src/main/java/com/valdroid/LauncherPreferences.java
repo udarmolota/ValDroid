@@ -259,6 +259,15 @@ public class LauncherPreferences {
         prefs.edit().putString("last_instance", name).apply();
     }
 
+    // --- Crossplay sign-in: the Steam login name, filled in next time. Never the password. ---
+    public String getSteamLoginName() {
+        return prefs.getString("steam_login_name", "");
+    }
+
+    public void setSteamLoginName(String name) {
+        prefs.edit().putString("steam_login_name", name).apply();
+    }
+
     // --- In-game overlay — global. Off by default. ---
     // FPS  = the classic green "FPS: XX" counter, top-left.
     // FULL = the performance bar (PerfOverlayView): API, GPU, CPU, RAM, power, heat, FPS + graph.

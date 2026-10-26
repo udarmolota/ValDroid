@@ -59,5 +59,10 @@ android {
 
 dependencies {
     implementation files('prepared/libs/unity-classes.jar')
+    // PlayFab Party's Java side (crossplay; tools/unity-native/prepare_party.sh). Reached by reflection
+    // and from its native library, so a prepared folder from before it only lacks crossplay.
+    if (file('prepared/libs/playfab-party.jar').exists()) {
+        implementation files('prepared/libs/playfab-party.jar')
+    }
     implementation 'androidx.games:games-frame-pacing:1.10.0'
 }

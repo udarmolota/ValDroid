@@ -75,6 +75,11 @@
         android:label="@string/nav_controls_transfer" />
 
     <fragment
+        android:id="@+id/multiplayer_fragment"
+        android:name="com.valdroid.fragments.MultiplayerFragment"
+        android:label="@string/nav_multiplayer" />
+
+    <fragment
         android:id="@+id/bug_report_fragment"
         android:name="com.valdroid.fragments.BugReportFragment"
         android:label="@string/nav_bug_report" />
@@ -121,6 +126,9 @@
 
     <action android:id="@+id/action_open_controls_transfer"
         app:destination="@id/controls_transfer_fragment" />
+
+    <action android:id="@+id/action_open_multiplayer"
+        app:destination="@id/multiplayer_fragment" />
 
     <action android:id="@+id/action_open_bug_report"
         app:destination="@id/bug_report_fragment" />

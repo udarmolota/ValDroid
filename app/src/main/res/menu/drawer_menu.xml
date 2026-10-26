@@ -42,7 +42,7 @@
             android:title="@string/nav_controls_transfer" />
     </group>
 
-    <!-- 3) Get the game from a store you own it on (Steam, GOG) -->
+    <!-- 3) Steam: get the game from a store you own it on, cloud saves, multiplayer -->
     <group android:id="@+id/group_store" android:checkableBehavior="none">
         <item
             android:id="@+id/action_download_game"
@@ -52,6 +52,11 @@
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
             android:title="@string/nav_cloud_saves" />
+        <!-- Multiplayer: crossplay on/off per instance (MultiplayerFragment); its sign-in is Steam's, as the two above -->
+        <item
+            android:id="@+id/action_multiplayer"
+            android:icon="@drawable/mt_icon_group"
+            android:title="@string/nav_multiplayer" />
     </group>
 
     <!-- 4) Settings + data transfer (saves / settings) -->

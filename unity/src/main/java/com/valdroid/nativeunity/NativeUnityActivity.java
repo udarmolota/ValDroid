@@ -34,6 +34,8 @@ public class NativeUnityActivity extends Activity
         super.onCreate(savedInstanceState);
         // Before the player loads libmain/libunity/il2mono: il2mono reads its paths from the environment.
         applyEnvironment(getIntent().getStringArrayExtra(EXTRA_ENV));
+        if (System.getenv("VALDROID_STEAM_TICKET") != null) loadParty();
+        backgroundText = getIntent().getStringExtra(EXTRA_BACKGROUND_TEXT);
         // The player reads its command line from the "unity" extra.
         getIntent().putExtra("unity", getIntent().getStringExtra("unity"));
 
@@ -70,6 +72,11 @@ public class NativeUnityActivity extends Activity
      * and not the other way round. Touches the overlay does not take reach the player.
      */
     public static final String EXTRA_OVERLAY = "valdroid.overlay";
+    /**
+     * Intent extra: the instance keeps running off screen ("Keep running in the background"); the text
+     * is the notification shown meanwhile, in the launcher's language. Absent = pause as usual.
+     */
+    public static final String EXTRA_BACKGROUND_TEXT = "valdroid.backgroundText";
 
     // The overlay, and through it the launcher's controller handling: a physical gamepad's buttons and
     // sticks are offered to it first (View.OnKeyListener / OnGenericMotionListener), because the game's
@@ -83,6 +90,28 @@ public class NativeUnityActivity extends Activity
         } catch (ReflectiveOperationException | ClassCastException e) {
             android.util.Log.e("NativeUnity", "overlay " + className + " failed", e);
             return null;
+        }
+    }
+
+    /**
+     * Crossplay: PlayFab Party, the network library Valheim's PlayFabParty.dll calls, loaded from Java
+     * before the game asks Mono for it. Its JNI_OnLoad keeps the Java VM and finds its Java classes
+     * (HTTP, audio devices) through this class loader, which a dlopen from Mono would not give it; Mono
+     * then gets the already loaded library (dllmap libParty.so -> libparty.so, NativeEngine). Its Java
+     * side wants the app Context, which the library's own init provider would set in the main process
+     * only. Its audio service is not declared: Valheim sends data only, and the service would switch
+     * the phone's audio mode for voice chat, so binding it just fails.
+     */
+    private void loadParty() {
+        try {
+            System.loadLibrary("party");
+            Context app = getApplicationContext();
+            for (String cls : new String[]{ "com.microsoft.playfab.party.AudioDeviceChangeMonitoringService",
+                    "com.microsoft.playfab.utilities.party.EventTracerHelperParty" })
+                Class.forName(cls).getMethod("setContext", Context.class).invoke(null, app);
+            android.util.Log.i("NativeUnity", "PlayFab Party loaded");
+        } catch (Throwable t) {
+            android.util.Log.e("NativeUnity", "PlayFab Party not loaded: crossplay cannot connect", t);
         }
     }
 
@@ -127,14 +156,39 @@ public class NativeUnityActivity extends Activity
     }
 
     @Override protected void onDestroy() {
+        BackgroundRunService.stop(this);
         mUnityPlayer.destroy();
         super.onDestroy();
     }
 
-    @Override protected void onStart() { super.onStart(); mUnityPlayer.onStart(); }
-    @Override protected void onStop() { super.onStop(); mUnityPlayer.onStop(); }
-    @Override protected void onPause() { super.onPause(); mUnityPlayer.onPause(); }
-    @Override protected void onResume() { super.onResume(); mUnityPlayer.onResume(); }
+    // "Keep running in the background" (EXTRA_BACKGROUND_TEXT set): leaving the screen does not pause
+    // the player, so a hosted world goes on; BackgroundRunService holds the process meanwhile. Unity's
+    // own pause/resume pair is skipped as a whole, so the player never sees half of it.
+    private boolean inBackground;
+    private String backgroundText;   // read once: a later intent (the notification's) has no extras
+
+    @Override protected void onStart() { super.onStart(); if (!inBackground) mUnityPlayer.onStart(); }
+    @Override protected void onStop() { super.onStop(); if (!inBackground) mUnityPlayer.onStop(); }
+
+    @Override protected void onPause() {
+        super.onPause();
+        if (backgroundText != null && !isFinishing()) {
+            inBackground = true;
+            BackgroundRunService.start(this, backgroundText);
+            return;
+        }
+        mUnityPlayer.onPause();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (inBackground) {
+            inBackground = false;
+            BackgroundRunService.stop(this);
+            return;
+        }
+        mUnityPlayer.onResume();
+    }
 
     @Override public void onLowMemory() {
         super.onLowMemory();

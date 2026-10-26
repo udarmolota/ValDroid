@@ -107,7 +107,8 @@ Mono (Unity fork)      MIT License          Copyright (c) .NET Foundation and Co
                        Corporation; 1996-1999 Silicon Graphics; 1999-2001 Hewlett-Packard.
 
 libsteam_api.so        ValDroid original work (GPL-3.0): an ARM64 stub that only exports the
-(arm64 stub)           Steamworks function names; contains no Valve code.
+(arm64 stub)           Steamworks function names (and hands the game the launcher's Steam
+                       ticket for crossplay); contains no Valve code.
 
 libDiskSpacePlugin.so  ValDroid original work (GPL-3.0): ARM64 replacement for the game's
                        free-disk-space plugin.
@@ -123,6 +124,12 @@ Unity Android player   Proprietary          Copyright (c) Unity Technologies
                        ValDroid patches libunity.so at build time: the platform check that
                        accepts the game's Linux asset bundles, and the name of the Vulkan
                        library it opens (libvkshim.so).
+
+PlayFab Party          MIT License          Copyright (c) Microsoft Corporation
+(libparty.so and its                        https://github.com/PlayFab/PlayFabParty
+ Java classes)                              Downloaded from Microsoft's release at build time
+                                            (1.10.17); not stored in the ValDroid repository.
+                                            Crossplay's network library.
 
 Mono class libraries   MIT License          Copyright (c) .NET Foundation and Contributors;
 (tools/unity-native/                        Unity Technologies' fork of Mono. Build-time

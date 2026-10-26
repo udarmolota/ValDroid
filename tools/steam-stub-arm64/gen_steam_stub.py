@@ -9,7 +9,15 @@ plausible value, everything else returns zero.
 
 Input: steamworks_net_imports.tsv (one row per DllImport of Valheim's Steamworks.NET, with the ABI of
 its return value). Every entry point gets a typed export so float and struct returns use the right
-registers. Answers that differ from zero live in OVERRIDES below.
+registers. Answers that differ from zero live in OVERRIDES below; the few entry points that need real
+arguments are written by hand in HANDWRITTEN.
+
+Crossplay (the native engine's Crossplay setting): the launcher signs in to Steam itself (JavaSteam)
+and hands the game a real session ticket, SteamID and name through the environment:
+VALDROID_STEAM_TICKET (a file holding the ticket; read once, then deleted), VALDROID_STEAM_ID and
+VALDROID_STEAM_PERSONA. GetAuthSessionTicket then answers with that ticket and queues the
+GetAuthSessionTicketResponse_t callback Valheim waits for before it calls PlayFab's LoginWithSteam.
+Without these variables everything stays offline as before.
 
 Usage: python gen_steam_stub.py [imports.tsv] [output.c]
 """
@@ -33,15 +41,15 @@ OVERRIDES = {
     "SteamInternal_ContextInit": "(uint64_t)(uintptr_t)vd_interface",
     "SteamInternal_CreateInterface": "(uint64_t)(uintptr_t)vd_interface",
     "SteamInternal_FindOrCreateUserInterface": "(uint64_t)(uintptr_t)vd_interface",
-    "SteamAPI_ISteamUser_GetSteamID": STEAM_ID,
+    "SteamAPI_ISteamUser_GetSteamID": "vd_steam_id()",
     "SteamAPI_ISteamUser_BLoggedOn": "0",          # Steam in offline mode, like the Goldberg setup
-    "SteamAPI_ISteamFriends_GetPersonaName": "(uint64_t)(uintptr_t)vd_persona",
+    "SteamAPI_ISteamFriends_GetPersonaName": "vd_persona_name()",
     "SteamAPI_ISteamFriends_GetFriendPersonaName": "(uint64_t)(uintptr_t)vd_persona",
     "SteamAPI_ISteamApps_GetCurrentGameLanguage": "(uint64_t)(uintptr_t)vd_language",
     "SteamAPI_ISteamApps_GetAvailableGameLanguages": "(uint64_t)(uintptr_t)vd_language",
     "SteamAPI_ISteamApps_BIsSubscribed": "1",
     "SteamAPI_ISteamApps_BIsSubscribedApp": "1",
-    "SteamAPI_ISteamApps_GetAppOwner": STEAM_ID,
+    "SteamAPI_ISteamApps_GetAppOwner": "vd_steam_id()",
     "SteamAPI_ISteamUtils_GetAppID": APP_ID,
     "SteamAPI_ISteamUtils_GetIPCountry": "(uint64_t)(uintptr_t)vd_country",
     "SteamAPI_ISteamUserStats_RequestCurrentStats": "1",
@@ -55,6 +63,82 @@ OVERRIDES = {
     "SteamAPI_ISteamRemoteStorage_BeginFileWriteBatch": "1",
     "SteamAPI_ISteamRemoteStorage_EndFileWriteBatch": "1",
 }
+
+# Crossplay helpers: the launcher's SteamID and name when it signed in, the fixed offline ones otherwise.
+HELPERS = """\
+static uint64_t vd_steam_id(void)
+{
+    const char* v = getenv("VALDROID_STEAM_ID");
+    uint64_t id = (v && v[0]) ? strtoull(v, NULL, 10) : 0;
+    return id ? id : %s;
+}
+
+static uint64_t vd_persona_name(void)
+{
+    const char* v = getenv("VALDROID_STEAM_PERSONA");
+    return (uint64_t)(uintptr_t)((v && v[0]) ? v : vd_persona);
+}
+""" % STEAM_ID
+
+# Entry points with real arguments, written out in full (their tsv rows only check they exist).
+HANDWRITTEN = {
+    "SteamAPI_ISteamUser_GetAuthSessionTicket": """\
+/* The launcher's ticket (VALDROID_STEAM_TICKET names the file; deleted once read, kept in memory for
+ * the game's later logins). Each call also queues GetAuthSessionTicketResponse_t, which Valheim waits
+ * for before it sends the ticket to PlayFab. 0 (k_HAuthTicketInvalid) without a ticket, as offline. */
+VD_EXPORT uint32_t SteamAPI_ISteamUser_GetAuthSessionTicket(void* self, uint8_t* ticket, int32_t max,
+                                                            uint32_t* size, const void* identity)
+{
+    (void)self; (void)identity;
+    if (size) *size = 0;
+    if (!vd_ticket_len) {
+        const char* path = getenv("VALDROID_STEAM_TICKET");
+        FILE* f = (path && path[0]) ? fopen(path, "rb") : NULL;
+        if (f) {
+            vd_ticket_len = (uint32_t)fread(vd_ticket, 1, sizeof(vd_ticket), f);
+            fclose(f);
+            unlink(path);
+        }
+    }
+    if (!vd_ticket_len || !ticket || max < (int32_t)vd_ticket_len) return 0;
+    memcpy(ticket, vd_ticket, vd_ticket_len);
+    if (size) *size = vd_ticket_len;
+    vd_ticket_response.handle = ++vd_ticket_handle;
+    vd_ticket_response.result = 1;   /* k_EResultOK */
+    vd_callback_queued = 1;
+    return vd_ticket_handle;
+}""",
+    "SteamAPI_ManualDispatch_GetNextCallback": """\
+/* Steamworks.NET's CallbackDispatcher.RunFrame: Get, dispatch, FreeLastCallback, Get again. */
+VD_EXPORT uint8_t SteamAPI_ManualDispatch_GetNextCallback(int32_t pipe, vd_CallbackMsg_t* msg)
+{
+    (void)pipe;
+    if (!vd_callback_queued || !msg) return 0;
+    msg->user = 1;
+    msg->callback = 163;   /* GetAuthSessionTicketResponse_t::k_iCallback */
+    msg->param = &vd_ticket_response;
+    msg->size = (int32_t)sizeof(vd_ticket_response);
+    return 1;
+}""",
+    "SteamAPI_ManualDispatch_FreeLastCallback": """\
+VD_EXPORT void SteamAPI_ManualDispatch_FreeLastCallback(int32_t pipe)
+{
+    (void)pipe;
+    vd_callback_queued = 0;
+}""",
+}
+
+# State behind HANDWRITTEN. Layouts as Steamworks.NET marshals them (Pack = 4 off Windows).
+HANDWRITTEN_STATE = """\
+typedef struct __attribute__((packed, aligned(4))) { int32_t user; int32_t callback; void* param; int32_t size; } vd_CallbackMsg_t;
+typedef struct { uint32_t handle; int32_t result; } vd_TicketResponse_t;
+
+static uint8_t vd_ticket[1024];
+static uint32_t vd_ticket_len;
+static uint32_t vd_ticket_handle;
+static vd_TicketResponse_t vd_ticket_response;
+static int vd_callback_queued;
+"""
 
 # every ISteamClient_GetISteamXxx accessor returns the dummy interface
 INTERFACE_PREFIX = "SteamAPI_ISteamClient_GetISteam"
@@ -81,9 +165,12 @@ def main():
 
     lines = [
         "/* Generated by tools/steam-stub-arm64/gen_steam_stub.py from steamworks_net_imports.tsv. Do not edit. */",
-        "/* ARM64 libsteam_api.so for native ARM64 Mono: Steam in offline single-player mode (see the generator). */",
+        "/* ARM64 libsteam_api.so for native ARM64 Mono: Steam in offline single-player mode, plus the launcher's ticket for crossplay (see the generator). */",
         "#include <stdint.h>",
+        "#include <stdio.h>",
         "#include <stdlib.h>",
+        "#include <string.h>",
+        "#include <unistd.h>",
         "",
         "#define VD_EXPORT __attribute__((visibility(\"default\")))",
         "",
@@ -105,9 +192,15 @@ def main():
     for tag, decl in STRUCTS.items():
         lines.append(f"typedef {decl} vd_{tag};")
     lines.append("")
+    lines.append(HELPERS)
+    lines.append(HANDWRITTEN_STATE)
 
-    unused = set(OVERRIDES)
+    unused = set(OVERRIDES) | set(HANDWRITTEN)
     for name, managed, abi in rows:
+        if name in HANDWRITTEN:
+            unused.discard(name)
+            lines.append(HANDWRITTEN[name])
+            continue
         value = OVERRIDES.get(name)
         if value is None and name.startswith(INTERFACE_PREFIX):
             value = "(uint64_t)(uintptr_t)vd_interface"

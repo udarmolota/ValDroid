@@ -3,7 +3,7 @@
 **ValDroid** is an unofficial, community-developed launcher that runs
 [Valheim](https://www.valheimgame.com) on ARM64 Android phones and tablets, with touch controls,
 gamepad support and mods. Since 0.1.3 the game runs **natively**: Unity's own Android engine, no
-emulation. The box64 engines that ValDroid started with are still there as a fallback.
+emulation. The box64 engine that ValDroid started with is still there as a fallback.
 
 > [!NOTE]
 > ValDroid does not include the game. It runs **your own copy** of Valheim's Linux build. You can
@@ -29,10 +29,9 @@ emulation. The box64 engines that ValDroid started with are still there as a fal
 - ✔️ **Native engine**: the Unity Android player runs the game and the game's own C# code runs on an
   ARM64 build of Unity's Mono. Faster loading, higher and steadier FPS and much less battery than
   emulation. New instances start on it.
-- ✔️ **Two box64 engines** as a fallback: *box64 + native Mono* (the engine is emulated, the game's code
-  is native) and *full emulation*. Switch any time in **Settings → Engine**; saves, settings, controls
-  and mods are shared.
-- ✔️ **Snapdragon and Mali**: the native engine runs on Adreno and Mali GPUs. The box64 engines render
+- ✔️ **box64 + native Mono** as a fallback: the engine is emulated, the game's code is native. Switch
+  any time in **Settings → Engine**; saves, settings, controls and mods are shared.
+- ✔️ **Snapdragon and Mali**: the native engine runs on Adreno and Mali GPUs. The box64 engine renders
   through MobileGlues (OpenGL → OpenGL ES) or Vulkan through Turnip.
 - ✔️ **On-screen controls with a full editor**: buttons (with styles and your own pictures), sticks,
   d-pad, touchpad, scroll bar and a radial menu. Two ready-made layouts — gamepad (the default) and
@@ -63,10 +62,10 @@ A few honest notes so expectations land right:
 - **Mods are experimental.** BepInEx is built in and many mods work, but not all of them. On the native
   engine, mods that bring their own x86 libraries (`.so` files) cannot load.
 - **Valheim is demanding.** On the native engine the GPU is usually the limit: a base full of fires
-  and torches is heavy, open meadows are light. On the box64 engines the CPU is the limit instead.
+  and torches is heavy, open meadows are light. On the box64 engine the CPU is the limit instead.
 - **Phones get hot.** With no frame limit a phone runs flat out and throttles after a while. A
   frame-rate mode is much kinder to your hands and your battery.
-- **The first launch is slow.** Shaders (and on the box64 engines, textures) are prepared once and
+- **The first launch is slow.** Shaders (and on the box64 engine, textures) are prepared once and
   cached, and every launch after that is noticeably faster.
 
 ## Steam Cloud saves
@@ -120,7 +119,7 @@ Valheim officially ships for x86_64 only. ValDroid runs it on ARM64 in one of tw
   *il2mono*, ValDroid's bridge between the player and the Mono runtime. Nothing is emulated. A small
   managed bridge inside the game drives the on-screen controls and applies the launcher's settings; a
   Vulkan shim between the engine and the driver takes care of the phones that need it.
-- **box64 engines:** [box64](https://github.com/ptitSeb/box64) emulates the x86_64 Linux build of the
+- **box64 engine:** [box64](https://github.com/ptitSeb/box64) emulates the x86_64 Linux build of the
   Unity engine in-process, the game's C# code runs on the native ARM64 Mono, graphics go to the GPU
   through MobileGlues or Zink, and touch and gamepad input is injected through an X server.
 
@@ -153,7 +152,7 @@ and send. The logs are attached for you.
   downloaded at build time and used under Unity's licence (see `NOTICE`)
 - [Mono (Unity fork)](https://github.com/Unity-Technologies/mono): the native ARM64 runtime for the
   game's code, and its class libraries as build-time references
-- [box64](https://github.com/ptitSeb/box64): x86_64 → ARM64 emulation for the box64 engines
+- [box64](https://github.com/ptitSeb/box64): x86_64 → ARM64 emulation for the box64 engine
 - [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues) by [MobileGL-Dev](https://github.com/MobileGL-Dev):
   OpenGL → OpenGL ES renderer
 - [Mesa / Zink / Turnip](https://gitlab.freedesktop.org/mesa/mesa): Vulkan rendering and the Adreno

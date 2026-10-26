@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />
+    <!-- Keep running in the background (BackgroundRunService): the world goes on with the screen off. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application>
         <!-- Unity player settings read by Unity's Java side. -->
@@ -28,5 +30,13 @@
             <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
             <meta-data android:name="notch_support" android:value="true" />
         </activity>
+
+        <!-- In the game's process: a foreground service there keeps that process running while the
+             game is off screen with "Keep running in the background" on. -->
+        <service
+            android:name="com.valdroid.nativeunity.BackgroundRunService"
+            android:process=":unity"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

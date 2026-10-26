@@ -43,6 +43,7 @@ public final class NativeEngine {
     public static final String EXTRA_INSTANCE = "valdroid.instance";
     /** Display mode (refresh rate) the frame-rate mode picked, 0 = leave the panel alone; for NativeGameOverlay. */
     public static final String EXTRA_DISPLAY_MODE = "valdroid.displayMode";
+    private static final String EXTRA_BACKGROUND_TEXT = "valdroid.backgroundText";
 
     /** Player files packaged in the APK; they win over the game's copies of the same names. */
     private static final String PLAYER_ASSETS = "bin/Data";
@@ -67,6 +68,21 @@ public final class NativeEngine {
 
     /** Prepares the instance (only what changed) and returns the intent that starts the player. */
     public static Intent prepare(Context context, GameInstance instance) throws IOException {
+        return prepare(context, instance, null);
+    }
+
+    /** Where the crossplay sign-in leaves the Steam ticket for the game (read once, then deleted). */
+    public static File steamTicketFile(GameInstance instance) {
+        return new File(new File(instance.getGamePath(), "native_engine"), "steam_ticket.bin");
+    }
+
+    /**
+     * As above; {@code steam} is the crossplay sign-in (null = offline as always). The game's Steam stub
+     * then answers with the real SteamID, name and session ticket, and Valheim logs in to PlayFab at
+     * start (ShouldTryAutoLogin). Without it a ticket left from an earlier launch is removed.
+     */
+    public static Intent prepare(Context context, GameInstance instance, com.valdroid.SteamTicketLogin.Result steam)
+            throws IOException {
         File gameDir = new File(instance.getGamePath());
         File dataDir = new File(gameDir, instance.getDataDirectoryName());
         if (!new File(dataDir, "globalgamemanagers").isFile())
@@ -87,7 +103,15 @@ public final class NativeEngine {
         env.add("VALDROID_IL2MONO_PERSISTENT_DATA=" + instance.getUserDataDir().getAbsolutePath());
 
         addMods(context, instance, gameDir, dataDir, env);
+        if (steam != null) {
+            env.add("VALDROID_STEAM_TICKET=" + steam.ticketFile.getAbsolutePath());
+            env.add("VALDROID_STEAM_ID=" + Long.toUnsignedString(steam.steamId));
+            if (steam.persona != null && !steam.persona.isEmpty()) env.add("VALDROID_STEAM_PERSONA=" + steam.persona);
+        } else {
+            steamTicketFile(instance).delete();
+        }
         applyGameSettings(context, instance, gameDir);
+        ValheimPrefsSync.setNativeInt(context, "ShouldTryAutoLogin", steam != null ? 1 : 0);
         int displayMode = graphicsSettings(context, instance.settings(), env);
         addUserEnvironment(context, instance.settings(), env);
         com.valdroid.LauncherLog.line("native engine environment: " + launchSummary(env));
@@ -100,6 +124,10 @@ public final class NativeEngine {
         intent.putExtra(EXTRA_OVERLAY, com.valdroid.NativeGameOverlay.class.getName());
         intent.putExtra(EXTRA_INSTANCE, instance.getName());
         intent.putExtra(EXTRA_DISPLAY_MODE, displayMode);
+        // "Keep running in the background" (a hosted world): the player goes on off screen, with this
+        // notification meanwhile (NativeUnityActivity, BackgroundRunService).
+        if (instance.settings().isKeepRunningInBackground())
+            intent.putExtra(EXTRA_BACKGROUND_TEXT, context.getString(com.valdroid.R.string.keep_running_notice));
         // Unity's own command line (the player reads the "unity" extra): ours (below), then the instance's
         // environment field for tests, VALDROID_UNITY_ARGS=-force-gfx-direct,-other (commas for spaces).
         StringBuilder unityArgs = new StringBuilder();
@@ -273,7 +301,13 @@ public final class NativeEngine {
         StringBuilder sb = new StringBuilder();
         for (String e : env) {
             if (e.startsWith("VALDROID_IL2MONO_") || e.startsWith("DOORSTOP_")) continue;
+            // The player's SteamID and name stay out of the log (it goes into bug reports).
+            if (e.startsWith("VALDROID_STEAM_") && !e.startsWith("VALDROID_STEAM_TICKET=")) continue;
             if (sb.length() > 0) sb.append(' ');
+            if (e.startsWith("VALDROID_STEAM_TICKET=")) {
+                sb.append("crossplay=on");
+                continue;
+            }
             sb.append(e.startsWith("VALDROID_BEPINEX_PRELOADER=") ? "mods=on" : e);
         }
         return sb.length() > 0 ? sb.toString() : "(defaults)";
@@ -518,6 +552,9 @@ public final class NativeEngine {
                             + "\t<dllmap dll=\"libdl\">" + DLOPEN_ENTRY + "</dllmap>\n"
                             + "\t<dllmap dll=\"libm.so.6\" target=\"libm.so\"/>\n"
                             + "\t<dllmap dll=\"libpthread.so.0\" target=\"libc.so\"/>\n"
+                            // PlayFab Party (crossplay): Valheim's PlayFabParty.dll asks for the Linux
+                            // file name; the Android build is libparty.so (NativeUnityActivity.loadParty).
+                            + "\t<dllmap dll=\"libParty.so\" target=\"libparty.so\"/>\n"
                             + "</configuration>");
             try (OutputStream out = new FileOutputStream(config)) {
                 out.write(text.getBytes(StandardCharsets.UTF_8));

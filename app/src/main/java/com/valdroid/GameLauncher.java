@@ -288,6 +288,13 @@ public class GameLauncher {
         // so a pending graphics profile below still lands on top of them.
         com.valdroid.game.ValheimPrefsSync.toLinux(ValDroidApplication.APP,
                 new java.io.File(gameInstance.getGamePath()));
+        // Crossplay is native-engine only: a PlayFab auto-login switched on there would retry forever
+        // here with the Goldberg emulator's ticket.
+        try {
+            ValheimInstanceSetup.setPlayerPrefInt(new java.io.File(gameInstance.getGamePath()), "ShouldTryAutoLogin", 0);
+        } catch (java.io.IOException e) {
+            Log.w(TAG, "ShouldTryAutoLogin not reset", e);
+        }
 
         // Graphics profile: written into the game's own settings ONCE — on a new instance's first
         // launch, or on the launch after the player pressed a profile button — and then left alone.
@@ -828,7 +835,6 @@ public class GameLauncher {
             Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
             Os.unsetenv("RIMDROID_NATIVE_MONO_STATUS");
         }
-        com.valdroid.game.NativeMono.noteLaunch(gameInstance.settings(), nativeMono);
 
         // Mods (BepInEx): the Mods screen's master switch. BepInEx only runs on the native Mono (the
         // box64 wrapper starts it there, see rd_bepinex_boot); the bundled copy is refreshed in the

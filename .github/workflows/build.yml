@@ -60,6 +60,13 @@ jobs:
           path: ${{ runner.temp }}/unity-android-support.pkg
           key: unity-android-support-6000.0.75f1-26349cd2a5c8
 
+      - name: Cache PlayFab Party release
+        if: vars.NATIVE_ENGINE == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/playfab-party-android.zip
+          key: playfab-party-android-1.10.17
+
       - name: Prepare the native engine module
         if: vars.NATIVE_ENGINE == 'true'
         run: |
@@ -67,6 +74,10 @@ jobs:
           PKG="$RUNNER_TEMP/unity-android-support.pkg"
           [ -f "$PKG" ] || curl -fL --retry 3 -o "$PKG" \
             "https://download.unity3d.com/download_unity/26349cd2a5c8/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-6000.0.75f1.pkg"
+          PARTY_ZIP="$RUNNER_TEMP/playfab-party-android.zip"
+          [ -f "$PARTY_ZIP" ] || curl -fL --retry 3 -o "$PARTY_ZIP" \
+            "https://github.com/PlayFab/PlayFabParty/releases/download/v1.10.17/PlayFabParty.Android.Release.zip"
+          export PARTY_ZIP
           sudo apt-get update
           sudo apt-get install -y libarchive-tools
           # The compiler is the .NET SDK's Roslyn (the bridge uses C# 9). The references are the Mono class

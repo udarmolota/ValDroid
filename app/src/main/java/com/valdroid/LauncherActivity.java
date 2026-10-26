@@ -116,6 +116,9 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_controls_transfer) {
                 navController.navigate(R.id.action_open_controls_transfer);   // import / export, one screen
                 return true;
+            } else if (id == R.id.action_multiplayer) {
+                navController.navigate(R.id.action_open_multiplayer);   // crossplay per instance
+                return true;
             } else if (id == R.id.action_bug_report) {
                 navController.navigate(R.id.action_open_bug_report);   // by email or to a file, one screen
                 return true;

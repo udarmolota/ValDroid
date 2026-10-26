@@ -14,6 +14,8 @@
 #   unity/prepared/jniLibs/arm64-v8a/libunity.so   full (unstripped) engine, build-target check patched
 #   unity/prepared/jniLibs/arm64-v8a/libmain.so
 #   unity/prepared/libs/unity-classes.jar
+#   unity/prepared/jniLibs/arm64-v8a/libparty.so   PlayFab Party (crossplay) and its Java side,
+#   unity/prepared/libs/playfab-party.jar          by prepare_party.sh
 #   unity/prepared/swappy/                         Unity's Swappy wrapper source (frame pacing), built
 #                                                  by the module's CMake
 #   unity/prepared/assets/bin/Data/                boot.config and unity_app_guid (generated),
@@ -84,3 +86,6 @@ mkdir -p "$MANAGED"
 cp "$WORK/Variations/mono/Managed/"UnityEngine*.dll "$MANAGED/"
 sh "$HERE/build_bridge.sh" "$WORK/Variations/mono/Managed" "$MANAGED"
 echo "prepared $OUT ($(ls "$MANAGED" | wc -l) managed overrides)"
+
+# Crossplay's network library (PlayFab Party), from Microsoft's release; PARTY_ZIP = a downloaded copy.
+sh "$HERE/prepare_party.sh" ${PARTY_ZIP:+"$PARTY_ZIP"}

@@ -44,7 +44,7 @@ public class ModsFragment extends Fragment {
 
     private Spinner spInstance;
     private Switch swSupport;
-    private TextView tvNativeWarning, tvOffNote, tvEmpty;
+    private TextView tvOffNote, tvEmpty;
     private LinearLayout llList, llActions;
     private Button btnEnableAll, btnDisableAll, btnExport;
     /** The mods picked in the export dialog, written once the file is chosen. */
@@ -78,7 +78,6 @@ public class ModsFragment extends Fragment {
         super.onViewCreated(v, savedInstanceState);
         spInstance = v.findViewById(R.id.sp_mods_instance);
         swSupport = v.findViewById(R.id.sw_mod_support);
-        tvNativeWarning = v.findViewById(R.id.tv_mods_native_mono_warning);
         tvOffNote = v.findViewById(R.id.tv_mods_off_note);
         tvEmpty = v.findViewById(R.id.tv_mods_empty);
         llList = v.findViewById(R.id.ll_mods_list);
@@ -148,9 +147,6 @@ public class ModsFragment extends Fragment {
         binding = false;
         btnPick.setEnabled(has && !installing);
         updateInstallEnabled();
-        // Mods load on native Mono or the native engine, not under full emulation.
-        boolean fullEmulation = has && gi.settings().getEngine() == com.valdroid.InstanceSettings.ENGINE_BOX64;
-        tvNativeWarning.setVisibility(on && fullEmulation ? View.VISIBLE : View.GONE);
 
         llList.removeAllViews();
         List<ModManager.Mod> mods = has ? ModManager.list(new File(gi.getGamePath())) : new ArrayList<>();

@@ -170,7 +170,7 @@
             interface. <b>Black margins 1280×720</b> keeps a classic 16:9 picture with bars at the
             sides.</li>
         <li><b>Graphics</b>: the profile with the most FPS is <b>Minimal</b> on the native engine
-            and <b>Very low</b> on the box64 engines, and a new game starts on it. <b>Very low</b> has
+            and <b>Very low</b> on the box64 engine, and a new game starts on it. <b>Very low</b> has
             no tessellation, no shadows and no extra draw distance; <b>Low</b> keeps antialiasing,
             bloom and sun shafts; <b>Minimal</b>, for weak GPUs, also lowers the 3D picture
             (pixelated), and on the native engine makes textures 4× smaller and turns realtime
@@ -328,8 +328,6 @@
         runs, and with it which of the other settings apply.
     </p>
     <ul>
-        <li><b>Full emulation (box64)</b> — the PC version runs as is, entirely through x86
-            emulation. The most compatible and the slowest. Mods do not load.</li>
         <li><b>box64 + native Mono</b> — the Unity engine is emulated, but the game's own code
             (everything written in C#) runs directly on your phone's processor. Much faster in busy
             places; mods work.</li>
@@ -346,7 +344,7 @@
     <h3>Native engine</h3>
     <p>
         On most phones it is the best choice: the game loads faster, the frame rate is higher and
-        steadier, and the battery lasts longer than with the box64 engines.
+        steadier, and the battery lasts longer than with the box64 engine.
     </p>
     <ul>
         <li>It always renders with <b>Vulkan</b>, on the phone's own driver. While it is chosen, the
@@ -375,7 +373,7 @@
         The renderer is picked in the instance settings (gear icon), card <b>Video</b>. There are two.
     </p>
     <p>
-        These settings apply to the two box64 engines. The <a href="#engine">native engine</a>
+        These settings apply to the box64 engine. The <a href="#engine">native engine</a>
         always renders with Vulkan on the phone's own driver.
     </p>
     <ul>
@@ -416,7 +414,7 @@
     <ul>
         <li>Pick the instance at the top and turn on <b>Mod support (BepInEx)</b>: it loads
             BepInEx when the game starts, and with it the mods switched on below.</li>
-        <li>Mods work with <b>box64 + native Mono</b> and the <b>native engine</b>, not with full emulation (see <a href="#engine">Engine</a>).</li>
+        <li>Mods work with <b>box64 + native Mono</b> and the <b>native engine</b> (see <a href="#engine">Engine</a>).</li>
         <li>To install a mod, tap <b>Choose mod file (zip)</b>, pick the .zip and tap
             <b>Install</b>.</li>
         <li>Each installed mod has its own switch, to turn it on or off.</li>
@@ -452,7 +450,7 @@
         vegetation — costs far more than resolution or texture size.
     </p>
     <p>
-        This is about the two box64 engines. With the <a href="#engine">native engine</a> nothing
+        This is about the box64 engine. With the <a href="#engine">native engine</a> nothing
         is emulated and the GPU is the limit instead: lower the heavy effects (SSAO, point light
         shadows, sun shafts) first.
     </p>

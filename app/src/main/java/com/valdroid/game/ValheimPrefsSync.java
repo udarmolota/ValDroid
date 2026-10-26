@@ -68,6 +68,32 @@ public final class ValheimPrefsSync {
         sync(androidFile(context), linuxFile(instanceDir), false);
     }
 
+    /**
+     * Before a native launch, after {@link #toNative}: one int pref in the Android file, set only when it
+     * differs. The file keeps its time, so the next sync still sees the game's own last change.
+     */
+    public static void setNativeInt(Context context, String key, int value) {
+        File f = androidFile(context);
+        try {
+            Map<String, Pref> prefs = f.isFile() ? readAndroid(f) : new LinkedHashMap<>();
+            Pref old = prefs.get(key);
+            if (old != null && "int".equals(old.type) && String.valueOf(value).equals(old.value)) return;
+            prefs.put(key, new Pref("int", String.valueOf(value)));
+            long time = f.isFile() ? f.lastModified() : 0;
+            File parent = f.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("cannot create " + parent);
+            File tmp = new File(f.getPath() + ".tmp");
+            try (FileOutputStream out = new FileOutputStream(tmp)) {
+                out.write(writeAndroid(prefs).getBytes(StandardCharsets.UTF_8));
+            }
+            if (!tmp.renameTo(f)) throw new IOException("cannot replace " + f);
+            if (time > 0) f.setLastModified(time);
+            Log.i(TAG, key + "=" + value + " (native)");
+        } catch (Exception e) {
+            Log.w(TAG, key + " not set", e);
+        }
+    }
+
     private static void sync(File src, File dst, boolean toAndroid) {
         try {
             if (!src.isFile()) return;

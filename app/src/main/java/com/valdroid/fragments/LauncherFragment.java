@@ -459,14 +459,133 @@ public class LauncherFragment extends Fragment {
         }).start();
     }
 
-    // Native engine (experimental): prepare the instance off the UI thread (first time builds the data
-    // archive, ~100 MB), then hand over to the native player's own process.
+    // Native engine (experimental): with Crossplay on, the Steam sign-in comes first (askCrossplaySignIn).
     private void startNativeEngine(GameInstance gi) {
+        if (gi.settings().isCrossplay()) askCrossplaySignIn(gi);
+        else launchNativeEngine(requireContext().getApplicationContext(), gi, null);
+    }
+
+    // ---- Crossplay sign-in --------------------------------------------------
+
+    /** Steam login and password (the login filled in from last time), or play without crossplay. */
+    private void askCrossplaySignIn(GameInstance gi) {
         android.content.Context app = requireContext().getApplicationContext();
+        View form = getLayoutInflater().inflate(R.layout.dialog_crossplay_login, null);
+        com.google.android.material.textfield.TextInputEditText etUser = form.findViewById(R.id.et_crossplay_user);
+        com.google.android.material.textfield.TextInputEditText etPass = form.findViewById(R.id.et_crossplay_pass);
+        String lastLogin = LauncherPreferences.requireSingleton().getSteamLoginName();
+        etUser.setText(lastLogin);
+        if (!lastLogin.isEmpty()) etPass.requestFocus();
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.crossplay_signin_title)
+                        .setView(form)
+                        .setPositiveButton(R.string.crossplay_signin_go, null)
+                        .setNeutralButton(R.string.crossplay_play_offline, (d, w) -> launchNativeEngine(app, gi, null))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .create();
+        dialog.setOnShowListener(d -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(x -> {
+            String user = etUser.getText() == null ? "" : etUser.getText().toString().trim();
+            String pass = etPass.getText() == null ? "" : etPass.getText().toString();
+            if (user.isEmpty() || pass.isEmpty()) {
+                android.widget.Toast.makeText(app, R.string.cloud_saves_need_login, android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            LauncherPreferences.requireSingleton().setSteamLoginName(user);
+            dialog.dismiss();
+            runCrossplaySignIn(gi, user, pass);
+        }));
+        dialog.show();
+    }
+
+    /**
+     * Signs in (SteamTicketLogin) behind a waiting dialog, then launches with the ticket. The Steam
+     * session outlives the launch by a few minutes; the keep-alive service holds the app's process
+     * for that time (and while the player is away approving in Steam Mobile).
+     */
+    private void runCrossplaySignIn(GameInstance gi, String user, String pass) {
+        android.content.Context app = requireContext().getApplicationContext();
+        androidx.appcompat.app.AlertDialog waiting =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.crossplay_signin_title)
+                        .setMessage(R.string.crossplay_step_connect)
+                        .setCancelable(false)
+                        .create();
+        com.valdroid.SteamTicketLogin[] login = new com.valdroid.SteamTicketLogin[1];
+        login[0] = new com.valdroid.SteamTicketLogin(user, pass,
+                com.valdroid.game.NativeEngine.steamTicketFile(gi), new com.valdroid.SteamTicketLogin.Listener() {
+            @Override
+            public java.util.concurrent.CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
+                java.util.concurrent.CompletableFuture<String> fut = new java.util.concurrent.CompletableFuture<>();
+                mainHandler.post(() -> {
+                    if (!isAdded()) { fut.complete(""); return; }
+                    android.widget.EditText et = new android.widget.EditText(requireContext());
+                    et.setHint(email != null ? getString(R.string.cloud_saves_code_email, email)
+                                             : getString(R.string.cloud_saves_code));
+                    et.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                            | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(prevWrong ? R.string.cloud_saves_code_wrong : R.string.cloud_saves_code_title)
+                            .setView(et)
+                            .setCancelable(false)
+                            .setPositiveButton(android.R.string.ok, (d, w) -> fut.complete(et.getText().toString().trim()))
+                            .show();
+                });
+                return fut;
+            }
+
+            @Override
+            public void onProgress(String step) {
+                int text = "approve".equals(step) ? R.string.crossplay_step_approve
+                        : "ticket".equals(step) ? R.string.crossplay_step_ticket : R.string.crossplay_step_connect;
+                mainHandler.post(() -> waiting.setMessage(app.getString(text)));
+            }
+
+            @Override
+            public void onReady(com.valdroid.SteamTicketLogin.Result result) {
+                mainHandler.post(() -> {
+                    waiting.dismiss();
+                    launchNativeEngine(app, gi, result);
+                });
+            }
+
+            @Override
+            public void onFailed(String message) {
+                mainHandler.post(() -> {
+                    waiting.dismiss();
+                    if (!isAdded()) return;
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                            .setMessage(getString(R.string.crossplay_failed, message))
+                            .setPositiveButton(R.string.crossplay_play_offline, (d, w) -> launchNativeEngine(app, gi, null))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                });
+            }
+        });
+        waiting.setButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL, getString(R.string.crossplay_play_offline), (d, w) -> {
+            login[0].cancel();
+            launchNativeEngine(app, gi, null);
+        });
+        waiting.setButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE, getString(android.R.string.cancel),
+                (d, w) -> login[0].cancel());
+        waiting.show();
+        com.valdroid.DownloadKeepAliveService.start(app, app.getString(R.string.crossplay_keepalive));
+        new Thread(() -> {
+            try {
+                login[0].run();
+            } finally {
+                com.valdroid.DownloadKeepAliveService.stop(app);
+            }
+        }, "CrossplaySignIn").start();
+    }
+
+    // Prepare the instance off the UI thread (first time builds the data archive, ~100 MB), then hand
+    // over to the native player's own process. steam = the crossplay sign-in, null = offline.
+    private void launchNativeEngine(android.content.Context app, GameInstance gi, com.valdroid.SteamTicketLogin.Result steam) {
         android.widget.Toast.makeText(app, R.string.native_engine_preparing, android.widget.Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
-                android.content.Intent intent = com.valdroid.game.NativeEngine.prepare(app, gi);
+                android.content.Intent intent = com.valdroid.game.NativeEngine.prepare(app, gi, steam);
                 app.startActivity(intent);
             } catch (Throwable e) {
                 Log.e(TAG, "Native engine launch failed", e);

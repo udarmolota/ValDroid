@@ -111,9 +111,11 @@ public class SettingsFragment extends Fragment {
         // the save bug that mod worked around is fixed at the root (box64 qsort). The switch's own
         // hint already says it is slower and only helps some devices.
         swCompat.setOnCheckedChangeListener((btn, checked) -> inst.setCompatibilityMode(checked));
-        // Engine: full emulation / box64 + native Mono / native engine. An option this APK or instance
-        // cannot run is hidden: native Mono needs the runtime packaged (NativeMono.isSupported), the
-        // native engine the native player module. With only one left there is nothing to choose.
+        // Engine: box64 + native Mono / native engine. An option this APK or instance cannot run is
+        // hidden: native Mono needs the runtime packaged (NativeMono.isSupported), the native engine
+        // the native player module. With only one left there is nothing to choose. (Full emulation is
+        // no longer offered: box64 still falls back to the game's own x86 Mono when native Mono is
+        // missing, see GameLauncher.)
         GameInstance engineInstance = null;
         for (GameInstance candidate : GameInstanceManager.requireSingleton().getInstances()) {
             if (candidate.getName().equals(instanceName)) engineInstance = candidate;
@@ -125,27 +127,16 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.tv_engine_box64_mono_hint).setVisibility(nativeMonoOffered ? View.VISIBLE : View.GONE);
         view.findViewById(R.id.rb_engine_native).setVisibility(nativeEngineOffered ? View.VISIBLE : View.GONE);
         view.findViewById(R.id.tv_engine_native_hint).setVisibility(nativeEngineOffered ? View.VISIBLE : View.GONE);
-        int engineChoices = 1 + (nativeMonoOffered ? 1 : 0) + (nativeEngineOffered ? 1 : 0);
+        int engineChoices = (nativeMonoOffered ? 1 : 0) + (nativeEngineOffered ? 1 : 0);
         view.findViewById(R.id.card_engine).setVisibility(engineChoices > 1 ? View.VISIBLE : View.GONE);
         int engine = inst.getEngine();
         if (engine == InstanceSettings.ENGINE_NATIVE && !nativeEngineOffered) engine = InstanceSettings.ENGINE_BOX64_MONO;
-        if (engine == InstanceSettings.ENGINE_BOX64_MONO && !nativeMonoOffered) engine = InstanceSettings.ENGINE_BOX64;
-        rgEngine.check(engine == InstanceSettings.ENGINE_NATIVE ? R.id.rb_engine_native
-                : engine == InstanceSettings.ENGINE_BOX64_MONO ? R.id.rb_engine_box64_mono : R.id.rb_engine_box64);
+        rgEngine.check(engine == InstanceSettings.ENGINE_NATIVE ? R.id.rb_engine_native : R.id.rb_engine_box64_mono);
         rgEngine.setOnCheckedChangeListener((group, checkedId) -> {
             int chosen = checkedId == R.id.rb_engine_native ? InstanceSettings.ENGINE_NATIVE
-                    : checkedId == R.id.rb_engine_box64_mono ? InstanceSettings.ENGINE_BOX64_MONO
-                    : InstanceSettings.ENGINE_BOX64;
+                    : InstanceSettings.ENGINE_BOX64_MONO;
             inst.setEngine(chosen);
             applyEngineState(view, chosen);
-            // Leaving native Mono for full emulation is the player's way around a problem we would
-            // otherwise never hear about.
-            if (chosen == InstanceSettings.ENGINE_BOX64) {
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setMessage(R.string.native_mono_off_msg)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            }
         });
         // Vulkan compatibility (native engine): Auto / On / Off, in the order of the VK_COMPAT_ values.
         // Auto says what it comes to on this phone.

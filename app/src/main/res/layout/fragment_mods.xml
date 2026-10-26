@@ -55,16 +55,6 @@
                 android:alpha="0.7"
                 android:text="@string/mod_support_hint" />
 
-            <TextView
-                android:id="@+id/tv_mods_native_mono_warning"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:textColor="?attr/colorError"
-                android:visibility="gone"
-                android:text="@string/mods_native_mono_warning" />
-
           </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
