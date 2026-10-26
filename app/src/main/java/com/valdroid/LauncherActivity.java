@@ -32,7 +32,6 @@ import com.valdroid.game.GameInstanceManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,27 +41,17 @@ public class LauncherActivity extends AppCompatActivity {
     private NavController navController;
     private AppBarConfiguration appBarConfiguration;
     private final Handler ui = new Handler(Looper.getMainLooper());
-    private static final String STATE_LOG_INSTANCE = "logExportInstance";
-    private String pendingLogInstanceName;
 
     private final ActivityResultLauncher<String[]> modZipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
                     uri -> { if (uri != null) ContentInstaller.showTargetDialog(this, uri); });
 
-    private final ActivityResultLauncher<String> exportLogsLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> {
-                        if (uri != null) exportLogs(uri);
-                        else pendingLogInstanceName = null;
-                    });
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        if (savedInstanceState != null)
-            pendingLogInstanceName = savedInstanceState.getString(STATE_LOG_INSTANCE);
 
         binding = ActivityLauncherBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -124,18 +113,11 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_settings_transfer) {
                 navController.navigate(R.id.action_open_settings_transfer);
                 return true;
-            } else if (id == R.id.action_export_logs) {
-                // No instance yet still exports: report.txt and launcher.log need none.
-                chooseInstanceThen(gi -> { pendingLogInstanceName = gi.getName();
-                        exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); },
-                        () -> { pendingLogInstanceName = null;
-                        exportLogsLauncher.launch("valdroid_logs_" + timestamp() + ".zip"); });
-                return true;
             } else if (id == R.id.action_controls_transfer) {
                 navController.navigate(R.id.action_open_controls_transfer);   // import / export, one screen
                 return true;
             } else if (id == R.id.action_bug_report) {
-                sendBugReport();
+                navController.navigate(R.id.action_open_bug_report);   // by email or to a file, one screen
                 return true;
             }
             // GitHub / X / Reddit / Support are no longer menu rows — they're the icon row in the
@@ -149,12 +131,6 @@ public class LauncherActivity extends AppCompatActivity {
 
         wireHeaderLinks();
         maybeDailyUpdateCheck();
-    }
-
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putString(STATE_LOG_INSTANCE, pendingLogInstanceName);
-        super.onSaveInstanceState(outState);
     }
 
     /** The icon row in the drawer header: the wiki and the external links (icons, not menu rows). */
@@ -210,84 +186,6 @@ public class LauncherActivity extends AppCompatActivity {
         dialog.show();
         TextView mv = dialog.findViewById(android.R.id.message);
         if (mv != null) mv.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
-    }
-
-    /**
-     * Open the user's email app pre-filled with a bug report to the maintainer — with the same log
-     * bundle that "Export logs" produces attached, so a report arrives diagnosable. Building the zip
-     * can touch multi-MB Player.logs, so it runs off the UI thread; the intent fires once it's ready.
-     * With no instance the zip is still built (report.txt + launcher.log + crash log): a launcher
-     * that crashes before any game starts is exactly the case where those are all there is.
-     */
-    private void sendBugReport() {
-        chooseInstanceThen(this::sendBugReport, () -> sendBugReport(null));
-    }
-
-    private void sendBugReport(GameInstance instance) {
-        final java.util.Date now = new java.util.Date();
-        final String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
-                .format(now);
-        final String reportName = "valdroid_report_"
-                + new java.text.SimpleDateFormat("ddMMyyyy_HHmm", java.util.Locale.US).format(now)
-                + ".zip";
-        toast("Preparing bug report…");
-        new Thread(() -> {
-            // Built on the worker thread: the GPU line creates a throwaway EGL context. Storage and
-            // build id sit in the mail itself so they are visible even if the zip gets lost.
-            final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
-                    + "\nAndroid: " + android.os.Build.VERSION.RELEASE
-                    + "\nGPU: " + ReportInfo.gpu()
-                    + "\nValDroid: " + ReportInfo.buildId()
-                    + "\nStorage: " + (ReportInfo.isAdoptable(this) ? "adoptable (SD card used as internal)" : "internal")
-                    + "\nInstance: " + (instance != null ? instance.getName() : "(none)");
-            Uri attach = null;
-            try {
-                java.io.File dir = new java.io.File(getCacheDir(), "reports");
-                if (dir.isDirectory() || dir.mkdirs()) {
-                    java.io.File zip = new java.io.File(dir, reportName);
-                    try (OutputStream out = new java.io.FileOutputStream(zip)) {
-                        LogExporter.export(this, instance, out);
-                    }
-                    if (zip.length() > 0)
-                        // The manifest names the provider after the application id, which differs
-                        // in builds with a suffix (the native engine's .nativeunity).
-                        attach = androidx.core.content.FileProvider.getUriForFile(
-                                this, getPackageName() + ".fileprovider", zip);
-                }
-            } catch (Throwable t) { attach = null; }   // no logs → still send the text report
-            final Uri fAttach = attach;
-            ui.post(() -> startBugReportEmail(date, device, fAttach));
-        }).start();
-    }
-
-    private void startBugReportEmail(String date, String device, Uri attachment) {
-        String[] to = { getString(R.string.bug_report_email) };
-        String subject = getString(R.string.bug_report_subject, date);
-        String body = getString(R.string.bug_report_body, device);
-        Intent i;
-        if (attachment != null) {
-            // ACTION_SEND carries an attachment (mailto/SENDTO can't). A chooser lets the user pick
-            // their mail app; to/subject/body/zip are all prefilled.
-            i = new Intent(Intent.ACTION_SEND);
-            i.setType("application/zip");
-            i.putExtra(Intent.EXTRA_EMAIL, to);
-            i.putExtra(Intent.EXTRA_SUBJECT, subject);
-            i.putExtra(Intent.EXTRA_TEXT, body);
-            i.putExtra(Intent.EXTRA_STREAM, attachment);
-            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            try { startActivity(Intent.createChooser(i, getString(R.string.nav_bug_report))); return; }
-            catch (android.content.ActivityNotFoundException ignored) { /* fall through to mailto */ }
-        }
-        // No attachment (or no app took the SEND) → plain mailto, text only.
-        i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"));
-        i.putExtra(Intent.EXTRA_EMAIL, to);
-        i.putExtra(Intent.EXTRA_SUBJECT, subject);
-        i.putExtra(Intent.EXTRA_TEXT, body);
-        try {
-            startActivity(i);
-        } catch (android.content.ActivityNotFoundException e) {
-            Toast.makeText(this, R.string.bug_report_no_mail, Toast.LENGTH_LONG).show();
-        }
     }
 
     @Override
@@ -550,51 +448,11 @@ public class LauncherActivity extends AppCompatActivity {
     // ---- Save / settings backup & restore -------------------------------------
 
 
-    /** Export the selected instance's diagnostic logs into a picked, date-stamped .zip. */
-    private void exportLogs(Uri uri) {
-        final String name = pendingLogInstanceName;
-        pendingLogInstanceName = null;
-        if (name == null) {
-            chooseInstanceThen(instance -> exportLogs(uri, instance), () -> exportLogs(uri, null));
-            return;
-        }
-        GameInstanceManager mgr = GameInstanceManager.requireSingleton();
-        mgr.reload();
-        final GameInstance instance = mgr.getByName(name);
-        if (instance == null) { toast("The selected instance is no longer available."); return; }
-        exportLogs(uri, instance);
-    }
-
-    private void exportLogs(Uri uri, GameInstance instance) {
-        toast("Exporting logs…");
-
-        new Thread(() -> {
-            LogExporter.Result res;
-            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                res = LogExporter.export(this, instance, out);
-            } catch (Exception ex) {
-                ui.post(() -> toast("Export failed: " + ex.getMessage()));
-                return;
-            }
-            final LogExporter.Result fr = res;
-            ui.post(() -> toast(fr.ok()
-                    ? "Logs: " + android.text.TextUtils.join(", ", fr.items)
-                        + " (" + (fr.bytes / 1024) + " KB)"
-                    : "Export failed: " + fr.error));
-        }).start();
-    }
-
     // ---- On-screen controls layout backup --------------------------------------
 
     /** Export the chosen instance's on-screen controls as a zip: controls.json + icons/ (the
      *  Zomdroid format). An instance still on the bundled default exports that default. */
 
-    /** yyyyMMdd_HHmmss — keeps each exported log zip uniquely named (no overwrite). */
-    private static String timestamp() {
-        return new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
-                .format(new java.util.Date());
-    }
 
 
     /** Open a URL in the user's browser (community / updates links). */

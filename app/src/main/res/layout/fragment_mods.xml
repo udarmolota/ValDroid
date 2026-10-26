@@ -149,7 +149,45 @@
                 android:alpha="0.7"
                 android:text="@string/mods_empty" />
 
-            <!-- One row per mod, added by ModsFragment: name + version, and a switch. -->
+            <!-- Switch all on / off and export, as in Zomdroid; shown when there are mods. -->
+            <LinearLayout
+                android:id="@+id/ll_mods_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btn_mods_enable_all"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:text="@string/mods_enable_all" />
+
+                <Button
+                    android:id="@+id/btn_mods_disable_all"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:text="@string/mods_disable_all" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/btn_mods_export"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:text="@string/mods_export" />
+            </LinearLayout>
+
+            <!-- One row per mod, added by ModsFragment: name + version, the author under it, and a switch. -->
             <LinearLayout
                 android:id="@+id/ll_mods_list"
                 android:layout_width="match_parent"

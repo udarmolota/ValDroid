@@ -45,7 +45,10 @@ public class ModsFragment extends Fragment {
     private Spinner spInstance;
     private Switch swSupport;
     private TextView tvNativeWarning, tvOffNote, tvEmpty;
-    private LinearLayout llList;
+    private LinearLayout llList, llActions;
+    private Button btnEnableAll, btnDisableAll, btnExport;
+    /** The mods picked in the export dialog, written once the file is chosen. */
+    private List<ModManager.Mod> exportMods = new ArrayList<>();
     private Button btnPick, btnInstall;
     private final List<GameInstance> instances = new ArrayList<>();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -61,6 +64,9 @@ public class ModsFragment extends Fragment {
                 btnPick.setText(displayName(uri) + ".zip");
                 updateInstallEnabled();
             });
+
+    private final ActivityResultLauncher<String> exportPicker =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"), this::exportTo);
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -104,6 +110,13 @@ public class ModsFragment extends Fragment {
             if (current() != null) picker.launch(new String[]{"application/zip", "application/x-zip-compressed", "application/octet-stream"});
         });
         btnInstall.setOnClickListener(x -> installZip(pickedZip));
+        llActions = v.findViewById(R.id.ll_mods_actions);
+        btnEnableAll = v.findViewById(R.id.btn_mods_enable_all);
+        btnDisableAll = v.findViewById(R.id.btn_mods_disable_all);
+        btnExport = v.findViewById(R.id.btn_mods_export);
+        btnEnableAll.setOnClickListener(x -> confirmSetAll(true));
+        btnDisableAll.setOnClickListener(x -> confirmSetAll(false));
+        btnExport.setOnClickListener(x -> pickModsToExport());
         refresh();
     }
 
@@ -142,6 +155,9 @@ public class ModsFragment extends Fragment {
         llList.removeAllViews();
         List<ModManager.Mod> mods = has ? ModManager.list(new File(gi.getGamePath())) : new ArrayList<>();
         tvEmpty.setVisibility(mods.isEmpty() ? View.VISIBLE : View.GONE);
+        llActions.setVisibility(mods.isEmpty() ? View.GONE : View.VISIBLE);
+        btnEnableAll.setEnabled(on);
+        btnDisableAll.setEnabled(on);
         tvOffNote.setVisibility(has && !on && !mods.isEmpty() ? View.VISIBLE : View.GONE);
         for (ModManager.Mod m : mods) llList.addView(row(gi, m, on));
     }
@@ -153,10 +169,22 @@ public class ModsFragment extends Fragment {
         int pad = Math.round(8 * getResources().getDisplayMetrics().density);
         row.setPadding(0, pad, 0, pad);
 
+        // Name and version, the author under them when known (as Zomdroid's list, a size smaller).
+        LinearLayout text = new LinearLayout(requireContext());
+        text.setOrientation(LinearLayout.VERTICAL);
         TextView title = new TextView(requireContext());
         title.setText(m.version != null ? m.name + "  " + m.version : m.name);
-        title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
-        row.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        title.setTextSize(14);
+        text.addView(title);
+        if (m.author != null) {
+            TextView author = new TextView(requireContext());
+            author.setText(getString(R.string.mod_author, m.author));
+            author.setTextSize(12);
+            author.setAlpha(0.7f);
+            text.addView(author);
+        }
+        row.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         Switch sw = new Switch(requireContext());
         sw.setChecked(m.enabled);
@@ -200,6 +228,90 @@ public class ModsFragment extends Fragment {
                     refresh();
                 })
                 .show();
+    }
+
+    // ---- all on / all off ----
+
+    /** Switching every mod on or off at once changes the instance: asked first. */
+    private void confirmSetAll(boolean enabled) {
+        GameInstance gi = current();
+        if (gi == null) return;
+        int n = ModManager.list(new File(gi.getGamePath())).size();
+        new AlertDialog.Builder(requireContext())
+                .setMessage(getString(enabled ? R.string.mods_enable_all_confirm : R.string.mods_disable_all_confirm, n))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(enabled ? R.string.mods_enable_all : R.string.mods_disable_all, (d, w) -> {
+                    if (ModManager.setAllEnabled(new File(gi.getGamePath()), enabled) > 0)
+                        Toast.makeText(requireContext(), R.string.mod_switch_failed, Toast.LENGTH_SHORT).show();
+                    refresh();
+                })
+                .show();
+    }
+
+    // ---- export ----
+
+    /** Which mods go into the zip: all ticked to start with; "All" ticks them again. */
+    private void pickModsToExport() {
+        GameInstance gi = current();
+        if (gi == null) return;
+        List<ModManager.Mod> mods = ModManager.list(new File(gi.getGamePath()));
+        if (mods.isEmpty()) return;
+        String[] names = new String[mods.size()];
+        boolean[] picked = new boolean[mods.size()];
+        for (int i = 0; i < names.length; i++) {
+            ModManager.Mod m = mods.get(i);
+            names[i] = m.version != null ? m.name + "  " + m.version : m.name;
+            picked[i] = true;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.mods_export_title)
+                .setMultiChoiceItems(names, picked, (d, which, checked) -> picked[which] = checked)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.mods_export_all, null)
+                .setPositiveButton(R.string.mods_export_go, null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(x -> {
+                for (int i = 0; i < picked.length; i++) {
+                    picked[i] = true;
+                    dialog.getListView().setItemChecked(i, true);
+                }
+            });
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(x -> {
+                List<ModManager.Mod> chosen = new ArrayList<>();
+                for (int i = 0; i < picked.length; i++) if (picked[i]) chosen.add(mods.get(i));
+                if (chosen.isEmpty()) {
+                    Toast.makeText(requireContext(), R.string.mods_export_none, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                exportMods = chosen;
+                dialog.dismiss();
+                exportPicker.launch("valdroid_mods_" + gi.getName().replaceAll("[^A-Za-z0-9._-]+", "_") + "_"
+                        + new java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.US).format(new java.util.Date())
+                        + ".zip");
+            });
+        });
+        dialog.show();
+    }
+
+    private void exportTo(@Nullable Uri uri) {
+        GameInstance gi = current();
+        List<ModManager.Mod> mods = exportMods;
+        exportMods = new ArrayList<>();
+        if (uri == null || gi == null || mods.isEmpty()) return;
+        android.content.Context app = requireContext().getApplicationContext();
+        File gameDir = new File(gi.getGamePath());
+        new Thread(() -> {
+            String msg;
+            try (java.io.OutputStream out = app.getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new java.io.IOException("cannot open the file");
+                msg = app.getString(R.string.mods_exported, ModManager.exportZip(gameDir, mods, out));
+            } catch (Exception e) {
+                msg = app.getString(R.string.mods_export_failed, String.valueOf(e.getMessage()));
+            }
+            final String m = msg;
+            main.post(() -> Toast.makeText(app, m, Toast.LENGTH_LONG).show());
+        }, "ModExport").start();
     }
 
     private void installZip(@Nullable Uri uri) {

@@ -51,6 +51,8 @@ public final class ModManager {
     private static final String BACKUP_DIR = ".valdroid_backup";
     /** Inside a mod folder: game-relative paths the mod replaced, one per line. */
     private static final String GAME_FILES_LIST = ".valdroid_game_files";
+    /** Inside a mod folder: its author, from the Thunderstore archive name it was installed from. */
+    private static final String AUTHOR_FILE = ".valdroid_author";
 
     private ModManager() {}
 
@@ -58,11 +60,13 @@ public final class ModManager {
     public static final class Mod {
         public final String name;
         public final String version;   // null when unknown
+        public final String author;    // null when unknown
         public final boolean enabled;
         final File location;           // folder or .dll, under plugins or plugins_off
 
-        Mod(String name, String version, boolean enabled, File location) {
-            this.name = name; this.version = version; this.enabled = enabled; this.location = location;
+        Mod(String name, String version, String author, boolean enabled, File location) {
+            this.name = name; this.version = version; this.author = author; this.enabled = enabled;
+            this.location = location;
         }
     }
 
@@ -129,10 +133,10 @@ public final class ModManager {
         for (File f : entries) {
             if (f.isDirectory()) {
                 String[] nv = readManifest(new File(f, "manifest.json"));
-                into.add(new Mod(nv[0] != null ? nv[0] : f.getName(), nv[1], enabled, f));
+                into.add(new Mod(nv[0] != null ? nv[0] : f.getName(), nv[1], readAuthor(f), enabled, f));
             } else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".dll")) {
                 String n = f.getName();
-                into.add(new Mod(n.substring(0, n.length() - 4), null, enabled, f));
+                into.add(new Mod(n.substring(0, n.length() - 4), null, null, enabled, f));
             }
         }
     }
@@ -146,6 +150,38 @@ public final class ModManager {
         boolean ok = mod.location.renameTo(target);
         if (!ok) Log.w(TAG, "Could not move " + mod.location + " to " + target);
         return ok;
+    }
+
+    /** Switches every listed mod on or off; returns how many could not be moved. */
+    public static int setAllEnabled(File gameDir, boolean enabled) {
+        int failed = 0;
+        for (Mod m : list(gameDir)) if (!setEnabled(gameDir, m, enabled)) failed++;
+        return failed;
+    }
+
+    /**
+     * A mod's author, when it can be told: the name of the Thunderstore archive it was installed from
+     * ("Author-Mod-1.0.0", AUTHOR_FILE), an "author" a manifest carries (our exports write one), or the
+     * owner in the manifest's website_url (github.com/owner/..., thunderstore.io/.../p/owner/...).
+     * Mods from Nexus carry none of these: null.
+     */
+    private static String readAuthor(File modDir) {
+        String a = readSmall(new File(modDir, AUTHOR_FILE));
+        if (a != null && !a.isEmpty()) return a;
+        String json = readSmall(new File(modDir, "manifest.json"));
+        if (json == null) return null;
+        try {
+            if (json.startsWith("\uFEFF")) json = json.substring(1);
+            JSONObject o = new JSONObject(json);
+            String author = o.optString("author", "").trim();
+            if (!author.isEmpty()) return author;
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("(?:github\\.com/|thunderstore\\.io/(?:c/[^/]+/)?p/)([A-Za-z0-9_.-]+)")
+                    .matcher(o.optString("website_url", ""));
+            return m.find() ? m.group(1) : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Deletes the mod and puts back the game files it replaced. */
@@ -174,7 +210,41 @@ public final class ModManager {
         byte[] data = readAll(ctx, zip);
         List<String> names = entryNames(data);
         String wrapper = commonWrapper(names);
+        // A pack of mods (exportZip): one folder per mod at the top, each with its manifest.
+        if (wrapper.isEmpty()) {
+            List<String> pack = packFolders(names);
+            if (pack != null) {
+                List<String> installed = new ArrayList<>();
+                for (String folder : pack) installed.add(install(data, folder, gameDir, folder.substring(0, folder.length() - 1)));
+                return String.join(", ", installed);
+            }
+        }
+        String modName = install(data, wrapper, gameDir, fallbackName);
+        // A Thunderstore archive is named Author-Mod-1.0.0: keep the author for the list.
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^([A-Za-z0-9_]+)-[A-Za-z0-9_]+-\\d+(?:\\.\\d+)+$")
+                .matcher(fallbackName != null ? fallbackName : "");
+        if (m.matches()) {
+            File modDir = new File(new File(bepinexDir(gameDir), PLUGINS), modName);
+            if (modDir.isDirectory()) writeSmall(new File(modDir, AUTHOR_FILE), m.group(1));
+        }
+        return modName;
+    }
 
+    /** The top folders of a pack (each holding a manifest.json, at least two), or null for a mod zip. */
+    private static List<String> packFolders(List<String> names) {
+        java.util.LinkedHashSet<String> tops = new java.util.LinkedHashSet<>();
+        for (String n : names) {
+            int s = n.indexOf('/');
+            if (s < 0) return null;   // a loose file at the top: a single mod's layout
+            tops.add(n.substring(0, s + 1));
+        }
+        if (tops.size() < 2) return null;
+        for (String t : tops) if (!names.contains(t + "manifest.json")) return null;
+        return new ArrayList<>(tops);
+    }
+
+    /** Installs the mod a zip holds under {@code wrapper} ("" = the whole zip). */
+    private static String install(byte[] data, String wrapper, File gameDir, String fallbackName) throws IOException {
         String modName = null, version = null;
         byte[] manifest = extractOne(data, wrapper + "manifest.json");
         if (manifest != null) {
@@ -251,6 +321,87 @@ public final class ModManager {
         }
         Log.i(TAG, "Installed " + modName + (version != null ? " " + version : "") + ": " + written + " files");
         return modName;
+    }
+
+    // ---- exporting ------------------------------------------------------------------------------
+
+    /**
+     * Writes the given mods into one zip, a folder per mod laid out as a mod archive is (manifest.json,
+     * plugins/, patchers/, the game files it replaced at their game paths), so {@link #install} takes
+     * the zip back as a pack. Mods without a manifest get one with their name. Returns the count.
+     */
+    public static int exportZip(File gameDir, List<Mod> mods, OutputStream rawOut) throws IOException {
+        java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(new java.io.BufferedOutputStream(rawOut));
+        java.util.Set<String> used = new java.util.HashSet<>();
+        int count = 0;
+        for (Mod m : mods) {
+            String base = m.location.isDirectory() ? m.location.getName() : sanitize(m.name);
+            String folder = base;
+            for (int n = 2; !used.add(folder.toLowerCase(Locale.ROOT)); n++) folder = base + "_" + n;
+            folder += "/";
+            File manifest = new File(m.location, "manifest.json");
+            String json = m.location.isDirectory() ? readSmall(manifest) : null;
+            if (json == null) {
+                JSONObject o = new JSONObject();
+                try {
+                    o.put("name", m.name);
+                    if (m.version != null) o.put("version_number", m.version);
+                    if (m.author != null) o.put("author", m.author);
+                } catch (org.json.JSONException ignored) {}
+                json = o.toString();
+            } else if (m.author != null && !json.contains("\"author\"")) {
+                try { json = new JSONObject(json).put("author", m.author).toString(); } catch (Exception ignored) {}
+            }
+            putEntry(zip, folder + "manifest.json", json.getBytes(StandardCharsets.UTF_8));
+            if (m.location.isDirectory()) {
+                addTree(zip, m.location, folder + "plugins/", true);
+                File patchers = new File(new File(bepinexDir(gameDir), "patchers"), m.location.getName());
+                if (patchers.isDirectory()) addTree(zip, patchers, folder + "patchers/", false);
+                String list = readSmall(new File(m.location, GAME_FILES_LIST));
+                if (list != null) {
+                    for (String rel : list.split("\n")) {
+                        rel = rel.trim();
+                        File f = new File(gameDir, rel);
+                        if (!rel.isEmpty() && isSafeRelative(rel) && f.isFile()) addFile(zip, f, folder + rel);
+                    }
+                }
+            } else {
+                addFile(zip, m.location, folder + "plugins/" + m.location.getName());
+            }
+            count++;
+        }
+        zip.finish();
+        zip.flush();
+        return count;
+    }
+
+    /** Every file under {@code dir}, at {@code prefix}; the mod folder's own bookkeeping left out. */
+    private static void addTree(java.util.zip.ZipOutputStream zip, File dir, String prefix, boolean modFolder) throws IOException {
+        File[] kids = dir.listFiles();
+        if (kids == null) return;
+        for (File k : kids) {
+            String n = k.getName();
+            if (modFolder && prefix.endsWith("plugins/") && (n.equals("manifest.json") || n.equals(GAME_FILES_LIST) || n.equals(AUTHOR_FILE)))
+                continue;
+            if (k.isDirectory()) addTree(zip, k, prefix + n + "/", false);
+            else addFile(zip, k, prefix + n);
+        }
+    }
+
+    private static void addFile(java.util.zip.ZipOutputStream zip, File f, String name) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        try (InputStream in = new FileInputStream(f)) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) > 0) zip.write(buf, 0, n);
+        }
+        zip.closeEntry();
+    }
+
+    private static void putEntry(java.util.zip.ZipOutputStream zip, String name, byte[] body) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(body);
+        zip.closeEntry();
     }
 
     // ---- game file backups ---------------------------------------------------------------------
