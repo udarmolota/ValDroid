@@ -41,13 +41,107 @@ static uint64_t vd_persona_name(void)
 }
 
 typedef struct __attribute__((packed, aligned(4))) { int32_t user; int32_t callback; void* param; int32_t size; } vd_CallbackMsg_t;
-typedef struct { uint32_t handle; int32_t result; } vd_TicketResponse_t;
 
 static uint8_t vd_ticket[1024];
 static uint32_t vd_ticket_len;
 static uint32_t vd_ticket_handle;
-static vd_TicketResponse_t vd_ticket_response;
-static int vd_callback_queued;
+
+/* Callbacks for the game, in order (all on the game's main thread). */
+typedef struct { int32_t id; int32_t size; uint8_t data[32]; } vd_Callback_t;
+static vd_Callback_t vd_queue[16];
+static int vd_queue_len;
+static vd_Callback_t vd_current;   /* what the last GetNextCallback handed out */
+
+static void vd_post(int32_t id, const void* data, size_t size)
+{
+    if (vd_queue_len >= (int)(sizeof(vd_queue) / sizeof(vd_queue[0])) || size > sizeof(vd_queue[0].data)) return;
+    vd_Callback_t* c = &vd_queue[vd_queue_len++];
+    c->id = id;
+    c->size = (int32_t)size;
+    memcpy(c->data, data, size);
+}
+
+/* Achievements and stats (VALDROID_STEAM_STATS): "stat NAME VALUE BASE" and "ach NAME" lines. */
+#define VD_NAME 64
+#define VD_MAX_STATS 64
+#define VD_MAX_ACHS 128
+typedef struct { char name[VD_NAME]; double value; double base; } vd_Stat;
+static vd_Stat vd_stats[VD_MAX_STATS];
+static int vd_nstats;
+static char vd_achs[VD_MAX_ACHS][VD_NAME];
+static int vd_nachs;
+static int vd_stats_loaded;
+
+static void vd_stats_load(void)
+{
+    if (vd_stats_loaded) return;
+    vd_stats_loaded = 1;
+    const char* path = getenv("VALDROID_STEAM_STATS");
+    FILE* f = (path && path[0]) ? fopen(path, "r") : NULL;
+    if (!f) return;
+    char line[256], name[VD_NAME];
+    double value, base;
+    while (fgets(line, sizeof(line), f)) {
+        if (sscanf(line, "stat %63s %lf %lf", name, &value, &base) == 3 && vd_nstats < VD_MAX_STATS) {
+            strcpy(vd_stats[vd_nstats].name, name);
+            vd_stats[vd_nstats].value = value;
+            vd_stats[vd_nstats].base = base;
+            vd_nstats++;
+        } else if (sscanf(line, "ach %63s", name) == 1 && vd_nachs < VD_MAX_ACHS) {
+            strcpy(vd_achs[vd_nachs++], name);
+        }
+    }
+    fclose(f);
+}
+
+static void vd_stats_save(void)
+{
+    const char* path = getenv("VALDROID_STEAM_STATS");
+    if (!path || !path[0]) return;
+    char tmp[512];
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    FILE* f = fopen(tmp, "w");
+    if (!f) return;
+    fprintf(f, "# ValDroid: Valheim's Steam achievements and stats on this phone (BASE = Steam's value at the last sync)\n");
+    for (int i = 0; i < vd_nstats; i++)
+        fprintf(f, "stat %s %.9g %.9g\n", vd_stats[i].name, vd_stats[i].value, vd_stats[i].base);
+    for (int i = 0; i < vd_nachs; i++) fprintf(f, "ach %s\n", vd_achs[i]);
+    if (fclose(f) == 0) rename(tmp, path);
+}
+
+static vd_Stat* vd_stat(const char* name, int create)
+{
+    vd_stats_load();
+    if (!name || !name[0] || strlen(name) >= VD_NAME) return NULL;
+    for (int i = 0; i < vd_nstats; i++)
+        if (!strcmp(vd_stats[i].name, name)) return &vd_stats[i];
+    if (!create || vd_nstats >= VD_MAX_STATS) return NULL;
+    vd_Stat* s = &vd_stats[vd_nstats++];
+    strcpy(s->name, name);
+    s->value = 0;
+    s->base = 0;
+    return s;
+}
+
+static uint8_t vd_set_stat(const char* name, double value)
+{
+    vd_Stat* s = vd_stat(name, 1);
+    if (!s) return 0;
+    if (s->value != value) {
+        s->value = value;
+        vd_stats_save();
+    }
+    return 1;
+}
+
+static int vd_ach_index(const char* name)
+{
+    vd_stats_load();
+    if (!name) return -1;
+    for (int i = 0; i < vd_nachs; i++)
+        if (!strcmp(vd_achs[i], name)) return i;
+    return -1;
+}
 
 VD_EXPORT uint64_t SteamAPI_GetHSteamPipe(void) { return 1; }
 VD_EXPORT uint64_t SteamAPI_GetHSteamUser(void) { return 1; }
@@ -801,12 +895,22 @@ VD_EXPORT uint64_t SteamAPI_ISteamUGC_UnsubscribeItem(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUGC_UpdateItemPreviewFile(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUGC_UpdateItemPreviewVideo(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_AttachLeaderboardUGC(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_ClearAchievement(void) { return 0; }
+/* Never taken back: what reaches Steam only ever grows. */
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_ClearAchievement(void* self, const char* name)
+{
+    (void)self; (void)name;
+    return 0;
+}
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_DownloadLeaderboardEntries(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_DownloadLeaderboardEntriesForUsers(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_FindLeaderboard(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_FindOrCreateLeaderboard(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetAchievement(void) { return 0; }
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_GetAchievement(void* self, const char* name, uint8_t* achieved)
+{
+    (void)self;
+    if (achieved) *achieved = vd_ach_index(name) >= 0;
+    return 1;
+}
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetAchievementAchievedPercent(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute(void) { return 0; }
@@ -827,22 +931,72 @@ VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetMostAchievedAchievementInfo(void)
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetNextMostAchievedAchievementInfo(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetNumAchievements(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetNumberOfCurrentPlayers(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetStatFloat(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetStatInt32(void) { return 0; }
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_GetStatFloat(void* self, const char* name, float* value)
+{
+    (void)self;
+    vd_Stat* s = vd_stat(name, 0);
+    if (value) *value = s ? (float)s->value : 0.0f;
+    return 1;
+}
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_GetStatInt32(void* self, const char* name, int32_t* value)
+{
+    (void)self;
+    vd_Stat* s = vd_stat(name, 0);
+    if (value) *value = s ? (int32_t)s->value : 0;
+    return 1;
+}
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetUserAchievement(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetUserAchievementAndUnlockTime(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetUserStatFloat(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_GetUserStatInt32(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_IndicateAchievementProgress(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_RequestCurrentStats(void) { return 1; }
+/* Valheim's achievement system starts on UserStatsReceived_t for its own game id. */
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_RequestCurrentStats(void* self)
+{
+    (void)self;
+    vd_stats_load();
+    struct __attribute__((packed, aligned(4))) { uint64_t game; int32_t result; uint64_t user; } received =
+        { 892970, 1, vd_steam_id() };
+    vd_post(1101, &received, sizeof(received));   /* UserStatsReceived_t */
+    return 1;
+}
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_RequestGlobalAchievementPercentages(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_RequestGlobalStats(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_RequestUserStats(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_ResetAllStats(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_SetAchievement(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_SetStatFloat(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_SetStatInt32(void) { return 0; }
-VD_EXPORT uint64_t SteamAPI_ISteamUserStats_StoreStats(void) { return 0; }
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_ResetAllStats(void* self, uint8_t achievements_too)
+{
+    (void)self; (void)achievements_too;
+    return 0;
+}
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_SetAchievement(void* self, const char* name)
+{
+    (void)self;
+    vd_stats_load();
+    if (!name || !name[0] || strlen(name) >= VD_NAME) return 0;
+    if (vd_ach_index(name) >= 0) return 1;
+    if (vd_nachs >= VD_MAX_ACHS) return 0;
+    strcpy(vd_achs[vd_nachs++], name);
+    vd_stats_save();
+    return 1;
+}
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_SetStatFloat(void* self, const char* name, float value)
+{
+    (void)self;
+    return vd_set_stat(name, value);
+}
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_SetStatInt32(void* self, const char* name, int32_t value)
+{
+    (void)self;
+    return vd_set_stat(name, value);
+}
+VD_EXPORT uint8_t SteamAPI_ISteamUserStats_StoreStats(void* self)
+{
+    (void)self;
+    vd_stats_save();
+    struct __attribute__((packed, aligned(4))) { uint64_t game; int32_t result; } stored = { 892970, 1 };
+    vd_post(1102, &stored, sizeof(stored));   /* UserStatsStored_t */
+    return 1;
+}
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_UpdateAvgRateStat(void) { return 0; }
 VD_EXPORT uint64_t SteamAPI_ISteamUserStats_UploadLeaderboardScore(void) { return 0; }
 VD_EXPORT void SteamAPI_ISteamUser_AdvertiseGame(void) {}
@@ -877,9 +1031,8 @@ VD_EXPORT uint32_t SteamAPI_ISteamUser_GetAuthSessionTicket(void* self, uint8_t*
     if (!vd_ticket_len || !ticket || max < (int32_t)vd_ticket_len) return 0;
     memcpy(ticket, vd_ticket, vd_ticket_len);
     if (size) *size = vd_ticket_len;
-    vd_ticket_response.handle = ++vd_ticket_handle;
-    vd_ticket_response.result = 1;   /* k_EResultOK */
-    vd_callback_queued = 1;
+    struct { uint32_t handle; int32_t result; } response = { ++vd_ticket_handle, 1 /* k_EResultOK */ };
+    vd_post(163, &response, sizeof(response));   /* GetAuthSessionTicketResponse_t */
     return vd_ticket_handle;
 }
 VD_EXPORT uint64_t SteamAPI_ISteamUser_GetAuthTicketForWebApi(void) { return 0; }
@@ -947,18 +1100,21 @@ VD_EXPORT uint64_t SteamAPI_IsSteamRunning(void) { return 1; }
 VD_EXPORT void SteamAPI_ManualDispatch_FreeLastCallback(int32_t pipe)
 {
     (void)pipe;
-    vd_callback_queued = 0;
+    if (!vd_queue_len) return;
+    memmove(vd_queue, vd_queue + 1, (size_t)(vd_queue_len - 1) * sizeof(vd_queue[0]));
+    vd_queue_len--;
 }
 VD_EXPORT uint64_t SteamAPI_ManualDispatch_GetAPICallResult(void) { return 0; }
 /* Steamworks.NET's CallbackDispatcher.RunFrame: Get, dispatch, FreeLastCallback, Get again. */
 VD_EXPORT uint8_t SteamAPI_ManualDispatch_GetNextCallback(int32_t pipe, vd_CallbackMsg_t* msg)
 {
     (void)pipe;
-    if (!vd_callback_queued || !msg) return 0;
+    if (!vd_queue_len || !msg) return 0;
+    vd_current = vd_queue[0];
     msg->user = 1;
-    msg->callback = 163;   /* GetAuthSessionTicketResponse_t::k_iCallback */
-    msg->param = &vd_ticket_response;
-    msg->size = (int32_t)sizeof(vd_ticket_response);
+    msg->callback = vd_current.id;
+    msg->param = vd_current.data;
+    msg->size = vd_current.size;
     return 1;
 }
 VD_EXPORT void SteamAPI_ManualDispatch_Init(void) {}

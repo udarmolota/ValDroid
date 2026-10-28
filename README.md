@@ -41,6 +41,10 @@ emulation. The box64 engine that ValDroid started with is still there as a fallb
   and *Figures by jurises99*) and your own zips.
 - ✔️ **Steam inside the app**\*: download the game, and move saves between your phone and PC through
   Steam Cloud
+- ✔️ **Online through crossplay** (native engine): join servers and friends' worlds with crossplay on,
+  by IP or invite code, or host your world from the phone. Steam-only servers can't be reached
+- ✔️ **Steam achievements** (native engine): earned on the phone, added to your Steam account at the
+  next sign-in, with a "My achievements" list in the app
 - ✔️ **Mods (experimental)**: BepInEx is built in; install mods from a `.zip` and switch them on and off
 - ✔️ **Graphics presets** (Low, Very low and Minimal), written into the game once, before it starts
 - ✔️ **Frame-rate modes** (Economy ~30, Balanced ~40, Smooth ~60, or no limit), plus an on-screen

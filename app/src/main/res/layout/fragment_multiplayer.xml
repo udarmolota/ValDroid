@@ -72,5 +72,59 @@
                 android:text="@string/crossplay_servers_note" />
           </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Steam achievements for the same instance (the switch follows the instance picked above). -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
+
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
+
+            <TextView
+                style="@style/AppTheme.CardHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/card_steam_achievements"
+                android:layout_marginBottom="6dp" />
+
+            <Switch
+                android:id="@+id/sw_steam_achievements"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:text="@string/steam_achievements_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="12sp"
+                android:alpha="0.7"
+                android:text="@string/steam_achievements_hint" />
+
+            <!-- What the last sign-in brought (SteamAchievementList); filled by MultiplayerFragment. -->
+            <TextView
+                android:id="@+id/tv_achievements_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btn_my_achievements"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/steam_achievements_show" />
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 </ScrollView>

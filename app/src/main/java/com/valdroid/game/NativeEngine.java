@@ -71,15 +71,24 @@ public final class NativeEngine {
         return prepare(context, instance, null);
     }
 
+    /**
+     * The game's Steam achievements and stats on this phone, kept by the libsteam_api stub
+     * (VALDROID_STEAM_STATS) and sent to the account by SteamStatsSync.
+     */
+    public static File steamStatsFile(GameInstance instance) {
+        return new File(new File(instance.getGamePath(), "native_engine"), "steam_stats.txt");
+    }
+
     /** Where the crossplay sign-in leaves the Steam ticket for the game (read once, then deleted). */
     public static File steamTicketFile(GameInstance instance) {
         return new File(new File(instance.getGamePath(), "native_engine"), "steam_ticket.bin");
     }
 
     /**
-     * As above; {@code steam} is the crossplay sign-in (null = offline as always). The game's Steam stub
-     * then answers with the real SteamID, name and session ticket, and Valheim logs in to PlayFab at
-     * start (ShouldTryAutoLogin). Without it a ticket left from an earlier launch is removed.
+     * As above; {@code steam} is the launch's Steam sign-in (null = offline as always). With a ticket
+     * (crossplay) the game's Steam stub answers with the real SteamID, name and session ticket, and
+     * Valheim logs in to PlayFab at start (ShouldTryAutoLogin). Without one a ticket left from an
+     * earlier launch is removed.
      */
     public static Intent prepare(Context context, GameInstance instance, com.valdroid.SteamTicketLogin.Result steam)
             throws IOException {
@@ -103,7 +112,9 @@ public final class NativeEngine {
         env.add("VALDROID_IL2MONO_PERSISTENT_DATA=" + instance.getUserDataDir().getAbsolutePath());
 
         addMods(context, instance, gameDir, dataDir, env);
-        if (steam != null) {
+        env.add("VALDROID_STEAM_STATS=" + steamStatsFile(instance).getAbsolutePath());
+        boolean crossplay = steam != null && steam.ticketFile != null;
+        if (crossplay) {
             env.add("VALDROID_STEAM_TICKET=" + steam.ticketFile.getAbsolutePath());
             env.add("VALDROID_STEAM_ID=" + Long.toUnsignedString(steam.steamId));
             if (steam.persona != null && !steam.persona.isEmpty()) env.add("VALDROID_STEAM_PERSONA=" + steam.persona);
@@ -111,7 +122,7 @@ public final class NativeEngine {
             steamTicketFile(instance).delete();
         }
         applyGameSettings(context, instance, gameDir);
-        ValheimPrefsSync.setNativeInt(context, "ShouldTryAutoLogin", steam != null ? 1 : 0);
+        ValheimPrefsSync.setNativeInt(context, "ShouldTryAutoLogin", crossplay ? 1 : 0);
         int displayMode = graphicsSettings(context, instance.settings(), env);
         addUserEnvironment(context, instance.settings(), env);
         com.valdroid.LauncherLog.line("native engine environment: " + launchSummary(env));

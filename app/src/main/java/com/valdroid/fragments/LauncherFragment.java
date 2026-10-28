@@ -461,13 +461,13 @@ public class LauncherFragment extends Fragment {
 
     // Native engine (experimental): with Crossplay on, the Steam sign-in comes first (askCrossplaySignIn).
     private void startNativeEngine(GameInstance gi) {
-        if (gi.settings().isCrossplay()) askCrossplaySignIn(gi);
+        if (gi.settings().isCrossplay() || gi.settings().isSteamAchievements()) askCrossplaySignIn(gi);
         else launchNativeEngine(requireContext().getApplicationContext(), gi, null);
     }
 
-    // ---- Crossplay sign-in --------------------------------------------------
+    // ---- Steam sign-in before a launch: crossplay and/or achievements -------------------
 
-    /** Steam login and password (the login filled in from last time), or play without crossplay. */
+    /** Steam login and password (the login filled in from last time), or play without signing in. */
     private void askCrossplaySignIn(GameInstance gi) {
         android.content.Context app = requireContext().getApplicationContext();
         View form = getLayoutInflater().inflate(R.layout.dialog_crossplay_login, null);
@@ -513,7 +513,9 @@ public class LauncherFragment extends Fragment {
                         .create();
         com.valdroid.SteamTicketLogin[] login = new com.valdroid.SteamTicketLogin[1];
         login[0] = new com.valdroid.SteamTicketLogin(user, pass,
-                com.valdroid.game.NativeEngine.steamTicketFile(gi), new com.valdroid.SteamTicketLogin.Listener() {
+                gi.settings().isCrossplay() ? com.valdroid.game.NativeEngine.steamTicketFile(gi) : null,
+                gi.settings().isSteamAchievements() ? com.valdroid.game.NativeEngine.steamStatsFile(gi) : null,
+                new com.valdroid.SteamTicketLogin.Listener() {
             @Override
             public java.util.concurrent.CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
                 java.util.concurrent.CompletableFuture<String> fut = new java.util.concurrent.CompletableFuture<>();
@@ -537,15 +539,30 @@ public class LauncherFragment extends Fragment {
             @Override
             public void onProgress(String step) {
                 int text = "approve".equals(step) ? R.string.crossplay_step_approve
-                        : "ticket".equals(step) ? R.string.crossplay_step_ticket : R.string.crossplay_step_connect;
+                        : "ticket".equals(step) ? R.string.crossplay_step_ticket
+                        : "achievements".equals(step) ? R.string.crossplay_step_achievements : R.string.crossplay_step_connect;
                 mainHandler.post(() -> waiting.setMessage(app.getString(text)));
             }
 
             @Override
             public void onReady(com.valdroid.SteamTicketLogin.Result result) {
                 mainHandler.post(() -> {
-                    waiting.dismiss();
-                    launchNativeEngine(app, gi, result);
+                    // The achievements result stays in the sign-in window for a moment before the game
+                    // starts: a toast went unseen under the starting game.
+                    String note = result.achievementsError != null
+                            ? app.getString(R.string.steam_achievements_failed, result.achievementsError)
+                            : result.achievementsSent > 0
+                            ? app.getString(R.string.steam_achievements_sent, result.achievementsSent) : null;
+                    if (note == null) {
+                        waiting.dismiss();
+                        launchNativeEngine(app, gi, result);
+                        return;
+                    }
+                    waiting.setMessage(note);
+                    mainHandler.postDelayed(() -> {
+                        waiting.dismiss();
+                        launchNativeEngine(app, gi, result);
+                    }, 3000);
                 });
             }
 

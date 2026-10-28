@@ -36,6 +36,10 @@ import in.dragonbra.javasteam.steam.steamclient.callbacks.DisconnectedCallback;
  * and name. Steam drops a session's tickets when it signs off, so the connection stays up for
  * {@link #HOLD_MS} after the launch, long enough for the game to start and PlayFab to check the ticket,
  * and then closes. The ticket itself is never logged.
+ *
+ * The same sign-in also sends the game's Steam achievements when that is on (SteamStatsSync), before
+ * the game starts; without crossplay the session then ends right away. A failed achievements sync
+ * does not stop the launch.
  */
 public class SteamTicketLogin implements Runnable {
     private static final String TAG = "ValDroid/Crossplay";
@@ -43,13 +47,16 @@ public class SteamTicketLogin implements Runnable {
     /** How long the Steam session outlives the ticket: game start (about a minute) plus PlayFab's check. */
     public static final long HOLD_MS = 5 * 60 * 1000L;
 
-    /** What the game gets: its SteamID and name, and the file the ticket is in. */
+    /** What the game gets: its SteamID and name, the file the ticket is in, and the achievements sync. */
     public static final class Result {
         public final long steamId;
         public final String persona;   // null when Steam did not send it in time
-        public final File ticketFile;
-        Result(long steamId, String persona, File ticketFile) {
+        public final File ticketFile;  // null: no crossplay this launch
+        public final int achievementsSent;       // new achievements stored; -1 when not synced
+        public final String achievementsError;   // why the sync failed, or null
+        Result(long steamId, String persona, File ticketFile, int achievementsSent, String achievementsError) {
             this.steamId = steamId; this.persona = persona; this.ticketFile = ticketFile;
+            this.achievementsSent = achievementsSent; this.achievementsError = achievementsError;
         }
     }
 
@@ -58,14 +65,16 @@ public class SteamTicketLogin implements Runnable {
         CompletableFuture<String> requestSteamGuardCode(boolean previousWrong, String email);
         /** A step for the waiting dialog. */
         void onProgress(String message);
-        /** The ticket is written: launch the game. The Steam session stays up for HOLD_MS. */
+        /** Done (the ticket written, achievements sent): launch the game. With a ticket the Steam
+         *  session stays up for HOLD_MS. */
         void onReady(Result result);
         /** Sign-in or ticket failed; nothing was written. */
         void onFailed(String message);
     }
 
     private final String username, password;
-    private final File ticketFile;
+    private final File ticketFile;   // null: no crossplay
+    private final File statsFile;    // null: no achievements sync
     private final Listener listener;
     private SteamClient steamClient;
     private CallbackManager manager;
@@ -76,10 +85,11 @@ public class SteamTicketLogin implements Runnable {
     private volatile String persona;
     private final CountDownLatch accountInfo = new CountDownLatch(1);
 
-    public SteamTicketLogin(String username, String password, File ticketFile, Listener listener) {
+    public SteamTicketLogin(String username, String password, File ticketFile, File statsFile, Listener listener) {
         this.username = username;
         this.password = password;
         this.ticketFile = ticketFile;
+        this.statsFile = statsFile;
         this.listener = listener;
     }
 
@@ -96,6 +106,7 @@ public class SteamTicketLogin implements Runnable {
             // The ticket handler must be there before the logon: the game connect tokens a session
             // ticket is built from arrive with it.
             if (steamClient.getHandler(SteamAuthTicket.class) == null) steamClient.addHandler(new SteamAuthTicket());
+            if (statsFile != null) SteamStatsSync.prepare(steamClient);
             manager = new CallbackManager(steamClient);
             steamUser = steamClient.getHandler(SteamUser.class);
             manager.subscribe(ConnectedCallback.class, cb -> onConnected());
@@ -161,6 +172,23 @@ public class SteamTicketLogin implements Runnable {
     private void ticket() {
         TicketInfo ticket = null;
         try {
+            int sent = -1;
+            String syncError = null;
+            if (statsFile != null) {
+                listener.onProgress("achievements");
+                try {
+                    sent = SteamStatsSync.sync(steamClient, statsFile);
+                } catch (Throwable t) {
+                    Log.w(TAG, "achievements sync failed", t);
+                    syncError = String.valueOf(t.getMessage());
+                }
+            }
+            if (cancelled) return;
+            if (ticketFile == null) {
+                accountInfo.await(5, TimeUnit.SECONDS);
+                listener.onReady(new Result(steamClient.getSteamID().convertToUInt64(), persona, null, sent, syncError));
+                return;
+            }
             listener.onProgress("ticket");
             SteamAuthTicket tickets = steamClient.getHandler(SteamAuthTicket.class);
             ticket = tickets.getAuthSessionTicket(VALHEIM).get(30, TimeUnit.SECONDS);
@@ -173,13 +201,13 @@ public class SteamTicketLogin implements Runnable {
                 ticketFile.delete();
                 return;
             }
-            listener.onReady(new Result(steamId, persona, ticketFile));
+            listener.onReady(new Result(steamId, persona, ticketFile, sent, syncError));
             // Holding the session keeps the ticket valid while the game starts and logs in.
             long until = System.currentTimeMillis() + HOLD_MS;
             while (!cancelled && System.currentTimeMillis() < until) Thread.sleep(1000);
         } catch (Throwable t) {
             Log.e(TAG, "Steam ticket failed", t);
-            ticketFile.delete();
+            if (ticketFile != null) ticketFile.delete();
             fail(String.valueOf(t.getMessage()));
         } finally {
             // Not ticket.close(): that would cancel the ticket at Steam while the game may still use it.

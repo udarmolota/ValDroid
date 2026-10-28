@@ -55,6 +55,7 @@
     <li><a href="#engine">Engine</a></li>
     <li><a href="#renderers">Graphics drivers</a></li>
     <li><a href="#mods">Mods</a></li>
+    <li><a href="#online">Online &amp; achievements</a></li>
     <li><a href="#compat-mode">Advanced settings</a></li>
     <li><a href="#performance">Getting the best performance</a></li>
     <li><a href="#known-issues">Known issues</a></li>
@@ -425,6 +426,43 @@
 
 <hr>
 
+<section id="online">
+    <h2>Online &amp; achievements</h2>
+    <p>
+        Side menu → <b>Online &amp; achievements</b>, then pick the instance at the top. Both need the
+        <a href="#engine">native engine</a>, Valheim bought on Steam, and the <b>Steam Mobile</b> app with
+        <b>Steam Guard</b> on: before the game starts, ValDroid signs in to Steam and you approve it in
+        Steam Mobile. The password is used for that sign-in only and is never saved.
+    </p>
+
+    <h3>Crossplay</h3>
+    <ul>
+        <li>Turn on <b>Crossplay</b>. The game then logs in to Valheim's crossplay by itself and you play
+            online as on a PC.</li>
+        <li><b>Only servers and worlds with crossplay on</b> can be joined: from the server list, by IP or
+            by the 6-digit invite code. A Steam-only server (crossplay off) cannot be reached from the
+            phone; its owner turns crossplay on in the hosting panel or with <code>-crossplay</code>.</li>
+        <li><b>Hosting from the phone:</b> Start → your world → tick <b>Public server</b> and
+            <b>Crossplay</b>, set a password (5 characters or more) and give your friends the invite code
+            shown in the game.</li>
+        <li>No router setup is needed: the connection goes through Microsoft's servers, on Wi-Fi or
+            mobile data alike.</li>
+    </ul>
+
+    <h3>Steam achievements</h3>
+    <ul>
+        <li>The game keeps the achievements you earn on the phone. Turn on <b>Send achievements to
+            Steam</b>, and at each launch the sign-in adds the new ones to your account. They are only
+            ever added, never removed.</li>
+        <li>Without crossplay the sign-in is only for the achievements and ends in a few seconds.</li>
+        <li><b>My achievements</b> shows them all: unlocked (with the date), waiting to be sent, and
+            locked. The list is updated at each sign-in.</li>
+        <li>Steam playtime is not counted yet.</li>
+    </ul>
+</section>
+
+<hr>
+
 <section id="compat-mode">
     <h2>Advanced settings</h2>
     <p>
@@ -475,6 +513,12 @@
 
 <section id="known-issues">
     <h2>Known issues</h2>
+
+    <h3>Hosting: keep the game on screen</h3>
+    <p>
+        While you host a world, keep ValDroid on screen: on the native engine the game pauses as soon as
+        it goes to the background, and your friends get disconnected.
+    </p>
 
     <h3>The resolution list in the game shows 0x0</h3>
     <p>

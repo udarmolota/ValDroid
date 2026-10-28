@@ -390,6 +390,17 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "crossplay", v).apply();
     }
 
+    // Steam achievements (native engine): the game keeps them on the phone (the libsteam_api stub);
+    // with this on, the Steam sign-in before a launch also sends the new ones (SteamStatsSync). Off
+    // by default: it writes to the player's Steam account.
+    public boolean isSteamAchievements() {
+        return p.getBoolean(pfx + "steam_achievements", false);
+    }
+
+    public void setSteamAchievements(boolean v) {
+        p.edit().putBoolean(pfx + "steam_achievements", v).apply();
+    }
+
     // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
     // Power-user / diagnostic knob applied last in GameLauncher, so it can OVERRIDE the box64 defaults.
     // E.g. "BOX64_DYNAREC_ALIGNED_ATOMICS=1" (Mali/Cortex save-corruption test) or
@@ -462,6 +473,7 @@ public class InstanceSettings {
                 .remove(pfx + "native_mono_failures")
                 .remove(pfx + "mod_support")
                 .remove(pfx + "crossplay")
+                .remove(pfx + "steam_achievements")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")
