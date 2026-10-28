@@ -152,12 +152,22 @@ public class MultiplayerFragment extends Fragment {
             return Long.compare(b.time, a.time);
         });
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        int dim = tvAchievements.getCurrentTextColor() & 0xB3FFFFFF;
         CharSequence[] rows = new CharSequence[sorted.size()];
         for (int i = 0; i < rows.length; i++) {
             com.valdroid.SteamAchievementList.Entry e = sorted.get(i);
-            rows[i] = e.unlocked ? "✅ " + e.name + (e.time > 0 ? "  ·  " + df.format(new java.util.Date(e.time * 1000)) : "")
-                    : e.pending ? "⏳ " + e.name + "  ·  " + getString(R.string.steam_achievements_waiting)
-                    : "○ " + e.name;
+            String note = e.unlocked ? (e.time > 0 ? df.format(new java.util.Date(e.time * 1000)) : null)
+                    : e.pending ? getString(R.string.steam_achievements_waiting) : null;
+            android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder(
+                    (e.unlocked ? "✅ " : e.pending ? "⏳ " : "○ ") + e.name);
+            if (note != null) {
+                // The date or "waiting" on its own line, smaller and dimmer, as on the summary.
+                int start = sb.length();
+                sb.append("\n     ").append(note);
+                sb.setSpan(new android.text.style.AbsoluteSizeSpan(12, true), start, sb.length(), 0);
+                sb.setSpan(new android.text.style.ForegroundColorSpan(dim), start, sb.length(), 0);
+            }
+            rows[i] = sb;
         }
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.steam_achievements_title) + "  " + l.unlocked + " / " + l.entries.size())
