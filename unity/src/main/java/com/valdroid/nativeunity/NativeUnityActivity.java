@@ -34,7 +34,9 @@ public class NativeUnityActivity extends Activity
         super.onCreate(savedInstanceState);
         // Before the player loads libmain/libunity/il2mono: il2mono reads its paths from the environment.
         applyEnvironment(getIntent().getStringArrayExtra(EXTRA_ENV));
-        if (System.getenv("VALDROID_STEAM_TICKET") != null) loadParty();
+        // Always, crossplay or not: hosting a crossplay world without the sign-in still makes the game
+        // load Party, and Party without its Context aborts the process (it then just fails to log in).
+        loadParty();
         backgroundText = getIntent().getStringExtra(EXTRA_BACKGROUND_TEXT);
         // The player reads its command line from the "unity" extra.
         getIntent().putExtra("unity", getIntent().getStringExtra("unity"));

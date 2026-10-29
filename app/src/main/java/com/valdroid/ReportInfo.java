@@ -42,7 +42,8 @@ public final class ReportInfo {
     /** sun_path is 108 bytes including the terminating NUL. */
     public static final int SUN_PATH_MAX = 107;
 
-    private static final Pattern GAME_VERSION = Pattern.compile("\\bl-\\d+\\.\\d+\\.\\d+");
+    // With the network version when the line has it: that is what multiplayer compares.
+    private static final Pattern GAME_VERSION = Pattern.compile("\\bl-\\d+\\.\\d+\\.\\d+(?: \\(network version \\d+\\))?");
 
     private ReportInfo() {}
 
@@ -277,13 +278,20 @@ public final class ReportInfo {
     /**
      * Valheim's build string ("l-1.0.15") as Unity's Player.log prints it near the top of a run.
      * The previous run's log is the fallback: Unity replaces Player.log at the start of each run,
-     * so a run that died early may have left a log without the version line.
+     * so a run that died early may have left a log without the version line. The native engine
+     * writes no Player.log: there the line is in its own log (NativeLog), in the game folder.
      */
     static String gameVersion(GameInstance gi) {
         File dir = gi.getUserDataDir();
+        File game = new File(gi.getGamePath());
         boolean anyLog = false;
-        for (String name : new String[] { "Player.log", "Player-prev.log" }) {
-            File f = new File(dir, name);
+        File[] logs = {
+                new File(dir, "Player.log"), new File(dir, "Player-prev.log"),
+                new File(game, com.valdroid.game.NativeLog.FILE), new File(game, com.valdroid.game.NativeLog.PREV) };
+        // Newest first: an old box64 Player.log must not speak for a game updated since.
+        java.util.Arrays.sort(logs, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        for (File f : logs) {
+            String name = f.getName();
             anyLog |= f.isFile();
             // The line comes after Unity's start-up output (hundreds of "BC7 ... decompressing"
             // warnings on GLES), ~700-900 lines in on real reports — a 300-line window always
@@ -291,7 +299,7 @@ public final class ReportInfo {
             String v = grepFirst(f, GAME_VERSION, 20000);
             if (v != null) return v + " (from " + name + ")";
         }
-        return anyLog ? "unknown (no version line in Player.log)" : "unknown (no Player.log yet)";
+        return anyLog ? "unknown (no version line in the game's log)" : "unknown (no game log yet)";
     }
 
     /** box64's own banner line ("Box64 arm64 v0.x.y <hash> with Dynarec built on ...") from its log. */
