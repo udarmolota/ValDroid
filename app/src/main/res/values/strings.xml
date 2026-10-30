@@ -155,8 +155,8 @@ In the cloud: %2$s
     <string name="launcher_empty_quick_start">Quick start</string>
     <string name="launcher_empty_steam">Download from Steam</string>
     <string name="launcher_empty_guide">To start playing, create an instance — an installed copy of Valheim. Add your game files with the + at the top, or download the game straight from Steam with the button below: the instance is then created by itself.</string>
-    <!-- "What's new" dialog, shown once per version (LauncherFragment.maybeShowReleaseNotes). English
-         only, like the release notes it is cut from. Read with getText, so <b>/<i> are kept; keep it on
+    <!-- "What's new" dialog, shown once per version (LauncherFragment.maybeShowReleaseNotes), in all
+         four languages, cut from the release notes. Read with getText, so <b>/<i> are kept; keep it on
          one line, because a line break inside a string resource turns into a leading space. -->
     <string name="news_title">Valheim news</string>
     <string name="release_notes_title" translatable="false">What\'s new in v%1$s</string>
@@ -335,7 +335,7 @@ In the cloud: %2$s
     <string name="hud_scale_label">In-game interface size</string>
     <string name="hud_scale_default">As in the game</string>
     <string name="hud_scale_hint">Makes the bars, hotbar, minimap, messages, chat and texts bigger than the game\u2019s own interface scale allows (Settings \u2192 Accessibility, up to 115%). Menus and inventory keep the game\u2019s size. Takes effect at the next launch.</string>
-    <string name="release_notes_body" translatable="false"><b>– Native engine</b>\nNothing is emulated: faster loading, higher FPS, much less battery. New instances start on it; switch in Settings → Engine.\n\n<b>– Works on Mali</b>\nIf the picture freezes on the logo or in the menu, set Vulkan compatibility (card Engine) to On.\n\n<b>– Minimal graphics profile</b>\nFor weak GPUs. Most FPS: Minimal on the native engine, Very low on box64.\n\n<b>– Icon packs</b>\nPictures for all on-screen buttons at once: two built-in packs and your own zips. Drawer → Icon packs.\n\n<b>– Physical keyboard</b>\nHides the on-screen controls while it is plugged in.\n\n<b>– Touchpad mode for camera buttons</b>\nA camera button can work like a touchpad instead of a stick.\n\n<b>– Import / export</b>\nControls, saves and settings: one screen each, in the drawer.\n\n<b>– Taps</b>\nA tap counts however long you held it; only a moving finger moves the cursor.\n\n<b>– Multiplayer</b>\nNot supported yet, but it\'s planned.</string>
+    <string name="release_notes_body" translatable="false"><b>– Crossplay multiplayer</b>\nPlay online with players on Steam and Xbox on the native engine: drawer → Online &amp; achievements. Needs Steam Mobile with Steam Guard and the same game version as the server, so update the game first.\n\n<b>– Hosting from the phone</b>\nExperimental. Keep the game on screen while you host.\n\n<b>– Steam achievements</b>\nNew ones go to your account at each launch. See them in My achievements.\n\n<b>– Faster game download</b>\nUpdates fetch only the files that changed.\n\n<b>– Valheim news</b>\nThe latest posts on the home screen.\n\n<b>– In-game interface size</b>\nA bigger HUD and chat on the native engine.\n\n<b>– Mods</b>\nAuthor shown, enable or disable all, export to a zip.\n\n<b>– Physical mouse and soft keyboards</b>\nNow work on the native engine.\n\n<b>– Full emulation removed</b>\nThe native engine does it better.</string>
     <string name="instance_downloading">downloading, wait until it finishes</string>
     <string name="instance_incomplete">not finished</string>
     <string name="instance_incomplete_hint">The download stopped before it finished. Open side menu → %1$s and download again with the same instance name — it continues where it stopped.</string>
