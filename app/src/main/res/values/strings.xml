@@ -7,6 +7,7 @@
     <string name="no_instances">No instances installed</string>
     <string name="choose_instance_prompt">— Choose an instance —</string>
     <string name="choose_instance_first">Choose an instance to install into</string>
+    <string name="choose_instance_needed">Choose an instance first</string>
     <string name="incomplete_game_title">Incomplete game files</string>
     <string name="incomplete_game_msg">This instance can\'t start — these game files are missing or incomplete:\n\n%1$s\n\nThis usually means a download didn\'t finish. Download the game again using the SAME instance name and it will continue where it stopped.</string>
     <string name="delete_instance">Delete instance</string>

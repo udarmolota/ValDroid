@@ -477,7 +477,7 @@ public class LauncherFragment extends Fragment {
         etUser.setText(lastLogin);
         if (!lastLogin.isEmpty()) etPass.requestFocus();
         androidx.appcompat.app.AlertDialog dialog =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_ValDroid_Dialog_Buttons)
                         .setTitle(R.string.crossplay_signin_title)
                         .setView(form)
                         .setPositiveButton(R.string.crossplay_signin_go, null)
@@ -506,7 +506,7 @@ public class LauncherFragment extends Fragment {
     private void runCrossplaySignIn(GameInstance gi, String user, String pass) {
         android.content.Context app = requireContext().getApplicationContext();
         androidx.appcompat.app.AlertDialog waiting =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_ValDroid_Dialog_Buttons)
                         .setTitle(R.string.crossplay_signin_title)
                         .setMessage(R.string.crossplay_step_connect)
                         .setCancelable(false)
@@ -526,7 +526,7 @@ public class LauncherFragment extends Fragment {
                                              : getString(R.string.cloud_saves_code));
                     et.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                             | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_ValDroid_Dialog_Buttons)
                             .setTitle(prevWrong ? R.string.cloud_saves_code_wrong : R.string.cloud_saves_code_title)
                             .setView(et)
                             .setCancelable(false)
@@ -571,7 +571,7 @@ public class LauncherFragment extends Fragment {
                 mainHandler.post(() -> {
                     waiting.dismiss();
                     if (!isAdded()) return;
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_ValDroid_Dialog_Buttons)
                             .setMessage(getString(R.string.crossplay_failed, message))
                             .setPositiveButton(R.string.crossplay_play_offline, (d, w) -> launchNativeEngine(app, gi, null))
                             .setNegativeButton(android.R.string.cancel, null)

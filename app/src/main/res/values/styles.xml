@@ -62,6 +62,33 @@
         <item name="materialAlertDialogTitleTextStyle">@style/ValDroid.Dialog.Title</item>
     </style>
 
+    <!-- The Steam sign-in windows: real buttons instead of text links, the main action filled. -->
+    <style name="ThemeOverlay.ValDroid.Dialog.Buttons">
+        <item name="buttonBarPositiveButtonStyle">@style/ValDroid.Dialog.Button.Filled</item>
+        <item name="buttonBarNegativeButtonStyle">@style/ValDroid.Dialog.Button.Outlined</item>
+        <item name="buttonBarNeutralButtonStyle">@style/ValDroid.Dialog.Button.Outlined</item>
+    </style>
+
+    <style name="ValDroid.Dialog.Button.Filled" parent="Widget.Material3.Button">
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="ValDroid.Dialog.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
     <style name="ValDroid.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
         <item name="android:textColor">?attr/colorPrimary</item>
     </style>

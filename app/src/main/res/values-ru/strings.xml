@@ -6,6 +6,7 @@
     <string name="no_instances">Нет установленных инстансов</string>
     <string name="choose_instance_prompt">— Выберите инстанс —</string>
     <string name="choose_instance_first">Выберите инстанс для установки</string>
+    <string name="choose_instance_needed">Сначала выберите инстанс</string>
     <string name="incomplete_game_title">Файлы игры неполные</string>
     <string name="incomplete_game_msg">Этот инстанс не запустится — эти файлы игры отсутствуют или повреждены:\n\n%1$s\n\nОбычно это значит, что загрузка не завершилась. Скачайте игру заново с ТЕМ ЖЕ именем инстанса — загрузка продолжится с места остановки.</string>
     <string name="delete_instance">Удалить инстанс</string>

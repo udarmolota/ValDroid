@@ -85,18 +85,21 @@ public class DataTransferFragment extends Fragment {
         instances.clear();
         instances.addAll(GameInstanceManager.requireSingleton().getInstances());
         List<String> names = new ArrayList<>();
-        if (instances.isEmpty()) names.add(getString(R.string.no_instances));
+        // Position 0 is a prompt: with several instances a pre-selected one could move data in or out
+        // of the wrong game without the spinner ever being touched. A single one is selected up front.
+        names.add(getString(instances.isEmpty() ? R.string.no_instances : R.string.choose_instance_prompt));
         for (GameInstance gi : instances) names.add(gi.getName());
         ArrayAdapter<String> a = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, names);
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spInstance.setAdapter(a);
+        if (instances.size() == 1) spInstance.setSelection(1);
 
         v.findViewById(R.id.btn_transfer_import).setOnClickListener(b -> {
-            if (current() == null) return;
+            if (requireChosen() == null) return;
             pickImport.launch(new String[]{"application/zip", "application/x-zip-compressed", "application/octet-stream"});
         });
         v.findViewById(R.id.btn_transfer_export).setOnClickListener(b -> {
-            GameInstance gi = current();
+            GameInstance gi = requireChosen();
             if (gi == null) return;
             exportFor = gi;
             pickExport.launch("valdroid_" + kind + "_" + gi.getName().replaceAll("[^A-Za-z0-9._-]", "_") + "_"
@@ -108,7 +111,17 @@ public class DataTransferFragment extends Fragment {
     @Nullable
     private GameInstance current() {
         int i = spInstance.getSelectedItemPosition();
-        return (i >= 0 && i < instances.size()) ? instances.get(i) : null;
+        return (i >= 1 && i <= instances.size()) ? instances.get(i - 1) : null;
+    }
+
+    /** The chosen instance; with none chosen says so, for the buttons. */
+    @Nullable
+    private GameInstance requireChosen() {
+        GameInstance gi = current();
+        if (gi == null && !instances.isEmpty())
+            android.widget.Toast.makeText(requireContext(), R.string.choose_instance_needed,
+                    android.widget.Toast.LENGTH_SHORT).show();
+        return gi;
     }
 
     /** Importing overwrites files of the same names: asked first, a stray tap must not do it. */

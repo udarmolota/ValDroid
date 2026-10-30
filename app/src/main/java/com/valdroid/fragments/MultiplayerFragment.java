@@ -13,7 +13,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.valdroid.LauncherPreferences;
 import com.valdroid.R;
 import com.valdroid.game.GameInstance;
 import com.valdroid.game.GameInstanceManager;
@@ -22,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Multiplayer for one instance, from the drawer: the instance is picked at the top (the last one
- * played to start with), Crossplay and Steam achievements switched on or off for it. With either on,
+ * Multiplayer for one instance, from the drawer: the instance is picked at the top (by hand when
+ * there are several), Crossplay and Steam achievements switched on or off for it. With either on,
  * every native launch signs in to Steam first: crossplay hands the game a ticket for its PlayFab
  * login, achievements sends the new ones to the account (SteamTicketLogin, SteamStatsSync). Both need
  * the native engine; for another engine the switches are greyed out with a note.
@@ -57,17 +56,14 @@ public class MultiplayerFragment extends Fragment {
         instances.clear();
         instances.addAll(GameInstanceManager.requireSingleton().getInstances());
         List<String> names = new ArrayList<>();
-        if (instances.isEmpty()) names.add(getString(R.string.no_instances));
-        String last = LauncherPreferences.requireSingleton().getLastInstanceName();
-        int selected = 0;
-        for (int i = 0; i < instances.size(); i++) {
-            names.add(instances.get(i).getName());
-            if (instances.get(i).getName().equals(last)) selected = i;
-        }
+        // Position 0 is a prompt: with several instances a pre-selected one would switch these on for
+        // the wrong game without the spinner ever being touched. A single one is selected up front.
+        names.add(getString(instances.isEmpty() ? R.string.no_instances : R.string.choose_instance_prompt));
+        for (GameInstance gi : instances) names.add(gi.getName());
         ArrayAdapter<String> a = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, names);
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spInstance.setAdapter(a);
-        spInstance.setSelection(selected);
+        if (instances.size() == 1) spInstance.setSelection(1);
         spInstance.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> p, View view, int pos, long id) { refresh(); }
             @Override public void onNothingSelected(AdapterView<?> p) {}
@@ -88,7 +84,7 @@ public class MultiplayerFragment extends Fragment {
     @Nullable
     private GameInstance current() {
         int i = spInstance == null ? -1 : spInstance.getSelectedItemPosition();
-        return (i >= 0 && i < instances.size()) ? instances.get(i) : null;
+        return (i >= 1 && i <= instances.size()) ? instances.get(i - 1) : null;
     }
 
     private void refresh() {

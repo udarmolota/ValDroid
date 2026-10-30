@@ -9,6 +9,7 @@
     <string name="no_instances">No hay instancias instaladas</string>
     <string name="choose_instance_prompt">— Elige una instancia —</string>
     <string name="choose_instance_first">Elige la instancia donde instalar</string>
+    <string name="choose_instance_needed">Primero elige una instancia</string>
     <string name="incomplete_game_title">Archivos del juego incompletos</string>
     <string name="incomplete_game_msg">Esta instancia no puede iniciar: faltan estos archivos del juego o están incompletos:\n\n%1$s\n\nNormalmente significa que una descarga no terminó. Descarga el juego otra vez usando el MISMO nombre de instancia y continuará donde se detuvo.</string>
     <string name="delete_instance">Eliminar instancia</string>
