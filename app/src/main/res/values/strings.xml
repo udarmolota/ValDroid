@@ -20,7 +20,7 @@
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="upload_custom_driver">Upload your custom driver</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
-    <string name="reverse_landscape_label">Mirror the picture (180°)</string>
+    <string name="reverse_landscape_label">Rotate screen 180°</string>
     <string name="nav_cloud_saves">Steam Cloud saves</string>
     <string name="cloud_saves_title">Steam Cloud saves</string>
     <string name="cloud_saves_hint">If you also play Valheim on a PC through Steam, your saves are synced to Steam Cloud — this pulls them onto the phone.\n\nSigning in is confirmed through the Steam Mobile app: you must have signed into it at least once and turned Steam Guard on there. When you tap the button, Steam sends an approval request to that app. The password goes straight to Steam and is never stored here.</string>
