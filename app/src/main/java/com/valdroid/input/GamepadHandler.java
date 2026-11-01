@@ -229,7 +229,7 @@ public class GamepadHandler {
     }
 
     public boolean onKey(KeyEvent e) {
-        if (!isFromGamepad(e.getSource())) return false;
+        if (!isFromGamepad(e.getSource()) || isTypingKey(e)) return false;
         if (e.getRepeatCount() > 0) return true;   // ignore auto-repeat; hold is managed by raw state
         if (PASSTHROUGH) return passthroughKey(e);
         final boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
@@ -592,6 +592,16 @@ public class GamepadHandler {
         if (a < DEADZONE) return 0f;
         float n = (a - DEADZONE) / (1f - DEADZONE);   // 0..1 past the deadzone
         return Math.signum(v) * n * n;
+    }
+
+    /**
+     * A key of a real keyboard. A keyboard with arrow keys reports the DPAD source too, on every key,
+     * which alone reads as a gamepad and would swallow its typing.
+     */
+    private static boolean isTypingKey(KeyEvent e) {
+        InputDevice d = e.getDevice();
+        return d != null && d.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                && !KeyEvent.isGamepadButton(e.getKeyCode());
     }
 
     private static boolean isFromGamepad(int source) {
