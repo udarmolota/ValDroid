@@ -94,6 +94,41 @@ public final class ValheimPrefsSync {
         }
     }
 
+    /**
+     * The Android player's int settings when they are newer than this instance's Linux prefs, else
+     * null. For reading what the game runs with: only a launch copies them over, so after a native
+     * session the Linux file is behind. Read only, and the caller's to use for the instance last
+     * played: there is one Android file for all instances.
+     */
+    public static Map<String, Integer> newerNativeInts(Context context, File instanceDir) {
+        File f = androidFile(context), linux = linuxFile(instanceDir);
+        if (!f.isFile() || (linux.isFile() && linux.lastModified() >= f.lastModified())) return null;
+        try {
+            Map<String, Integer> out = new LinkedHashMap<>();
+            for (Map.Entry<String, Pref> e : readAndroid(f).entrySet())
+                if ("int".equals(e.getValue().type)) out.put(e.getKey(), Integer.parseInt(e.getValue().value));
+            return out;
+        } catch (Exception e) {
+            Log.w(TAG, "native settings not read", e);
+            return null;
+        }
+    }
+
+    /** The Android player's numbers as text, for a report: strings (names, addresses) stay out. */
+    public static String nativeNumbersText(Context context) {
+        File f = androidFile(context);
+        if (!f.isFile()) return null;
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, Pref> e : readAndroid(f).entrySet())
+                if (!"string".equals(e.getValue().type))
+                    sb.append(e.getKey()).append(" = ").append(e.getValue().value).append('\n');
+            return sb.toString();
+        } catch (Exception e) {
+            return "unreadable: " + e;
+        }
+    }
+
     private static void sync(File src, File dst, boolean toAndroid) {
         try {
             if (!src.isFile()) return;

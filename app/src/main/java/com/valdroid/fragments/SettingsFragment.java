@@ -606,9 +606,17 @@ public class SettingsFragment extends Fragment {
         if (btnGfxUltra == null || inst == null) return;
         final InstanceSettings s = inst;
         final java.io.File dir = com.valdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
+        final android.content.Context app = requireContext().getApplicationContext();
+        final boolean lastPlayed = instanceName.equals(
+                com.valdroid.LauncherPreferences.requireSingleton().getLastInstanceName());
         new Thread(() -> {
             int pending = s.getGraphicsPending();
+            // The native engine keeps the game's settings in its own file: what the player changed
+            // in game there is not in the one the box64 engine uses until a launch copies it.
+            java.util.Map<String, Integer> nativeNow = (pending == InstanceSettings.GFX_KEEP && lastPlayed)
+                    ? com.valdroid.game.ValheimPrefsSync.newerNativeInts(app, dir) : null;
             final int current = (pending != InstanceSettings.GFX_KEEP) ? pending
+                    : nativeNow != null ? com.valdroid.ValheimInstanceSetup.detectGraphicsPreset(nativeNow)
                     : com.valdroid.ValheimInstanceSetup.detectGraphicsPreset(dir);
             android.app.Activity a = getActivity();
             if (a == null) return;

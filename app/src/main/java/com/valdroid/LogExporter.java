@@ -110,6 +110,16 @@ public final class LogExporter {
                 // The game's own settings: graphics preset, resolution, VSync, FPS limit, tessellation…
                 put(candidates, "prefs-game.xml", new File(userDir, "prefs"));
                 put(candidates, "prefs-unknown.xml", new File(gamePath, "unity3d/unknown/unknown/prefs"));
+                // The native engine's settings live in the app's shared_prefs; its numbers only.
+                String nativePrefs = com.valdroid.game.ValheimPrefsSync.nativeNumbersText(ctx);
+                if (nativePrefs != null) {
+                    File nativeCopy = new File(ctx.getCacheDir(), "prefs-native.txt");
+                    try {
+                        java.nio.file.Files.write(nativeCopy.toPath(),
+                                nativePrefs.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        put(candidates, "prefs-native.txt", nativeCopy);
+                    } catch (java.io.IOException ignored) { }
+                }
                 // Native engine: the game process's own logcat (game.NativeLog) for this run and the
                 // one before, and what BepInEx says about the mods (its log, and the preloader's
                 // crash log when it failed to start).

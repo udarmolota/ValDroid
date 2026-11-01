@@ -240,6 +240,11 @@ public final class ValheimInstanceSetup {
             Log.w(TAG, "graphics preset detect: " + e);
             return GFX_KEEP_RESULT;
         }
+        return detectGraphicsPreset(have);
+    }
+
+    /** The same for settings already read (the native engine's, see ValheimPrefsSync). */
+    public static int detectGraphicsPreset(java.util.Map<String, Integer> have) {
         if (profileMatches(have, GFX_MINIMAL)) return com.valdroid.InstanceSettings.GFX_MINIMAL;
         if (profileMatches(have, GFX_ULTRA)) return com.valdroid.InstanceSettings.GFX_ULTRA;
         if (profileMatches(have, GFX_LOW))   return com.valdroid.InstanceSettings.GFX_LOW;
