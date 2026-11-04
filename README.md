@@ -24,6 +24,26 @@ emulation. The box64 engine that ValDroid started with is still there as a fallb
 > has been seen yet, and the native engine is still marked experimental in the app. Back up your
 > saves before you play (the drawer has **Import / export saves** for that).
 
+## Download only from GitHub
+
+> [!CAUTION]
+> ValDroid has appeared on pirate APK sites, repacked together with the game. In a repack the code
+> can be changed: nobody told me about it, and I don't know how or into what it was changed. This
+> matters most for your **Steam login**, which ValDroid asks for crossplay, achievements and the
+> Steam download. The real app uses it only to sign in to Steam and never stores it.
+> Repacked launchers are not supported.
+
+Get ValDroid only from the [Releases page](https://github.com/udarmolota/ValDroid/releases). Since
+0.1.4 it is signed with my own key. Certificate fingerprint (SHA-256):
+
+```
+F8:5A:43:7A:50:90:FB:84:B9:EB:2A:4C:BF:F5:AB:C0:7E:4D:3B:A2:D5:C4:BE:02:59:63:6F:3A:62:4E:D2:C6
+```
+
+You can check it in apps like MT Manager or App Manager. The real ValDroid also installs over itself
+as an update: if Android refuses to update your copy with the one from GitHub, your copy is not the
+original.
+
 ## Features
 
 - ✔️ **Native engine**: the Unity Android player runs the game and the game's own C# code runs on an
