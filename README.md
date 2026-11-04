@@ -1,7 +1,7 @@
 # ValDroid
 
 **ValDroid** is an unofficial, community-developed launcher that runs
-[Valheim](https://www.valheimgame.com) on ARM64 Android phones and tablets, with touch controls,
+[Valheim](https://www.valheimgame.com) on mobile: Android phones and tablets, with touch controls,
 gamepad support and mods. Since 0.1.3 the game runs **natively**: Unity's own Android engine, no
 emulation. The box64 engine that ValDroid started with is still there as a fallback.
 
