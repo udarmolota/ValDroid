@@ -45,34 +45,26 @@
         android:label="@string/nav_mods" />
 
     <fragment
+        android:id="@+id/thunderstore_fragment"
+        android:name="com.valdroid.fragments.ThunderstoreFragment"
+        android:label="@string/ts_menu" />
+
+    <fragment
         android:id="@+id/driver_fragment"
         android:name="com.valdroid.fragments.DriverImportFragment"
         android:label="@string/nav_custom_driver" />
 
+    <!-- Every import and export, one screen (as in Zomdroid and RimDroid); in the bottom bar. -->
     <fragment
-        android:id="@+id/saves_transfer_fragment"
-        android:name="com.valdroid.fragments.DataTransferFragment"
-        android:label="@string/nav_saves_transfer">
-        <argument
-            android:name="kind"
-            app:argType="string"
-            android:defaultValue="saves" />
-    </fragment>
+        android:id="@+id/transfer_fragment"
+        android:name="com.valdroid.fragments.TransferFragment"
+        android:label="@string/transfer_title" />
 
+    <!-- The author's other launchers (as in Zomdroid and RimDroid); in the bottom bar. -->
     <fragment
-        android:id="@+id/settings_transfer_fragment"
-        android:name="com.valdroid.fragments.DataTransferFragment"
-        android:label="@string/nav_settings_transfer">
-        <argument
-            android:name="kind"
-            app:argType="string"
-            android:defaultValue="settings" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/controls_transfer_fragment"
-        android:name="com.valdroid.fragments.ControlsTransferFragment"
-        android:label="@string/nav_controls_transfer" />
+        android:id="@+id/projects_fragment"
+        android:name="com.valdroid.fragments.ProjectsFragment"
+        android:label="@string/projects_title" />
 
     <fragment
         android:id="@+id/multiplayer_fragment"
@@ -115,17 +107,14 @@
     <action android:id="@+id/action_open_mods"
         app:destination="@id/mods_fragment" />
 
+    <action android:id="@+id/action_open_thunderstore"
+        app:destination="@id/thunderstore_fragment" />
+
     <action android:id="@+id/action_open_custom_driver"
         app:destination="@id/driver_fragment" />
 
-    <action android:id="@+id/action_open_saves_transfer"
-        app:destination="@id/saves_transfer_fragment" />
-
-    <action android:id="@+id/action_open_settings_transfer"
-        app:destination="@id/settings_transfer_fragment" />
-
-    <action android:id="@+id/action_open_controls_transfer"
-        app:destination="@id/controls_transfer_fragment" />
+    <action android:id="@+id/action_open_transfer"
+        app:destination="@id/transfer_fragment" />
 
     <action android:id="@+id/action_open_multiplayer"
         app:destination="@id/multiplayer_fragment" />

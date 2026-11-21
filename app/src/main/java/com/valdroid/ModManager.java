@@ -202,7 +202,8 @@ public final class ModManager {
      *   <li>{@code BepInEx/patchers/…}, {@code patchers/…} → {@code BepInEx/patchers/<mod>/…};</li>
      *   <li>{@code BepInEx/config/…}, {@code config/…} → {@code BepInEx/config/…}, never over an existing file;</li>
      *   <li>{@code BepInEx/core/…} → skipped (ours is bundled); other {@code BepInEx/…} → as is;</li>
-     *   <li>any other folder (e.g. {@code valheim_Data/…}) → the game folder, replaced files backed up;</li>
+     *   <li>a folder the game has (e.g. {@code valheim_Data/…}) → the game folder, replaced files backed up;</li>
+     *   <li>any other folder (e.g. {@code OdinShip/OdinShip.dll}) → {@code BepInEx/plugins/<mod>/…}, as r2modman;</li>
      *   <li>native Windows DLLs anywhere → skipped (a .NET assembly also ends in .dll and is kept).</li>
      * </ul>
      */
@@ -303,11 +304,18 @@ public final class ModManager {
                 } else if (first.equals("config")) {
                     out = new File(new File(root, "config"), rest);
                     if (out.exists()) continue;
-                } else {
-                    // A game folder such as valheim_Data/Managed: back up what is there first.
+                } else if (gameFolder(gameDir, path.substring(0, slash)) != null) {
+                    // A game folder such as valheim_Data/Managed: back up what is there first. The
+                    // folder's own spelling, so Valheim_Data/ in a zip lands in valheim_Data/.
+                    path = gameFolder(gameDir, path.substring(0, slash)) + path.substring(slash);
                     out = new File(gameDir, path);
                     if (out.isFile()) backupGameFile(gameDir, modName, path, out);
                     gameFiles.add(path);
+                } else {
+                    // Any other folder belongs to the mod, as r2modman lays it out: OdinShip 0.8.7
+                    // ships OdinShip/OdinShip.dll at the top, which went next to the game and never
+                    // loaded (2026-11-11). BepInEx looks for plugins in subfolders too.
+                    out = new File(modDir, path);
                 }
                 mkdirs(out.getParentFile());
                 try (OutputStream os = new FileOutputStream(out)) { os.write(body); }
@@ -375,6 +383,89 @@ public final class ModManager {
         return count;
     }
 
+    // ---- copying to another instance ------------------------------------------------------------
+
+    /** What {@link #copyMods} did, by mod name. */
+    public static final class CopyResult {
+        public final List<String> copied = new ArrayList<>();
+        public final List<String> alreadyThere = new ArrayList<>();
+        public final List<String> failed = new ArrayList<>();
+    }
+
+    public interface CopyProgress {
+        void onMod(String name, int index, int total);
+    }
+
+    /**
+     * Copies mods of one instance into another, as Zomdroid does. A mod is not one folder here
+     * (plugins, patchers, game files it replaced), so each goes the export way: into a zip in
+     * {@code tmpDir}, then installed from it, which also backs up the target's own game files. A mod
+     * the target already has (same name) is left as it is there. A mod that is off stays off. Config
+     * files the target does not have yet are copied too, so the mods keep their settings; the
+     * target's own configs are never overwritten. Not on the main thread.
+     */
+    public static CopyResult copyMods(Context ctx, File fromGame, List<Mod> mods, File toGame, File tmpDir,
+                                      CopyProgress progress) {
+        CopyResult result = new CopyResult();
+        java.util.Set<String> present = new java.util.HashSet<>();
+        for (Mod m : list(toGame)) present.add(m.name.toLowerCase(Locale.ROOT));
+        mkdirs(tmpDir);
+        for (int i = 0; i < mods.size(); i++) {
+            Mod m = mods.get(i);
+            if (progress != null) progress.onMod(m.name, i + 1, mods.size());
+            if (present.contains(m.name.toLowerCase(Locale.ROOT))) {
+                result.alreadyThere.add(m.name);
+                continue;
+            }
+            File zip = new File(tmpDir, "copy_" + i + ".zip");
+            try {
+                try (OutputStream out = new FileOutputStream(zip)) {
+                    exportZip(fromGame, Collections.singletonList(m), out);
+                }
+                String installed = install(ctx, Uri.fromFile(zip), toGame, m.name);
+                if (!m.enabled) {
+                    for (Mod t : list(toGame)) {
+                        if (t.enabled && t.location.getName().equals(installed)) { setEnabled(toGame, t, false); break; }
+                    }
+                }
+                present.add(m.name.toLowerCase(Locale.ROOT));
+                result.copied.add(m.name);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not copy " + m.name, e);
+                result.failed.add(m.name);
+            } finally {
+                //noinspection ResultOfMethodCallIgnored
+                zip.delete();
+            }
+        }
+        if (!result.copied.isEmpty()) {
+            try {
+                copyMissing(new File(bepinexDir(fromGame), "config"), new File(bepinexDir(toGame), "config"));
+            } catch (IOException e) {
+                Log.w(TAG, "Could not copy the configs", e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Files under {@code from} that {@code to} lacks, copied over; nothing existing is touched.
+     * BepInEx.cfg is the target's own BepInEx setup, never copied.
+     */
+    private static void copyMissing(File from, File to) throws IOException {
+        File[] kids = from.listFiles();
+        if (kids == null) return;
+        for (File k : kids) {
+            File out = new File(to, k.getName());
+            if (k.isDirectory()) {
+                copyMissing(k, out);
+            } else if (k.isFile() && !out.exists() && !k.getName().equalsIgnoreCase("BepInEx.cfg")) {
+                mkdirs(to);
+                try (InputStream in = new FileInputStream(k)) { copy(in, out); }
+            }
+        }
+    }
+
     /** Every file under {@code dir}, at {@code prefix}; the mod folder's own bookkeeping left out. */
     private static void addTree(java.util.zip.ZipOutputStream zip, File dir, String prefix, boolean modFolder) throws IOException {
         File[] kids = dir.listFiles();
@@ -402,6 +493,22 @@ public final class ModManager {
         zip.putNextEntry(new ZipEntry(name));
         zip.write(body);
         zip.closeEntry();
+    }
+
+    /**
+     * The game's own folder a top folder of a mod zip names (valheim_Data and the like, case ignored),
+     * spelled as on disk; its files go into the game, replaced ones backed up. Null for anything else,
+     * which is the mod's own folder.
+     */
+    @androidx.annotation.Nullable
+    private static String gameFolder(File gameDir, String top) {
+        File[] kids = gameDir.listFiles();
+        if (kids == null) return null;
+        for (File k : kids) {
+            if (k.isDirectory() && k.getName().equalsIgnoreCase(top)
+                    && !k.getName().equalsIgnoreCase("BepInEx")) return k.getName();
+        }
+        return null;
     }
 
     // ---- game file backups ---------------------------------------------------------------------

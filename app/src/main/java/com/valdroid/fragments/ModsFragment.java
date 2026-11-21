@@ -116,6 +116,7 @@ public class ModsFragment extends Fragment {
         btnEnableAll.setOnClickListener(x -> confirmSetAll(true));
         btnDisableAll.setOnClickListener(x -> confirmSetAll(false));
         btnExport.setOnClickListener(x -> pickModsToExport());
+        v.findViewById(R.id.btn_mods_copy).setOnClickListener(x -> pickModsToCopy());
         refresh();
     }
 
@@ -246,10 +247,21 @@ public class ModsFragment extends Fragment {
 
     // ---- export ----
 
-    /** Which mods go into the zip: all ticked to start with; "All" ticks them again. */
+    /** Which mods go into the zip. */
     private void pickModsToExport() {
         GameInstance gi = current();
         if (gi == null) return;
+        pickMods(gi, R.string.mods_export_title, R.string.mods_export_go, chosen -> {
+            exportMods = chosen;
+            exportPicker.launch("valdroid_mods_" + gi.getName().replaceAll("[^A-Za-z0-9._-]+", "_") + "_"
+                    + new java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.US).format(new java.util.Date())
+                    + ".zip");
+        });
+    }
+
+    /** Picking mods of {@code gi}: all ticked to start with; "All" ticks them again. */
+    private void pickMods(GameInstance gi, int titleRes, int goRes,
+                          java.util.function.Consumer<List<ModManager.Mod>> then) {
         List<ModManager.Mod> mods = ModManager.list(new File(gi.getGamePath()));
         if (mods.isEmpty()) return;
         String[] names = new String[mods.size()];
@@ -260,11 +272,11 @@ public class ModsFragment extends Fragment {
             picked[i] = true;
         }
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.mods_export_title)
+                .setTitle(titleRes)
                 .setMultiChoiceItems(names, picked, (d, which, checked) -> picked[which] = checked)
                 .setNegativeButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.mods_export_all, null)
-                .setPositiveButton(R.string.mods_export_go, null)
+                .setPositiveButton(goRes, null)
                 .create();
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(x -> {
@@ -280,14 +292,80 @@ public class ModsFragment extends Fragment {
                     Toast.makeText(requireContext(), R.string.mods_export_none, Toast.LENGTH_SHORT).show();
                     return;
                 }
-                exportMods = chosen;
                 dialog.dismiss();
-                exportPicker.launch("valdroid_mods_" + gi.getName().replaceAll("[^A-Za-z0-9._-]+", "_") + "_"
-                        + new java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.US).format(new java.util.Date())
-                        + ".zip");
+                then.accept(chosen);
             });
         });
         dialog.show();
+    }
+
+    // ---- copy to another instance ----
+
+    /** Picked mods of this instance into another one, as Zomdroid's copy; asked before copying. */
+    private void pickModsToCopy() {
+        GameInstance from = current();
+        if (from == null) return;
+        List<GameInstance> targets = new ArrayList<>();
+        for (GameInstance gi : instances) if (gi != from && !gi.getName().equals(from.getName())) targets.add(gi);
+        if (targets.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.mods_copy_no_target, Toast.LENGTH_LONG).show();
+            return;
+        }
+        pickMods(from, R.string.mods_copy_title, R.string.mods_copy_next, chosen -> {
+            String[] names = new String[targets.size()];
+            for (int i = 0; i < names.length; i++) names[i] = targets.get(i).getName();
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.mods_copy_target, chosen.size()))
+                    .setItems(names, (d, which) -> {
+                        GameInstance to = targets.get(which);
+                        new AlertDialog.Builder(requireContext())
+                                .setMessage(getString(R.string.mods_copy_confirm, chosen.size(), to.getName()))
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .setPositiveButton(R.string.mods_copy_go, (d2, w2) -> copyMods(from, chosen, to))
+                                .show();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        });
+    }
+
+    private void copyMods(GameInstance from, List<ModManager.Mod> mods, GameInstance to) {
+        android.content.Context app = requireContext().getApplicationContext();
+        AlertDialog wait = new AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.mods_copy_running, to.getName()))
+                .setMessage("…")
+                .setCancelable(false)
+                .show();
+        File tmp = new File(app.getCacheDir(), "mod_copy");
+        new Thread(() -> {
+            ModManager.CopyResult r = ModManager.copyMods(app, new File(from.getGamePath()), mods,
+                    new File(to.getGamePath()), tmp,
+                    (name, i, total) -> main.post(() -> wait.setMessage(i + " / " + total + "\n" + name)));
+            main.post(() -> {
+                wait.dismiss();
+                if (!isAdded()) {
+                    Toast.makeText(app, app.getString(R.string.mods_copy_done_short, r.copied.size()), Toast.LENGTH_LONG).show();
+                    return;
+                }
+                StringBuilder msg = new StringBuilder(getString(R.string.mods_copy_done, r.copied.size()));
+                if (!r.alreadyThere.isEmpty()) {
+                    msg.append("\n\n").append(getString(R.string.mods_copy_already)).append('\n');
+                    for (String n : r.alreadyThere) msg.append("• ").append(n).append('\n');
+                }
+                if (!r.failed.isEmpty()) {
+                    msg.append("\n\n").append(getString(R.string.mods_copy_failed)).append('\n');
+                    for (String n : r.failed) msg.append("• ").append(n).append('\n');
+                }
+                if (!r.copied.isEmpty() && !to.settings().isModSupport())
+                    msg.append("\n\n").append(getString(R.string.ts_mods_off));
+                new AlertDialog.Builder(requireContext())
+                        .setTitle(to.getName())
+                        .setMessage(msg.toString().trim())
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+                refresh();
+            });
+        }, "ModCopy").start();
     }
 
     private void exportTo(@Nullable Uri uri) {

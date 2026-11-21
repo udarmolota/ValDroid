@@ -162,7 +162,7 @@ In the cloud: %2$s
     <string name="release_notes_title" translatable="false">What\'s new in v%1$s</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid on X</string>
-    <string name="link_reddit">RimDroid on Reddit</string>
+    <string name="link_reddit">ValDroid on Reddit</string>
     <string name="link_support">Support the developer</string>
     <string name="link_soon">Coming soon</string>
     <!-- Captions shown under each drawer-footer icon. Brand names stay untranslated. -->
@@ -335,7 +335,7 @@ In the cloud: %2$s
     <string name="hud_scale_label">In-game interface size</string>
     <string name="hud_scale_default">As in the game</string>
     <string name="hud_scale_hint">Makes the bars, hotbar, minimap, messages, chat and texts bigger than the game\u2019s own interface scale allows (Settings \u2192 Accessibility, up to 115%). Menus and inventory keep the game\u2019s size. Takes effect at the next launch.</string>
-    <string name="release_notes_body" translatable="false"><b>– Crossplay multiplayer</b>\nPlay online with players on Steam and Xbox on the native engine: drawer → Online &amp; achievements. Needs Steam Mobile with Steam Guard and the same game version as the server, so update the game first.\n\n<b>– Hosting from the phone</b>\nExperimental. Keep the game on screen while you host.\n\n<b>– Steam achievements</b>\nNew ones go to your account at each launch. See them in My achievements.\n\n<b>– Faster game download</b>\nUpdates fetch only the files that changed.\n\n<b>– Valheim news</b>\nThe latest posts on the home screen.\n\n<b>– In-game interface size</b>\nA bigger HUD and chat on the native engine.\n\n<b>– Mods</b>\nAuthor shown, enable or disable all, export to a zip.\n\n<b>– Physical mouse and soft keyboards</b>\nNow work on the native engine.\n\n<b>– Full emulation removed</b>\nThe native engine does it better.</string>
+    <string name="release_notes_body" translatable="false"><b>– Thunderstore mods in the launcher</b>\nThe Mods button at the bottom: search, sort, categories and each mod\'s page. Queue the mods you want and install them with everything they need into the instance you choose. The catalog downloads on Wi-Fi by itself and asks first on mobile data.\n\n<b>– Bottom bar</b>\nHome, Game, Mods, Import and Projects are one tap away.\n\n<b>– Import / export, one screen</b>\nSaves, mods, game settings and on-screen controls of an instance, all in one place.\n\n<b>– Copy mods to another instance</b>\nMods → Copy to…: pick the mods and the instance. Their settings come along.\n\n<b>– Projects</b>\nMy other launchers, with their latest versions.\n\n<b>– Fixes</b>\nBluetooth keyboards with arrow keys type in the game again (they counted as a gamepad). Mods that keep their files in a folder of their own, such as OdinShip, now load: install them again.\n\n<b>– Genuine copy check</b>\nA copy not signed by me says so. Download ValDroid only from GitHub.\n\n<b>– Console works</b>\nTurn it on in the game\'s settings, open it with L1 + L2 + Start on a gamepad or F5 on a keyboard, and type with ValDroid\'s keyboard button.\n\n<b>– Tip: keyboard covers the game?</b>\nSwitch your keyboard app to its one-handed or floating mode (in Gboard: the keyboard\'s menu). It gets smaller and the game stays in view.</string>
     <string name="instance_downloading">downloading, wait until it finishes</string>
     <string name="instance_incomplete">not finished</string>
     <string name="instance_incomplete_hint">The download stopped before it finished. Open side menu → %1$s and download again with the same instance name — it continues where it stopped.</string>
@@ -436,9 +436,98 @@ In the cloud: %2$s
     <string name="mods_export_none">Pick at least one mod</string>
     <string name="mods_exported">Exported %1$d mods. The zip installs back with Install, all of them at once.</string>
     <string name="mods_export_failed">Could not export the mods: %1$s</string>
+    <string name="mods_copy">Copy to…</string>
+    <string name="mods_copy_title">Mods to copy</string>
+    <string name="mods_copy_next">Next</string>
+    <string name="mods_copy_target">Copy %1$d mods to:</string>
+    <string name="mods_copy_no_target">There is no other instance to copy to.</string>
+    <string name="mods_copy_confirm">Copy %1$d mods to %2$s? Mods it already has stay as they are; their settings come along where it has none.</string>
+    <string name="mods_copy_go">Copy</string>
+    <string name="mods_copy_running">Copying mods to %1$s</string>
+    <string name="mods_copy_done">Copied: %1$d.</string>
+    <string name="mods_copy_done_short">Mods copied: %1$d</string>
+    <string name="mods_copy_already">Already there, left as they were:</string>
+    <string name="mods_copy_failed">Could not copy:</string>
     <string name="native_mono_fallback_title">Native ARM64 Mono did not load</string>
     <string name="native_mono_fallback_message">In the last launch of %1$s the native ARM64 Mono could not be loaded, so the game ran on the slower emulated Mono (about half the frame rate).\n\nReason: %2$s\n\nPlease send a report with Report a bug in the menu.</string>
     <string name="mods_install_header">Install a mod</string>
     <string name="shader_cache_label">Shader cache</string>
     <string name="shader_cache_hint">Keeps compiled shaders on the phone, so a new enemy or effect stutters only the very first time you see it, not in every session. Works on MobileGlues. Turn it off if something renders wrong. Off by default on Mali GPUs: there it can turn the water black.</string>
+    <!-- Thunderstore screen (ThunderstoreFragment) -->
+    <string name="ts_menu">Thunderstore mods</string>
+    <string name="ts_open_a_mod">Tap ↓ on a mod to queue it, or the mod to see its page.</string>
+    <string name="ts_add_to_queue">Add to queue</string>
+    <string name="ts_remove_from_queue">Remove</string>
+    <string name="ts_added">Added to queue: %1$s</string>
+    <string name="ts_install">Install</string>
+    <string name="ts_install_n">Install (%1$d)</string>
+    <string name="ts_choose_instance">Install into which instance?</string>
+    <string name="ts_resolving">Checking what these mods need…</string>
+    <string name="ts_error_resolve">Could not get the mods from Thunderstore: %1$s</string>
+    <string name="ts_confirm_title">Install %1$d mod(s)?</string>
+    <string name="ts_also_needed">Also needed:</string>
+    <string name="ts_confirm_note">Into instance “%1$s”. Downloaded from Thunderstore, no sign-in needed. BepInEx is built into ValDroid and is not downloaded.</string>
+    <string name="ts_clear_queue">Clear queue</string>
+    <string name="ts_installing">Installing %1$d of %2$d: %3$s</string>
+    <string name="ts_failed_line">✗ %1$s: %2$s</string>
+    <string name="ts_done_title">Mods installed</string>
+    <string name="ts_done_some">Some mods were not installed</string>
+    <string name="ts_mods_off">Mods are off for this instance: turn them on in Mods.</string>
+    <string name="ts_text_smaller">Smaller text</string>
+    <string name="ts_text_larger">Larger text</string>
+    <string name="ts_total_size">To download: %1$s</string>
+    <string name="ts_card_meta">%1$s · ↓ %2$s · %3$s</string>
+    <string name="ts_nothing_found">No mods found.</string>
+    <string name="ts_load">Download</string>
+    <string name="ts_mobile_message">You are not on Wi-Fi. The mod catalog is about 15 MB. It is downloaded once; later only the changes are fetched, and only on Wi-Fi.</string>
+    <string name="ts_mobile_title">Download the catalog over mobile data?</string>
+    <string name="ts_load_catalog">Download</string>
+    <string name="ts_not_loaded">The mod catalog is not downloaded yet.</string>
+    <string name="ts_retry">Retry</string>
+    <string name="ts_catalog_failed">Could not load the mod catalog: %1$s</string>
+    <string name="ts_loading_catalog">Downloading the mod catalog… %1$d / %2$d</string>
+    <string name="ts_reading_catalog">Opening the mod catalog…</string>
+    <string name="ts_all_categories">All categories</string>
+    <string name="ts_sort_name">By name</string>
+    <string name="ts_sort_rating">Top rated</string>
+    <string name="ts_sort_updated">Recently updated</string>
+    <string name="ts_sort_popular">Most downloaded</string>
+    <string name="ts_search_hint">Search mods</string>
+    <!-- Bottom bar, Import / export and Projects screens (2026-11, as in Zomdroid and RimDroid) -->
+    <string name="bottom_nav_home">Home</string>
+    <string name="bottom_nav_game">Game</string>
+    <string name="bottom_nav_mods">Mods</string>
+    <string name="bottom_nav_transfer">Import</string>
+    <string name="bottom_nav_projects">Projects</string>
+    <string name="transfer_title">Import / export</string>
+    <string name="transfer_instance">Instance</string>
+    <string name="transfer_import">Import</string>
+    <string name="transfer_export">Export</string>
+    <string name="transfer_saves">Saves</string>
+    <string name="transfer_saves_hint">A zip of this instance\'s worlds and characters: to keep, or to move to another instance or phone. Worlds and characters with the same names are replaced on import. PC saves zipped from worlds_local and characters_local import too.</string>
+    <string name="transfer_mods">Mods</string>
+    <string name="transfer_mods_hint">Import: one or more mod .zip files (Thunderstore or Nexus). Export: every mod of this instance in one .zip, which installs whole here or on another phone.</string>
+    <string name="transfer_mods_installing">Installing mods…</string>
+    <string name="transfer_mods_imported">Mods installed: %1$d</string>
+    <string name="transfer_mods_none">This instance has no mods.</string>
+    <string name="transfer_settings">Game settings</string>
+    <string name="transfer_settings_hint">Graphics, sound and key bindings. Import replaces the instance\'s current ones. Phone to phone only: the PC version keeps its settings elsewhere.</string>
+    <string name="transfer_controls">On-screen controls</string>
+    <string name="transfer_controls_hint">The instance\'s controls layout with its icons, as a .zip. Import replaces the instance\'s layout; a bare controls .json is accepted too.</string>
+    <string name="transfer_device">For the whole phone</string>
+    <string name="transfer_device_hint">The custom Vulkan driver and the button icon packs belong to the phone, not to an instance.</string>
+    <string name="transfer_driver_button">Custom driver</string>
+    <string name="transfer_icons_button">Icons</string>
+    <string name="projects_title">Other projects</string>
+    <string name="projects_reddit_title" translatable="false">r/UdarMolotaDev</string>
+    <string name="projects_reddit_hint">News of all my projects</string>
+    <string name="projects_download">Download</string>
+    <string name="projects_page">Page</string>
+    <string name="projects_latest_version">Latest version: %1$s</string>
+    <string name="projects_here">You are here</string>
+    <!-- A copy not signed with the release key (LauncherActivity.maybeWarnForeignSignature) -->
+    <string name="signature_warning_title">This copy is not from the author</string>
+    <string name="signature_warning_message">It is signed with a different key, so it may have been modified. The original ValDroid is on GitHub. The game still starts as usual.</string>
+    <string name="signature_warning_github">Open GitHub</string>
+    <string name="signature_warning_dont_show">Don\'t show again</string>
 </resources>

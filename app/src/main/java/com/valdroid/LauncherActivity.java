@@ -40,6 +40,10 @@ public class LauncherActivity extends AppCompatActivity {
     private ActivityLauncherBinding binding;
     private NavController navController;
     private AppBarConfiguration appBarConfiguration;
+    /** The screens of the bottom bar (menu_bottom_nav.xml); the bar is shown on these only. */
+    private static final int[] BOTTOM_NAV_DESTINATIONS = {
+            R.id.launcher_fragment, R.id.download_fragment, R.id.thunderstore_fragment,
+            R.id.transfer_fragment, R.id.projects_fragment};
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     private final ActivityResultLauncher<String[]> modZipPicker =
@@ -58,19 +62,34 @@ public class LauncherActivity extends AppCompatActivity {
 
         binding.appbarLayout.setOnApplyWindowInsetsListener((v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsets.Type.systemBars());
-            v.setPadding(v.getPaddingLeft(), insets.top, v.getPaddingRight(), insets.bottom);
+            // With the bottom bar shown, the bar itself takes the navigation-bar inset
+            // (paddingBottomSystemWindowInsets) so its colour runs under the system buttons; padding
+            // the whole screen too left a strip between them with 3-button navigation (as RimDroid).
+            boolean barShown = binding.bottomNav.getVisibility() == View.VISIBLE;
+            v.setPadding(v.getPaddingLeft(), insets.top, v.getPaddingRight(), barShown ? 0 : insets.bottom);
             return windowInsets;
         });
 
         setSupportActionBar(binding.appbar);
 
-        appBarConfiguration = new AppBarConfiguration.Builder(R.id.launcher_fragment)
+        // The bottom bar's screens are top level: the drawer button, not a back arrow.
+        appBarConfiguration = new AppBarConfiguration.Builder(BOTTOM_NAV_DESTINATIONS)
                 .setOpenableLayout(binding.drawerLayout)
                 .build();
 
         navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.launcherNv, navController);
+        NavigationUI.setupWithNavController(binding.bottomNav, navController);
+        // The bottom bar only on its own screens (as in Zomdroid and RimDroid): elsewhere it would eat height.
+        navController.addOnDestinationChangedListener((c, dest, args) -> {
+            boolean main = false;
+            for (int d : BOTTOM_NAV_DESTINATIONS) if (d == dest.getId()) main = true;
+            if ((binding.bottomNav.getVisibility() == View.VISIBLE) != main) {
+                binding.bottomNav.setVisibility(main ? View.VISIBLE : View.GONE);
+                binding.appbarLayout.requestApplyInsets();   // move the bottom inset to the bar or back
+            }
+        });
         // Refresh the toolbar menu on navigation so the "+" (add instance) shows only on the main screen.
         navController.addOnDestinationChangedListener((c, dest, args) -> invalidateOptionsMenu());
 
@@ -80,8 +99,6 @@ public class LauncherActivity extends AppCompatActivity {
             if (id == R.id.action_settings) {
                 navController.navigate(R.id.action_app_settings);   // global app settings (theme); per-instance is via the card gear
                 return true;
-            } else if (id == R.id.action_download_game) {
-                navController.navigate(R.id.action_download_game);
             } else if (id == R.id.action_cloud_saves) {
                 navController.navigate(R.id.action_cloud_saves);   // pull PC saves from Steam Cloud
                 return true;
@@ -107,15 +124,6 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_custom_driver) {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import
                 return true;
-            } else if (id == R.id.action_saves_transfer) {
-                navController.navigate(R.id.action_open_saves_transfer);   // import / export saves, one screen
-                return true;
-            } else if (id == R.id.action_settings_transfer) {
-                navController.navigate(R.id.action_open_settings_transfer);
-                return true;
-            } else if (id == R.id.action_controls_transfer) {
-                navController.navigate(R.id.action_open_controls_transfer);   // import / export, one screen
-                return true;
             } else if (id == R.id.action_multiplayer) {
                 navController.navigate(R.id.action_open_multiplayer);   // crossplay per instance
                 return true;
@@ -134,6 +142,36 @@ public class LauncherActivity extends AppCompatActivity {
 
         wireHeaderLinks();
         maybeDailyUpdateCheck();
+        if (savedInstanceState == null) maybeWarnForeignSignature();
+    }
+
+    private static final String SIGNATURE_PREFS = "signature_check";
+    private static final String SIGNATURE_DISMISSED = "dismissed_sha256";
+
+    /**
+     * A copy not signed with the release key (a repack from an APK site, a fork, a re-signed test
+     * build) says so once per start, without blocking anything: GPL forks are legitimate. "Don't show
+     * again" remembers that one key, so a different repack warns again. Debug builds are not checked.
+     */
+    private void maybeWarnForeignSignature() {
+        if (BuildConfig.DEBUG) return;
+        SignatureCheck.Signer s = SignatureCheck.foreign(this);
+        if (s == null) return;
+        android.content.SharedPreferences prefs = getSharedPreferences(SIGNATURE_PREFS, MODE_PRIVATE);
+        if (s.sha256.equals(prefs.getString(SIGNATURE_DISMISSED, null))) return;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.signature_warning_title)
+                .setMessage(R.string.signature_warning_message)
+                .setPositiveButton(R.string.signature_warning_github, (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/udarmolota/ValDroid/releases")));
+                    } catch (Exception ignored) {}
+                })
+                .setNegativeButton(android.R.string.ok, null)
+                .setNeutralButton(R.string.signature_warning_dont_show, (d, w) ->
+                        prefs.edit().putString(SIGNATURE_DISMISSED, s.sha256).apply())
+                .show();
     }
 
     /** The icon row in the drawer header: the wiki and the external links (icons, not menu rows). */
@@ -224,8 +262,11 @@ public class LauncherActivity extends AppCompatActivity {
     private static String wikiSectionFor(int destinationId) {
         if (destinationId == R.id.new_instance_fragment)    return "zip-archive";
         if (destinationId == R.id.download_fragment)        return "steam-in-app";
-        if (destinationId == R.id.install_content_fragment) return "mods";
-        if (destinationId == R.id.cloud_saves_fragment)     return "saves";
+        if (destinationId == R.id.install_content_fragment
+                || destinationId == R.id.mods_fragment
+                || destinationId == R.id.thunderstore_fragment) return "mods";
+        if (destinationId == R.id.cloud_saves_fragment
+                || destinationId == R.id.transfer_fragment)  return "saves";
         if (destinationId == R.id.settings_fragment
                 || destinationId == R.id.driver_fragment)   return "renderers";
         return "quick-start";   // the main screen, app settings, and any screen added later

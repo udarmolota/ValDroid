@@ -210,43 +210,21 @@ public final class ReportInfo {
         line(sb, "signature", signature(ctx));
     }
 
-    /** SHA-256 of the GitHub release signing certificate (also printed in README.md). */
-    private static final String RELEASE_CERT_SHA256 =
-            "f85a437a5090fb84b9eb2a4cbff5abc07e4d3ba2d5c4be0259636f3a624ed2c6";
-
     /**
      * Who signed the installed APK: "release key" for the GitHub release, otherwise the certificate's
-     * subject and SHA-256. Repacks from APK sites are re-signed with the site's own key (seen:
-     * CN=APKVISION.ORG), so a report from one is recognisable at a glance.
+     * subject and SHA-256 (SignatureCheck). Repacks from APK sites are re-signed with the site's own key
+     * (seen: CN=APKVISION.ORG), so a report from one is recognisable at a glance.
      */
     static String signature(Context ctx) {
-        try {
-            PackageInfo pi = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(),
-                    PackageManager.GET_SIGNING_CERTIFICATES);
-            android.content.pm.Signature[] signers = pi.signingInfo.getApkContentsSigners();
-            StringBuilder sb = new StringBuilder();
-            for (android.content.pm.Signature s : signers) {
-                byte[] der = s.toByteArray();
-                byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(der);
-                StringBuilder hex = new StringBuilder(64);
-                for (byte b : d) hex.append(String.format(Locale.US, "%02x", b));
-                if (sb.length() > 0) sb.append("; ");
-                if (RELEASE_CERT_SHA256.contentEquals(hex)) {
-                    sb.append("release key");
-                } else {
-                    String subject;
-                    try {
-                        subject = ((java.security.cert.X509Certificate) java.security.cert.CertificateFactory
-                                .getInstance("X.509").generateCertificate(new java.io.ByteArrayInputStream(der)))
-                                .getSubjectX500Principal().getName();
-                    } catch (Throwable t) { subject = "?"; }
-                    sb.append("NOT the release key: ").append(subject).append(", sha256 ").append(hex);
-                }
-            }
-            return sb.length() > 0 ? sb.toString() : "(no signers)";
-        } catch (Throwable t) {
-            return "unavailable: " + t;
+        List<SignatureCheck.Signer> signers = SignatureCheck.signers(ctx);
+        if (signers.isEmpty()) return "unavailable";
+        StringBuilder sb = new StringBuilder();
+        for (SignatureCheck.Signer s : signers) {
+            if (sb.length() > 0) sb.append("; ");
+            if (s.isRelease()) sb.append("release key");
+            else sb.append("NOT the release key: ").append(s.subject).append(", sha256 ").append(s.sha256);
         }
+        return sb.toString();
     }
 
     /** Names of the instance directories, so a report without a chosen instance still shows them. */

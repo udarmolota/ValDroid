@@ -139,7 +139,7 @@
                 android:alpha="0.7"
                 android:text="@string/mods_empty" />
 
-            <!-- Switch all on / off and export, as in Zomdroid; shown when there are mods. -->
+            <!-- Switch all on / off, export and copy, as in Zomdroid; shown when there are mods. -->
             <LinearLayout
                 android:id="@+id/ll_mods_actions"
                 android:layout_width="match_parent"
@@ -175,6 +175,15 @@
                     android:layout_height="wrap_content"
                     android:textSize="13sp"
                     android:text="@string/mods_export" />
+
+                <!-- Copy picked mods into another instance, as Zomdroid's copy button. -->
+                <Button
+                    android:id="@+id/btn_mods_copy"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:text="@string/mods_copy" />
             </LinearLayout>
 
             <!-- One row per mod, added by ModsFragment: name + version, the author under it, and a switch. -->

@@ -42,6 +42,7 @@ namespace ValDroid
             VirtualKeyboardMouse.Initialize();
             UiClickDiag.Initialize();
             HudScale.Initialize();
+            ConsoleInput.Initialize();
             try
             {
                 s_State = GetGameStatePointer();
@@ -104,6 +105,7 @@ namespace ValDroid
             UiClickDiag.Tick();
             MemoryLog.Tick();
             HudScale.Tick();
+            ConsoleInput.Tick();
         }
     }
 }

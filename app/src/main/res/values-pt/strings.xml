@@ -161,7 +161,7 @@ Na nuvem: %2$s
     <string name="launcher_empty_guide">Para começar a jogar, crie uma instância: uma cópia instalada do Valheim. Adicione os arquivos do jogo com o + no topo, ou baixe o jogo direto da Steam com o botão abaixo: a instância é criada sozinha.</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid no X</string>
-    <string name="link_reddit">RimDroid no Reddit</string>
+    <string name="link_reddit">ValDroid no Reddit</string>
     <string name="link_support">Apoiar o desenvolvedor</string>
     <string name="link_soon">Em breve</string>
     <string name="bug_report_subject">VALDROID REPORT %1$s</string>
@@ -419,6 +419,18 @@ Na nuvem: %2$s
     <string name="mods_export_none">Escolha pelo menos um mod</string>
     <string name="mods_exported">%1$d mods exportados. O zip se instala de volta com Instalar, todos de uma vez.</string>
     <string name="mods_export_failed">Não foi possível exportar os mods: %1$s</string>
+    <string name="mods_copy">Copiar para…</string>
+    <string name="mods_copy_title">Mods para copiar</string>
+    <string name="mods_copy_next">Avançar</string>
+    <string name="mods_copy_target">Copiar %1$d mods para:</string>
+    <string name="mods_copy_no_target">Não há outra instância para onde copiar.</string>
+    <string name="mods_copy_confirm">Copiar %1$d mods para %2$s? Os mods que ela já tem ficam como estão; as configurações vêm junto onde ela não tiver as suas.</string>
+    <string name="mods_copy_go">Copiar</string>
+    <string name="mods_copy_running">Copiando mods para %1$s</string>
+    <string name="mods_copy_done">Copiados: %1$d.</string>
+    <string name="mods_copy_done_short">Mods copiados: %1$d</string>
+    <string name="mods_copy_already">Já estavam lá, ficaram como estavam:</string>
+    <string name="mods_copy_failed">Não foi possível copiar:</string>
     <string name="native_mono_fallback_title">O Mono ARM64 nativo não carregou</string>
     <string name="native_mono_fallback_message">Na última execução de %1$s não foi possível carregar o Mono ARM64 nativo, então o jogo rodou no Mono emulado, mais lento (cerca de metade dos FPS).\n\nMotivo: %2$s\n\nEnvie um relatório com «Relatar um problema» no menu.</string>
     <string name="mods_install_header">Instalar um mod</string>
@@ -426,5 +438,81 @@ Na nuvem: %2$s
     <string name="shader_cache_hint">Guarda os shaders compilados no telefone, então um inimigo ou efeito novo só engasga na primeira vez que você o vê, não em toda sessão. Funciona com o MobileGlues. Desative se algo aparecer errado. Em GPUs Mali vem desligado: lá ele pode deixar a água preta.</string>
     <string name="news_title">Notícias do Valheim</string>
     <string name="release_notes_title" translatable="false">Novidades da v%1$s</string>
-    <string name="release_notes_body" translatable="false"><b>– Multijogador com crossplay</b>\nJogue online com jogadores da Steam e do Xbox no motor nativo: menu lateral → Online e conquistas. Precisa do Steam Mobile com Steam Guard e da mesma versão do jogo que o servidor, então atualize o jogo primeiro.\n\n<b>– Hospedar pelo celular</b>\nExperimental. Mantenha o jogo na tela enquanto hospeda.\n\n<b>– Conquistas da Steam</b>\nAs novas vão para a sua conta a cada início. Veja em Minhas conquistas.\n\n<b>– Download do jogo mais rápido</b>\nAs atualizações baixam só os arquivos que mudaram.\n\n<b>– Notícias do Valheim</b>\nAs últimas publicações na tela inicial.\n\n<b>– Tamanho da interface no jogo</b>\nHUD e chat maiores no motor nativo.\n\n<b>– Mods</b>\nAutor visível, ativar ou desativar todos, exportar para um zip.\n\n<b>– Mouse físico e teclados na tela</b>\nAgora funcionam no motor nativo.\n\n<b>– Emulação completa removida</b>\nO motor nativo faz melhor.</string>
+    <string name="release_notes_body" translatable="false"><b>– Mods do Thunderstore no launcher</b>\nO botão Mods embaixo: busca, ordem, categorias e a página de cada mod. Marque os mods que quiser e instale-os com tudo de que precisam na instância que escolher. O catálogo baixa sozinho no Wi-Fi e pergunta antes nos dados móveis.\n\n<b>– Barra inferior</b>\nInício, Jogo, Mods, Importar e Projetos a um toque.\n\n<b>– Importar / exportar em uma tela</b>\nSaves, mods, configurações do jogo e controles na tela de uma instância, tudo num lugar.\n\n<b>– Copiar mods para outra instância</b>\nMods → Copiar para…: escolha os mods e a instância. As configurações vão junto.\n\n<b>– Projetos</b>\nMeus outros launchers, com as versões mais recentes.\n\n<b>– Correções</b>\nTeclados Bluetooth com setas voltam a digitar no jogo (contavam como controle). Mods que guardam os arquivos numa pasta própria, como o OdinShip, agora carregam: instale-os de novo.\n\n<b>– Verificação de cópia original</b>\nUma cópia que não foi assinada por mim avisa. Baixe o ValDroid só pelo GitHub.\n\n<b>– O console funciona</b>\nAtive-o nas configurações do jogo, abra com L1 + L2 + Start no controle ou F5 no teclado e digite com o botão de teclado do ValDroid.\n\n<b>– Dica: o teclado cobre o jogo?</b>\nColoque o seu teclado no modo de uma mão ou flutuante (no Gboard: o menu do teclado). Ele fica menor e o jogo continua visível.</string>
+    <!-- Thunderstore screen (ThunderstoreFragment) -->
+    <string name="ts_menu">Mods do Thunderstore</string>
+    <string name="ts_open_a_mod">Toque em ↓ num mod para colocá-lo na fila, ou no mod para ver a página dele.</string>
+    <string name="ts_add_to_queue">Adicionar à fila</string>
+    <string name="ts_remove_from_queue">Remover</string>
+    <string name="ts_added">Adicionado à fila: %1$s</string>
+    <string name="ts_install">Instalar</string>
+    <string name="ts_install_n">Instalar (%1$d)</string>
+    <string name="ts_choose_instance">Instalar em qual instância?</string>
+    <string name="ts_resolving">Verificando do que estes mods precisam…</string>
+    <string name="ts_error_resolve">Não foi possível obter os mods do Thunderstore: %1$s</string>
+    <string name="ts_confirm_title">Instalar %1$d mod(s)?</string>
+    <string name="ts_also_needed">Também são necessários:</string>
+    <string name="ts_confirm_note">Na instância “%1$s”. Baixados do Thunderstore, sem login. O BepInEx já vem no ValDroid e não é baixado.</string>
+    <string name="ts_clear_queue">Limpar a fila</string>
+    <string name="ts_installing">Instalando %1$d de %2$d: %3$s</string>
+    <string name="ts_failed_line">✗ %1$s: %2$s</string>
+    <string name="ts_done_title">Mods instalados</string>
+    <string name="ts_done_some">Alguns mods não foram instalados</string>
+    <string name="ts_mods_off">Os mods estão desligados nesta instância: ligue-os em Mods.</string>
+    <string name="ts_text_smaller">Texto menor</string>
+    <string name="ts_text_larger">Texto maior</string>
+    <string name="ts_total_size">Para baixar: %1$s</string>
+    <string name="ts_card_meta">%1$s · ↓ %2$s · %3$s</string>
+    <string name="ts_nothing_found">Nenhum mod encontrado.</string>
+    <string name="ts_load">Baixar</string>
+    <string name="ts_mobile_message">Você não está no Wi-Fi. O catálogo de mods tem cerca de 15 MB. Ele é baixado uma vez; depois só as mudanças são baixadas, e só no Wi-Fi.</string>
+    <string name="ts_mobile_title">Baixar o catálogo pelos dados móveis?</string>
+    <string name="ts_load_catalog">Baixar</string>
+    <string name="ts_not_loaded">O catálogo de mods ainda não foi baixado.</string>
+    <string name="ts_retry">Tentar de novo</string>
+    <string name="ts_catalog_failed">Não foi possível carregar o catálogo de mods: %1$s</string>
+    <string name="ts_loading_catalog">Baixando o catálogo de mods… %1$d / %2$d</string>
+    <string name="ts_reading_catalog">Abrindo o catálogo de mods…</string>
+    <string name="ts_all_categories">Todas as categorias</string>
+    <string name="ts_sort_name">Por nome</string>
+    <string name="ts_sort_rating">Mais bem avaliados</string>
+    <string name="ts_sort_updated">Atualizados recentemente</string>
+    <string name="ts_sort_popular">Mais baixados</string>
+    <string name="ts_search_hint">Buscar mods</string>
+    <!-- Barra inferior, telas Importar / exportar e Projetos -->
+    <string name="bottom_nav_home">Início</string>
+    <string name="bottom_nav_game">Jogo</string>
+    <string name="bottom_nav_mods">Mods</string>
+    <string name="bottom_nav_transfer">Importar</string>
+    <string name="bottom_nav_projects">Projetos</string>
+    <string name="transfer_title">Importar / exportar</string>
+    <string name="transfer_instance">Instância</string>
+    <string name="transfer_import">Importar</string>
+    <string name="transfer_export">Exportar</string>
+    <string name="transfer_saves">Saves</string>
+    <string name="transfer_saves_hint">Um zip com os mundos e personagens desta instância: para guardar ou levar para outra instância ou celular. Ao importar, mundos e personagens com o mesmo nome são substituídos. Saves do PC (as pastas worlds_local e characters_local num zip) também são importados.</string>
+    <string name="transfer_mods">Mods</string>
+    <string name="transfer_mods_hint">Importar: um ou mais .zip de mods (Thunderstore ou Nexus). Exportar: todos os mods desta instância em um .zip, que se instala inteiro aqui ou em outro celular.</string>
+    <string name="transfer_mods_installing">Instalando mods…</string>
+    <string name="transfer_mods_imported">Mods instalados: %1$d</string>
+    <string name="transfer_mods_none">Esta instância não tem mods.</string>
+    <string name="transfer_settings">Configurações do jogo</string>
+    <string name="transfer_settings_hint">Gráficos, som e teclas. Importar substitui as atuais da instância. Só entre celulares: a versão de PC guarda as configurações em outro lugar.</string>
+    <string name="transfer_controls">Controles na tela</string>
+    <string name="transfer_controls_hint">O layout de controles da instância com os ícones, em um .zip. Importar substitui o layout da instância; um .json de controles também serve.</string>
+    <string name="transfer_device">Para o celular todo</string>
+    <string name="transfer_device_hint">O driver Vulkan próprio e os pacotes de ícones dos botões são do celular, não de uma instância.</string>
+    <string name="transfer_driver_button">Driver próprio</string>
+    <string name="transfer_icons_button">Ícones</string>
+    <string name="projects_title">Outros projetos</string>
+    <string name="projects_reddit_hint">Novidades de todos os meus projetos</string>
+    <string name="projects_download">Baixar</string>
+    <string name="projects_page">Página</string>
+    <string name="projects_latest_version">Última versão: %1$s</string>
+    <string name="projects_here">Você está aqui</string>
+    <!-- Cópia não assinada com a chave do autor -->
+    <string name="signature_warning_title">Esta cópia não é do autor</string>
+    <string name="signature_warning_message">Ela está assinada com outra chave, então pode ter sido modificada. O ValDroid original está no GitHub. O jogo inicia normalmente.</string>
+    <string name="signature_warning_github">Abrir GitHub</string>
+    <string name="signature_warning_dont_show">Não mostrar de novo</string>
 </resources>

@@ -17,6 +17,8 @@
             android:id="@+id/action_install_content"
             android:icon="@drawable/mt_icon_mods"
             android:title="@string/nav_mods" />
+        <!-- The Thunderstore catalog, the Steam download and Import / export are in the bottom bar
+             (menu_bottom_nav.xml), so not here too. -->
     </group>
 
     <!-- 2) On-screen controls and the gamepad: everything about controls in one place. Actions that
@@ -35,19 +37,10 @@
             android:id="@+id/action_gamepad_mapper"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/gamepad_mapper_settings_btn" />
-        <!-- One screen for both, as Zomdroid's "Import/Export Controls" -->
-        <item
-            android:id="@+id/action_controls_transfer"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_controls_transfer" />
     </group>
 
-    <!-- 3) Steam: get the game from a store you own it on, cloud saves, multiplayer -->
+    <!-- 3) Steam: cloud saves, multiplayer (the game download is the bottom bar's Game) -->
     <group android:id="@+id/group_store" android:checkableBehavior="none">
-        <item
-            android:id="@+id/action_download_game"
-            android:icon="@drawable/ic_steam"
-            android:title="@string/nav_download_game" />
         <item
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
@@ -59,21 +52,12 @@
             android:title="@string/nav_multiplayer" />
     </group>
 
-    <!-- 4) Settings + data transfer (saves / settings) -->
+    <!-- 4) Settings (Import / export is the bottom bar's Import) -->
     <group android:id="@+id/group_data" android:checkableBehavior="none">
         <item
             android:id="@+id/action_settings"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_settings" />
-        <!-- One screen each for import and export, as the controls one -->
-        <item
-            android:id="@+id/action_saves_transfer"
-            android:icon="@drawable/mt_icon_save"
-            android:title="@string/nav_saves_transfer" />
-        <item
-            android:id="@+id/action_settings_transfer"
-            android:icon="@drawable/mt_icon_tune"
-            android:title="@string/nav_settings_transfer" />
     </group>
 
     <!-- 5) Diagnostics -->

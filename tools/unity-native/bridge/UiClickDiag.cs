@@ -13,6 +13,9 @@ namespace ValDroid
     // takes the buttons. The launcher's log shows the clicks reaching the virtual mouse; this follows
     // them further: what the UI module and the EventSystem see at each left-button edge, which buttons
     // actually run their click handler, and once a second the game's own input mode (ZInput).
+    // Also the gamepad's A (Retroid Pocket 6, 2026-11-04): after typing a map pin name with the soft
+    // keyboard, A stopped working in every menu until a pause. At each A edge on any gamepad: what the
+    // UI module's Submit action is doing and every button held anywhere, to show what got stuck.
     // uGUI and the Input System's UI module are not available at build time (see build_bridge.sh), so
     // everything from them is reached by reflection and failures are logged, never thrown.
     internal static class UiClickDiag
@@ -21,6 +24,8 @@ namespace ValDroid
         static float s_Next;
         static bool s_LastPressed;
         static bool s_ClickHooked;
+        static bool s_SubmitHooked;
+        static readonly Dictionary<int, bool> s_LastSouth = new Dictionary<int, bool>();
         static readonly HashSet<int> s_HookedButtons = new HashSet<int>();
 
         static Type s_EventSystem, s_PointerEventData, s_RaycastResult, s_Selectable, s_Button, s_ZInput;
@@ -80,6 +85,7 @@ namespace ValDroid
                 LogState();
                 HookButtons();
                 HookClickAction();
+                HookSubmitAction();
             }
             catch (Exception e)
             {
@@ -174,10 +180,108 @@ namespace ValDroid
             action.canceled += ctx => Write("VALDROID uidiag: leftClick canceled, frame " + Time.frameCount);
         }
 
+        // The UI module's Submit action, the one A and Enter press menu buttons through.
+        static InputAction SubmitAction()
+        {
+            object es = CurrentEventSystem();
+            object module = es != null ? Prop(es, "currentInputModule") : null;
+            var reference = module != null ? Prop(module, "submit") as InputActionReference : null;
+            return reference != null ? reference.action : null;
+        }
+
+        static void HookSubmitAction()
+        {
+            if (s_SubmitHooked)
+                return;
+            var action = SubmitAction();
+            if (action == null)
+                return;
+            s_SubmitHooked = true;
+            var sb = new StringBuilder("VALDROID uidiag: submit action ").Append(action.name)
+                .Append(action.enabled ? " enabled" : " DISABLED").Append(", controls:");
+            foreach (var control in action.controls)
+                sb.Append(' ').Append(control.path);
+            Write(sb.ToString());
+            action.started += ctx => Write("VALDROID uidiag: submit started from " + ctx.control.path + ", frame " + Time.frameCount);
+            action.performed += ctx => Write("VALDROID uidiag: submit performed from " + ctx.control.path + ", frame " + Time.frameCount);
+            action.canceled += ctx => Write("VALDROID uidiag: submit canceled, frame " + Time.frameCount);
+        }
+
+        // ------------------------------------------------------------------ each A edge, any gamepad
+
+        static void WatchGamepadSouth()
+        {
+            foreach (var pad in Gamepad.all)
+            {
+                bool pressed = pad.buttonSouth.isPressed;
+                bool last;
+                s_LastSouth.TryGetValue(pad.deviceId, out last);
+                if (pressed == last)
+                    continue;
+                s_LastSouth[pad.deviceId] = pressed;
+                LogSouthEdge(pad, pressed);
+            }
+        }
+
+        static void LogSouthEdge(Gamepad pad, bool pressed)
+        {
+            var sb = new StringBuilder("VALDROID uidiag: A ").Append(pressed ? "DOWN" : "UP").Append(" on ")
+                .Append(pad.name).Append(" #").Append(pad.deviceId).Append(", frame ").Append(Time.frameCount);
+            var action = SubmitAction();
+            if (action == null)
+                sb.Append(" | no submit action");
+            else
+            {
+                sb.Append(" | submit ").Append(action.enabled ? "" : "DISABLED ").Append(action.phase)
+                  .Append(", active ").Append(action.activeControl != null ? action.activeControl.path : "none")
+                  .Append(", held:");
+                foreach (var control in action.controls)
+                {
+                    if (control.IsPressed())
+                        sb.Append(' ').Append(control.path);
+                }
+            }
+            object es = CurrentEventSystem();
+            var selected = es != null ? Prop(es, "currentSelectedGameObject") as GameObject : null;
+            sb.Append(" | selected ").Append(selected != null ? Path(selected) : "none");
+            // Every button held on every device: a key the soft keyboard pressed and never released
+            // shows up here.
+            sb.Append(" | held anywhere:");
+            int held = 0;
+            foreach (var device in InputSystem.devices)
+            {
+                foreach (var control in device.allControls)
+                {
+                    var button = control as UnityEngine.InputSystem.Controls.ButtonControl;
+                    if (button == null || button.synthetic || !button.isPressed)
+                        continue;
+                    sb.Append(' ').Append(button.path);
+                    if (++held >= 16)
+                        break;
+                }
+            }
+            if (held == 0)
+                sb.Append(" none");
+            foreach (var m in s_ZInputFlags)
+            {
+                try { sb.Append(", ").Append(m.Name).Append('=').Append(m.Invoke(null, null)); }
+                catch (Exception) { }
+            }
+            Write(sb.ToString());
+        }
+
         // ------------------------------------------------------------------ each left-button edge
 
         static void AfterUpdate()
         {
+            try
+            {
+                WatchGamepadSouth();
+            }
+            catch (Exception e)
+            {
+                Write("VALDROID uidiag: A edge failed: " + e.GetType().Name + ": " + e.Message);
+            }
             var mouse = Mouse.current;
             if (mouse == null)
                 return;
