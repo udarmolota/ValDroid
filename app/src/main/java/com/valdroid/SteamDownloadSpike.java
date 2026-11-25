@@ -940,13 +940,30 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
      * same folder DLC/mod archives already land in. Purely a safety net for a botched or
      * corrupted app-private install (uninstall/reinstall wipes files/instances/, but the public
      * Downloads copy survives) — never fatal if it fails, and never blocks re-download: a fresh
-     * download's finalizeInstance() always overwrites the previous backup for that version.
+     * download's finalizeInstance() overwrites our own previous backup for that version.
+     *
+     * <p>A backup an earlier installation of ValDroid made cannot be overwritten: Android 11+ lets an
+     * app write only the files in Downloads it created itself (EACCES). That used to end in "Backup
+     * copy skipped: ... Permission denied" although the same version was already there (2026-11-21).
+     * Now a full-size copy of the same build is reported as present, and anything else we may not
+     * write (a smaller, probably unfinished file; an unknown version) gets a new name beside it.
      */
     private void backupInstanceZip(File instanceDir) {
         try {
             AppStorage storage = AppStorage.requireSingleton();
             String versionTag = readVersionTag(instanceDir);
             File zip = new File(storage.getDownloadsDir(), "Valheim_" + versionTag + ".zip");
+            if (zip.exists() && !zip.canWrite()) {
+                long game = sizeOf(instanceDir);
+                if (!"unknown".equals(versionTag) && game > 0 && zip.length() >= game / 2) {
+                    progress("Download finished. A backup copy of this version is already in the "
+                            + "Downloads folder: " + zip.getAbsolutePath() + " ("
+                            + (zip.length() / (1024 * 1024)) + " MB), made earlier.");
+                    return;
+                }
+                for (int n = 2; zip.exists(); n++)
+                    zip = new File(storage.getDownloadsDir(), "Valheim_" + versionTag + "_" + n + ".zip");
+            }
             // Several GB of game go into one archive here. It is the slowest part of the whole
             // install and it happens AFTER the progress bar has reached 100%, which is exactly where
             // people think the app has hung and close it. Say what is happening, and how long.
@@ -962,6 +979,18 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             Log.e(TAG, "backupInstanceZip failed (non-fatal)", t);
             progress("Backup copy skipped: " + describe(t));
         }
+    }
+
+    /** Bytes of the regular files under {@code dir} (links not followed); 0 when unreadable. */
+    private static long sizeOf(File dir) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return dir.isFile() ? dir.length() : 0;
+        long total = 0;
+        for (File k : kids) {
+            if (java.nio.file.Files.isSymbolicLink(k.toPath())) continue;
+            total += k.isDirectory() ? sizeOf(k) : k.length();
+        }
+        return total;
     }
 
     /**

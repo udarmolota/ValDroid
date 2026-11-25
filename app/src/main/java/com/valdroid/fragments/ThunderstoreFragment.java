@@ -145,7 +145,11 @@ public class ThunderstoreFragment extends Fragment {
         btnTextLarger = v.findViewById(R.id.btn_ts_text_larger);
 
         RecyclerView rv = v.findViewById(R.id.rv_ts);
-        rv.setLayoutManager(new GridLayoutManager(requireContext(), 2));
+        // A column per ~180dp of width, at least two: two on a phone held upright, more in landscape.
+        // Handhelds such as the Retroid stay landscape, where two fixed columns made each square icon
+        // taller than the screen (2026-11-24). The screen is built again on a rotation.
+        int columns = Math.max(2, getResources().getConfiguration().screenWidthDp / 180);
+        rv.setLayoutManager(new GridLayoutManager(requireContext(), columns));
         rv.setAdapter(adapter);
 
         ArrayAdapter<String> sorts = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, new String[]{
