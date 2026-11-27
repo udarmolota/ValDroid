@@ -320,6 +320,42 @@ public final class ReportInfo {
         return anyLog ? "unknown (no version line in the game's log)" : "unknown (no game log yet)";
     }
 
+    /** Version found per log file, kept while the file is unchanged: the card list binds often. */
+    private static final java.util.Map<String, String[]> SHORT_VERSION_CACHE = new java.util.HashMap<>();
+    private static final Pattern SHORT_VERSION = Pattern.compile("\\d+\\.\\d+\\.\\d+");
+
+    /**
+     * The game's version for the instance card, "1.0.21", from the newest of the game's logs (box64's
+     * Player.log or the native engine's log); null before the instance has run. A log is read once per
+     * change: the line sits a few hundred lines in.
+     */
+    @androidx.annotation.Nullable
+    public static String shortGameVersion(GameInstance gi) {
+        File dir = gi.getUserDataDir();
+        File game = new File(gi.getGamePath());
+        File[] logs = {
+                new File(dir, "Player.log"), new File(dir, "Player-prev.log"),
+                new File(game, com.valdroid.game.NativeLog.FILE), new File(game, com.valdroid.game.NativeLog.PREV) };
+        java.util.Arrays.sort(logs, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        for (File f : logs) {
+            if (!f.isFile()) continue;
+            String key = f.getAbsolutePath(), stamp = f.lastModified() + ":" + f.length();
+            String version;
+            synchronized (SHORT_VERSION_CACHE) {
+                String[] cached = SHORT_VERSION_CACHE.get(key);
+                version = cached != null && cached[0].equals(stamp) ? cached[1] : null;
+                if (cached == null || !cached[0].equals(stamp)) {
+                    String line = grepFirst(f, GAME_VERSION, 20000);
+                    Matcher m = line != null ? SHORT_VERSION.matcher(line) : null;
+                    version = m != null && m.find() ? m.group() : "";
+                    SHORT_VERSION_CACHE.put(key, new String[] { stamp, version });
+                }
+            }
+            if (!version.isEmpty()) return version;
+        }
+        return null;
+    }
+
     /** box64's own banner line ("Box64 arm64 v0.x.y <hash> with Dynarec built on ...") from its log. */
     static String box64Banner(GameInstance gi) {
         Pattern p = Pattern.compile("Box64.*built on.*");

@@ -236,7 +236,7 @@ Na nuvem: %2$s
 
     <string name="nav_label_donate">Doar</string>
     <string name="zomdroid_dialog_message">O Zomdroid roda Project Zomboid no Android do mesmo jeito que este launcher roda Valheim. Mesmo autor, mesma abordagem.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
-    <string name="download_manifest_hint">Avançado: ID do manifesto — vazio = 1.5 recomendada</string>
+    <string name="download_manifest_hint">Avançado: ID do manifesto (vazio = conforme a caixa abaixo)</string>
     <string name="download_start">Baixar</string>
     <string name="download_tab_game">Jogo</string>
     <string name="download_tab_mods">Mods</string>
@@ -515,4 +515,8 @@ Na nuvem: %2$s
     <string name="signature_warning_message">Ela está assinada com outra chave, então pode ter sido modificada. O ValDroid original está no GitHub. O jogo inicia normalmente.</string>
     <string name="signature_warning_github">Abrir GitHub</string>
     <string name="signature_warning_dont_show">Não mostrar de novo</string>
+    <!-- Download: a versão que funciona no ValDroid -->
+    <string name="download_known_good">Última versão compatível com o ValDroid</string>
+    <string name="download_known_good_note">Uma atualização do Valheim pode precisar de um motor de jogo mais novo do que o ValDroid tem ainda. Marcado, você baixa a versão mais nova que sabidamente funciona; desmarcado, a mais nova da Steam (pode rodar só nos motores box64). Um ID de manifesto acima tem prioridade.</string>
+    <string name="instance_game_version">versão %1$s</string>
 </resources>

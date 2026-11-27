@@ -98,6 +98,18 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     public static final int APP_ID = 892970;
     private static final int LINUX_DEPOT = 892971;
 
+    // The newest Valheim build known to run on ValDroid's native engine. Iron Gate can move the game
+    // to a newer Unity than the engine's player (6000.0.75f1): the 2026-11-26 update did (6000.0.85f1),
+    // and the native engine then stops with "Unable to initialize Unity engine". So the download takes
+    // this build when the player leaves "Latest version compatible with ValDroid" ticked, as RimDroid
+    // does. Read from KNOWN_GOOD_URL (one line to change on GitHub once a newer build is verified, no
+    // app release); these constants are the fallback when that file cannot be fetched.
+    private static final long KNOWN_GOOD_MANIFEST = 4702704970510748940L;   // 1.0.21, Unity 6000.0.75f1
+    private static final long KNOWN_GOOD_BUILD = 26249040L;
+    private static final String KNOWN_GOOD_VERSION = "1.0.21";
+    private static final String KNOWN_GOOD_URL =
+            "https://raw.githubusercontent.com/udarmolota/ValDroid/main/downloads/known_good.json";
+
     private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
     /** Re-tries of the INITIAL sign-in if the CM connection drops mid-approval (Steam-Mobile excursion). */
     private static final int MAX_AUTH_ATTEMPTS = 3;
@@ -150,6 +162,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private volatile Throwable lastError;          // set by onDownloadFailed; checked after awaitCompletion
     /** Steam build id of the manifest being downloaded (0 when a manifest id was pinned by hand). */
     private volatile long buildId;
+    /** Take the build known to run on ValDroid instead of Steam's newest (no manifest pinned by hand). */
+    private boolean knownGood;
     private int downloadAttempts;
     private int authAttempts;                      // initial-sign-in attempts (drops during approval)
 
@@ -166,6 +180,47 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         this.manifestId = manifestId;
         this.workshopIds = null;
         this.listener = listener;
+    }
+
+    /** GAME mode: the build known to run on ValDroid rather than the newest Steam serves. */
+    public SteamDownloadSpike knownGoodBuild(boolean knownGood) { this.knownGood = knownGood; return this; }
+
+    /**
+     * The manifest of the build known to run on ValDroid: from GitHub ({"valheim": {"manifest": "...",
+     * "build": 26249040, "version": "1.0.21"}}), else the built-in one; 0 when neither is set.
+     */
+    private long knownGoodManifest() {
+        java.net.HttpURLConnection conn = null;
+        try {
+            conn = (java.net.HttpURLConnection) new java.net.URL(KNOWN_GOOD_URL).openConnection();
+            conn.setConnectTimeout(6000);
+            conn.setReadTimeout(6000);
+            conn.setUseCaches(false);
+            if (conn.getResponseCode() == java.net.HttpURLConnection.HTTP_OK) {
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                        conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    for (String line; (line = r.readLine()) != null; ) sb.append(line).append('\n');
+                }
+                org.json.JSONObject o = new org.json.JSONObject(sb.toString()).getJSONObject("valheim");
+                long gid = Long.parseUnsignedLong(o.getString("manifest"));
+                if (gid != 0L) {
+                    buildId = o.optLong("build", 0L);
+                    progress("Latest Valheim known to run on ValDroid: " + o.optString("version", "?")
+                            + " (build " + buildId + ")");
+                    return gid;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "known-good build not fetched, using the built-in one", e);
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        if (KNOWN_GOOD_MANIFEST == 0L) return 0L;
+        buildId = KNOWN_GOOD_BUILD;
+        progress("Latest Valheim known to run on ValDroid: " + KNOWN_GOOD_VERSION + " (build "
+                + KNOWN_GOOD_BUILD + ", built in)");
+        return KNOWN_GOOD_MANIFEST;
     }
 
     /** MODS mode ctor. */
@@ -533,7 +588,12 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         SteamApps apps = steamClient.getHandler(SteamApps.class);
         SteamContent content = steamClient.getHandler(SteamContent.class);
 
-        long gid = (manifestId > 0) ? manifestId : resolveManifestGid();
+        long gid = manifestId > 0 ? manifestId : 0L;
+        if (gid == 0L && knownGood) {
+            gid = knownGoodManifest();
+            if (gid == 0L) progress("No build known to run on ValDroid is set; taking Steam's newest.");
+        }
+        if (gid == 0L) gid = resolveManifestGid();
         if (gid == 0L) { done("Could not resolve a build to download."); running = false; return; }
         progress("Depot " + LINUX_DEPOT + ", manifest " + Long.toUnsignedString(gid)
                 + (buildId > 0 ? (", build " + buildId) : ""));

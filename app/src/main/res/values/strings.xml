@@ -252,7 +252,7 @@ In the cloud: %2$s
          leaving cookies in this app\'s store, so promising that nothing is kept would be false. -->
     <!-- Temporary library probe: proves GogLibrary works against a real account. -->
     <string name="new_instance_with_dlc">%1$s\n+ DLC: %2$d</string>
-    <string name="download_manifest_hint">Advanced: Manifest ID — blank = recommended 1.5</string>
+    <string name="download_manifest_hint">Advanced: manifest ID (blank = as the box below says)</string>
     <string name="download_start">Download</string>
     <string name="download_tab_game">Game</string>
     <string name="download_tab_mods">Mods</string>
@@ -530,4 +530,8 @@ In the cloud: %2$s
     <string name="signature_warning_message">It is signed with a different key, so it may have been modified. The original ValDroid is on GitHub. The game still starts as usual.</string>
     <string name="signature_warning_github">Open GitHub</string>
     <string name="signature_warning_dont_show">Don\'t show again</string>
+    <!-- Download: the build known to run on ValDroid (DownloadFragment, SteamDownloadSpike) -->
+    <string name="download_known_good">Latest version compatible with ValDroid</string>
+    <string name="download_known_good_note">A Valheim update can need a newer game engine than ValDroid has yet. With this ticked you get the newest version known to run; untick it for Steam\'s newest (it may only run on the box64 engines). A manifest ID above overrides both.</string>
+    <string name="instance_game_version">version %1$s</string>
 </resources>

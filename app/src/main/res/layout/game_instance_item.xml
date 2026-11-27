@@ -46,6 +46,18 @@
                 android:ellipsize="end"
                 android:maxLines="1" />
 
+            <!-- The game's version, from its own log once it has run (ReportInfo.shortGameVersion),
+                 as on OxyDroid's and SyxDroid's cards. -->
+            <TextView
+                android:id="@+id/instance_item_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="13sp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:visibility="gone" />
+
             <!--TextView
                 android:id="@+id/instance_item_subtitle"
                 android:layout_width="match_parent"

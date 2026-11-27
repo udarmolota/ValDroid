@@ -42,6 +42,8 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     private final Handler mainH = new Handler(Looper.getMainLooper());
 
     private EditText etInstance, etUser, etPass, etManifest, etModsIds, etModsBrowserId;
+    /** Download the build known to run on ValDroid (ticked by default) instead of Steam's newest. */
+    private CheckBox cbKnownGood;
     private Button btnStart, btnModsStart, btnModsBrowser, btnCancel;
     private ProgressBar progress;
     private TextView tvStatus;
@@ -66,6 +68,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         etUser     = v.findViewById(R.id.et_dl_user);
         etPass     = v.findViewById(R.id.et_dl_pass);
         etManifest = v.findViewById(R.id.et_dl_manifest);
+        cbKnownGood = v.findViewById(R.id.cb_dl_known_good);
         btnStart   = v.findViewById(R.id.btn_dl_start);
         etModsIds  = v.findViewById(R.id.et_mods_ids);
         btnModsStart = v.findViewById(R.id.btn_mods_start);
@@ -154,8 +157,9 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         } catch (NumberFormatException ignored) { /* blank/invalid → default */ }
 
         SteamDownloadState st = SteamDownloadState.get();
+        // A manifest typed by hand wins; otherwise the box picks the build known to run on ValDroid.
         SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
-                /* manifestOnly */ false, manifestId, st);
+                /* manifestOnly */ false, manifestId, st).knownGoodBuild(cbKnownGood != null && cbKnownGood.isChecked());
         // The backup archive is packed after the bar hits 100%, and that step is long enough that
         // people close the app thinking it hung. Say so before they start waiting.
         st.onProgress(getString(R.string.download_backup_note));
@@ -295,6 +299,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (etUser != null) etUser.setEnabled(enabled);
         if (etPass != null) etPass.setEnabled(enabled);
         if (etManifest != null) etManifest.setEnabled(enabled);
+        if (cbKnownGood != null) cbKnownGood.setEnabled(enabled);
         if (etModsIds != null) etModsIds.setEnabled(enabled);
     }
 

@@ -119,6 +119,23 @@
                     android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- The build known to run on ValDroid's native engine, as RimDroid's 1.7 box: a Valheim
+                 update can move the game to a newer Unity than the engine's (SteamDownloadSpike). -->
+            <CheckBox
+                android:id="@+id/cb_dl_known_good"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/download_known_good" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:alpha="0.7"
+                android:text="@string/download_known_good_note"
+                android:textSize="12sp" />
+
             <Button
                 android:id="@+id/btn_dl_start"
                 android:layout_width="match_parent"
